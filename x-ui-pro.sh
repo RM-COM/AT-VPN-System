@@ -295,7 +295,7 @@ server {
 	proxy_intercept_errors on;
 	#X-UI Admin Panel
 	location /${panel_path}/ {
-         1.1;
+        proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
 
@@ -311,7 +311,7 @@ server {
 		break;
 	}
         location /${panel_path} {
-         1.1;
+        proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
 
