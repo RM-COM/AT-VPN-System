@@ -39,3 +39,5 @@
 - [2026-04-05 07:43:17] Shell-вывод нового `stage=reset` нормализован в ASCII English, чтобы staging-диагностика не страдала от кодировочных проблем в Linux-консоли.
 - [2026-04-05 07:49:59] На runtime после `stage=reset` выявлен баг clean install: `nginx` падал на неверном порядке загрузки `ngx_stream_module` и `ngx_stream_geoip2_module`.
 - [2026-04-05 07:49:59] В `x-ui-pro-updated.sh` исправлена модульная логика `nginx`: ложный детект `--with-stream=dynamic` устранён, legacy `load_module`-строки вычищаются, а динамические `stream`/`stream_geoip2` теперь подключаются через `modules-enabled` в устойчивом порядке.
+- [2026-04-05 08:02:47] Реальный regression на staging подтверждён: `stage=reset` проходит успешно, clean install после reset снова поднимает `nginx`, `x-ui`, `sub2sing-box`, а `stage=verify` и `stage=websub` завершаются полным `PASS`.
+- [2026-04-05 08:02:47] Зафиксировано поведение long-running install на staging: локальный SSH-клиент упёрся в таймаут вывода, но фактическое состояние сервера после команды было успешно подтверждено через отдельные `verify` и service-check команды.
