@@ -116,13 +116,13 @@ print_execution_plan() {
 	print_runtime_context
 }
 print_reset_plan() {
-	msg_inf "DRY-RUN reset: staging-РЅРѕРґР° РЅРµ Р±СѓРґРµС‚ РёР·РјРµРЅРµРЅР°."
-	msg_inf "РџР»Р°РЅ reset-РїРѕС‚РѕРєР°:"
-	msg_inf "1. РЎРЅСЏС‚СЊ debug-Р°СЂС‚РµС„Р°РєС‚С‹ С‚РµРєСѓС‰РµРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ."
-	msg_inf "2. РћСЃС‚Р°РЅРѕРІРёС‚СЊ nginx, x-ui Рё sub2sing-box."
-	msg_inf "3. Р’С‹РїРѕР»РЅРёС‚СЊ РїРѕР»РЅС‹Р№ uninstall x-ui/nginx/certbot."
-	msg_inf "4. РЈРґР°Р»РёС‚СЊ РѕСЃС‚Р°С‚РѕС‡РЅС‹Рµ РєР°С‚Р°Р»РѕРіРё web-sub, nginx, certbot Рё Р±РёРЅР°СЂРЅРёРєРё."
-	msg_inf "5. РџСЂРѕРІРµСЂРёС‚СЊ, С‡С‚Рѕ РїРѕСЂС‚С‹ 80/443 СЃРІРѕР±РѕРґРЅС‹, Р° Р°СЂС‚РµС„Р°РєС‚С‹ СѓСЃС‚Р°РЅРѕРІРєРё РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‚."
+	msg_inf "DRY-RUN reset: staging node will not be modified."
+	msg_inf "Reset plan:"
+	msg_inf "1. Capture debug artifacts from the current installation state."
+	msg_inf "2. Stop nginx, x-ui and sub2sing-box."
+	msg_inf "3. Run full uninstall for x-ui/nginx/certbot."
+	msg_inf "4. Remove residual web-sub, nginx, certbot and binary paths."
+	msg_inf "5. Verify that ports 80/443 are free and install artifacts are gone."
 	print_runtime_context
 }
 load_existing_runtime_context() {
@@ -274,24 +274,24 @@ verify_reset_state() {
 	local path listener_output
 
 	if systemctl is-active --quiet nginx; then
-		record_verify_result "FAIL" "РЎРµСЂРІРёСЃ nginx РІСЃС‘ РµС‰С‘ Р°РєС‚РёРІРµРЅ РїРѕСЃР»Рµ reset"
+		record_verify_result "FAIL" "nginx service is still active after reset"
 		failures=$((failures + 1))
 	else
-		record_verify_result "PASS" "РЎРµСЂРІРёСЃ nginx РѕСЃС‚Р°РЅРѕРІР»РµРЅ/СѓРґР°Р»С‘РЅ"
+		record_verify_result "PASS" "nginx service is stopped or removed"
 	fi
 
 	if systemctl is-active --quiet x-ui; then
-		record_verify_result "FAIL" "РЎРµСЂРІРёСЃ x-ui РІСЃС‘ РµС‰С‘ Р°РєС‚РёРІРµРЅ РїРѕСЃР»Рµ reset"
+		record_verify_result "FAIL" "x-ui service is still active after reset"
 		failures=$((failures + 1))
 	else
-		record_verify_result "PASS" "РЎРµСЂРІРёСЃ x-ui РѕСЃС‚Р°РЅРѕРІР»РµРЅ/СѓРґР°Р»С‘РЅ"
+		record_verify_result "PASS" "x-ui service is stopped or removed"
 	fi
 
 	if pgrep -x "sub2sing-box" >/dev/null 2>&1; then
-		record_verify_result "FAIL" "РџСЂРѕС†РµСЃСЃ sub2sing-box РІСЃС‘ РµС‰С‘ Р·Р°РїСѓС‰РµРЅ"
+		record_verify_result "FAIL" "sub2sing-box process is still running"
 		failures=$((failures + 1))
 	else
-		record_verify_result "PASS" "РџСЂРѕС†РµСЃСЃ sub2sing-box РѕСЃС‚Р°РЅРѕРІР»РµРЅ"
+		record_verify_result "PASS" "sub2sing-box process is stopped"
 	fi
 
 	for path in \
@@ -305,42 +305,42 @@ verify_reset_state() {
 		"/usr/bin/x-ui" \
 		"/usr/bin/sub2sing-box"; do
 		if [[ -e "$path" ]]; then
-			record_verify_result "FAIL" "РћСЃС‚Р°С‚РѕС‡РЅС‹Р№ РїСѓС‚СЊ РµС‰С‘ СЃСѓС‰РµСЃС‚РІСѓРµС‚: $path"
+			record_verify_result "FAIL" "Residual path still exists: $path"
 			failures=$((failures + 1))
 		else
-			record_verify_result "PASS" "РџСѓС‚СЊ РѕС‡РёС‰РµРЅ: $path"
+			record_verify_result "PASS" "Path is clean: $path"
 		fi
 	done
 
 	if command -v nginx >/dev/null 2>&1; then
-		record_verify_result "FAIL" "Р‘РёРЅР°СЂРЅРёРє nginx РІСЃС‘ РµС‰С‘ РґРѕСЃС‚СѓРїРµРЅ РІ PATH"
+		record_verify_result "FAIL" "nginx binary is still available in PATH"
 		failures=$((failures + 1))
 	else
-		record_verify_result "PASS" "Р‘РёРЅР°СЂРЅРёРє nginx СѓРґР°Р»С‘РЅ РёР· PATH"
+		record_verify_result "PASS" "nginx binary is gone from PATH"
 	fi
 
 	if command -v x-ui >/dev/null 2>&1; then
-		record_verify_result "FAIL" "Р‘РёРЅР°СЂРЅРёРє x-ui РІСЃС‘ РµС‰С‘ РґРѕСЃС‚СѓРїРµРЅ РІ PATH"
+		record_verify_result "FAIL" "x-ui binary is still available in PATH"
 		failures=$((failures + 1))
 	else
-		record_verify_result "PASS" "Р‘РёРЅР°СЂРЅРёРє x-ui СѓРґР°Р»С‘РЅ РёР· PATH"
+		record_verify_result "PASS" "x-ui binary is gone from PATH"
 	fi
 
 	if command -v sub2sing-box >/dev/null 2>&1; then
-		record_verify_result "FAIL" "Р‘РёРЅР°СЂРЅРёРє sub2sing-box РІСЃС‘ РµС‰С‘ РґРѕСЃС‚СѓРїРµРЅ РІ PATH"
+		record_verify_result "FAIL" "sub2sing-box binary is still available in PATH"
 		failures=$((failures + 1))
 	else
-		record_verify_result "PASS" "Р‘РёРЅР°СЂРЅРёРє sub2sing-box СѓРґР°Р»С‘РЅ РёР· PATH"
+		record_verify_result "PASS" "sub2sing-box binary is gone from PATH"
 	fi
 
 	if command -v ss >/dev/null 2>&1; then
 		listener_output=$(ss -ltn 2>/dev/null | awk 'NR > 1 && $4 ~ /:(80|443)$/ {print}')
 		append_debug_log "Reset listener check: ${listener_output:-<empty>}"
 		if [[ -n "$listener_output" ]]; then
-			record_verify_result "FAIL" "РџРѕСЂС‚С‹ 80/443 РІСЃС‘ РµС‰С‘ Р·Р°РЅСЏС‚С‹: ${listener_output//$'\n'/; }"
+			record_verify_result "FAIL" "Ports 80/443 are still busy: ${listener_output//$'\n'/; }"
 			failures=$((failures + 1))
 		else
-			record_verify_result "PASS" "РџРѕСЂС‚С‹ 80/443 СЃРІРѕР±РѕРґРЅС‹"
+			record_verify_result "PASS" "Ports 80/443 are free"
 		fi
 	fi
 
@@ -372,14 +372,14 @@ reset_staging_node() {
 	fi
 
 	if ! is_yes "$CONFIRM_RESET"; then
-		die "stage=reset является destructive-операцией. Повторите запуск с -confirm_reset yes."
+		die "stage=reset is destructive. Re-run with -confirm_reset yes."
 	fi
 
-	msg_inf "Р—Р°РїСѓСЃРєР°СЋ staging reset: С‚РµРєСѓС‰Р°СЏ СѓСЃС‚Р°РЅРѕРІРєР° Р±СѓРґРµС‚ РїРѕР»РЅРѕСЃС‚СЊСЋ СѓРґР°Р»РµРЅР°."
+	msg_inf "Starting staging reset: the current installation will be fully removed."
 	append_debug_log "Starting staging reset"
 	uninstall_xui
-	verify_reset_state || die "Reset staging-ноды завершился с ошибками. Проверьте debug-артефакты."
-	msg_ok "Staging reset завершён успешно."
+	verify_reset_state || die "Staging reset finished with failures. Check debug artifacts."
+	msg_ok "Staging reset completed successfully."
 }
 repo_asset_exists() { [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/$1" ]]; }
 copy_or_fetch_repo_file() {
