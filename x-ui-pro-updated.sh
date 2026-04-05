@@ -759,33 +759,43 @@ EOF
 
 	grep -qF "stream { include /etc/nginx/stream-enabled/*.conf; }" /etc/nginx/nginx.conf || echo "stream { include /etc/nginx/stream-enabled/*.conf; }" >> /etc/nginx/nginx.conf
 
-	# --- ngx_stream_module: load only if not already available ---
-	# The module may be: (a) compiled statically, (b) loaded via /etc/nginx/modules-enabled/,
-	# or (c) already present in nginx.conf from a previous run.  Adding a duplicate load_module
-	# causes "module is already loaded" and Nginx refuses to start.
-	if nginx -V 2>&1 | grep -q -- '--with-stream\b'; then
+	local nginx_v stream_ready="n"
+	nginx_v=$(nginx -V 2>&1)
+	sed -i '/ngx_stream_module\.so/d;/ngx_stream_geoip2_module\.so/d' /etc/nginx/nginx.conf
+	rm -f /etc/nginx/modules-enabled/50-mod-stream.conf /etc/nginx/modules-enabled/70-mod-stream-geoip2.conf
+
+	if printf '%s' "$nginx_v" | grep -q -- '--with-stream=dynamic'; then
+		if [[ -f /usr/lib/nginx/modules/ngx_stream_module.so ]]; then
+			cat > /etc/nginx/modules-enabled/50-mod-stream.conf <<'EOF'
+load_module /usr/lib/nginx/modules/ngx_stream_module.so;
+EOF
+			msg_inf "stream module enabled via modules-enabled/50-mod-stream.conf"
+			stream_ready="y"
+		else
+			warn "nginx reports --with-stream=dynamic but ngx_stream_module.so is missing"
+		fi
+	elif printf '%s' "$nginx_v" | grep -qE -- '(^|[[:space:]])--with-stream([[:space:]]|$)'; then
 		msg_inf "stream module is compiled statically, skipping load_module"
+		stream_ready="y"
 	elif ls /etc/nginx/modules-enabled/*stream* &>/dev/null; then
-		msg_inf "stream module already enabled via modules-enabled, skipping load_module"
-	elif grep -qF "load_module" /etc/nginx/nginx.conf 2>/dev/null \
-	     && grep -qF "ngx_stream_module" /etc/nginx/nginx.conf 2>/dev/null; then
-		msg_inf "stream module already loaded in nginx.conf, skipping"
+		msg_inf "stream module already enabled via modules-enabled, keeping existing configuration"
+		stream_ready="y"
 	elif [[ -f /usr/lib/nginx/modules/ngx_stream_module.so ]]; then
-		sed -i '1s|^|load_module /usr/lib/nginx/modules/ngx_stream_module.so; \n|' /etc/nginx/nginx.conf
-		msg_inf "stream module loaded dynamically via load_module"
+		cat > /etc/nginx/modules-enabled/50-mod-stream.conf <<'EOF'
+load_module /usr/lib/nginx/modules/ngx_stream_module.so;
+EOF
+		msg_inf "stream module enabled via modules-enabled/50-mod-stream.conf"
+		stream_ready="y"
 	else
 		warn "ngx_stream_module.so not found and stream not built-in; install libnginx-mod-stream"
 	fi
 
-	# --- ngx_stream_geoip2_module: same logic ---
-	if ls /etc/nginx/modules-enabled/*geoip2* &>/dev/null; then
-		msg_inf "stream geoip2 module already enabled via modules-enabled, skipping"
-	elif grep -qF "ngx_stream_geoip2_module" /etc/nginx/nginx.conf 2>/dev/null; then
-		msg_inf "stream geoip2 module already loaded in nginx.conf, skipping"
-	elif [[ -f /usr/lib/nginx/modules/ngx_stream_geoip2_module.so ]]; then
-		sed -i '1s|^|load_module /usr/lib/nginx/modules/ngx_stream_geoip2_module.so; \n|' /etc/nginx/nginx.conf
-		msg_inf "stream geoip2 module loaded dynamically via load_module"
-	else
+	if [[ "$stream_ready" == "y" && -f /usr/lib/nginx/modules/ngx_stream_geoip2_module.so ]]; then
+		cat > /etc/nginx/modules-enabled/70-mod-stream-geoip2.conf <<'EOF'
+load_module /usr/lib/nginx/modules/ngx_stream_geoip2_module.so;
+EOF
+		msg_inf "stream geoip2 module enabled via modules-enabled/70-mod-stream-geoip2.conf"
+	elif [[ "$stream_ready" == "y" ]]; then
 		warn "ngx_stream_geoip2_module.so not found; geoip2 filtering will not work"
 	fi
 

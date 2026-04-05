@@ -37,3 +37,5 @@
 - [2026-04-05 07:35:53] В debug-контур добавлены pre-reset артефакты и post-check reset-сценария: состояние сервисов, файлов, бинарников и портов `80/443`.
 - [2026-04-05 07:35:53] Документация дополнена отдельным регламентом `docs/STAGING_RESET.md`, а `README.md` и `docs/DEBUG_MODE.md` обновлены под новый reset-workflow.
 - [2026-04-05 07:43:17] Shell-вывод нового `stage=reset` нормализован в ASCII English, чтобы staging-диагностика не страдала от кодировочных проблем в Linux-консоли.
+- [2026-04-05 07:49:59] На runtime после `stage=reset` выявлен баг clean install: `nginx` падал на неверном порядке загрузки `ngx_stream_module` и `ngx_stream_geoip2_module`.
+- [2026-04-05 07:49:59] В `x-ui-pro-updated.sh` исправлена модульная логика `nginx`: ложный детект `--with-stream=dynamic` устранён, legacy `load_module`-строки вычищаются, а динамические `stream`/`stream_geoip2` теперь подключаются через `modules-enabled` в устойчивом порядке.
