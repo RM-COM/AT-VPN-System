@@ -11,6 +11,32 @@ msg_inf		 ' /\    |_| _|_   |   | \ \_/ '	; echo
 ##################################Variables#############################################################
 XUIDB="/etc/x-ui/x-ui.db";domain="";UNINSTALL="x";INSTALL="n";PNLNUM=1;CFALLOW="n";CLASH=0;CUSTOMWEBSUB=0
 Pak=$(type apt &>/dev/null && echo "apt" || echo "yum")
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+case "$SCRIPT_SOURCE" in
+    /dev/fd/*|/proc/self/fd/*) SCRIPT_DIR="" ;;
+    *) SCRIPT_DIR=$(cd -- "$(dirname -- "$SCRIPT_SOURCE")" >/dev/null 2>&1 && pwd -P) ;;
+esac
+REPO_SLUG="${REPO_SLUG:-mozaroc/x-ui-pro}"
+REPO_REF="${REPO_REF:-master}"
+REPO_RAW_BASE="${REPO_RAW_BASE:-https://raw.githubusercontent.com/${REPO_SLUG}/${REPO_REF}}"
+LEGACY_DEBUG_PASSTHROUGH="n"
+for arg in "$@"; do
+    case "$arg" in
+        -debug|-dry_run|-verify|-stage|-skip_cleanup|-keep_artifacts)
+            LEGACY_DEBUG_PASSTHROUGH="y"
+            break
+            ;;
+    esac
+done
+if [[ "$LEGACY_DEBUG_PASSTHROUGH" == "y" ]]; then
+    UPDATED_SCRIPT="${SCRIPT_DIR}/x-ui-pro-updated.sh"
+    if [[ -f "$UPDATED_SCRIPT" ]]; then
+        msg_inf "Legacy-скрипт передает debug/stage запуск в x-ui-pro-updated.sh"
+        exec bash "$UPDATED_SCRIPT" "$@"
+    fi
+    msg_err "Для debug/stage режима нужен локальный x-ui-pro-updated.sh рядом с x-ui-pro.sh"
+    exit 1
+fi
 systemctl stop x-ui
 rm -rf /etc/systemd/system/x-ui.service
 rm -rf /usr/local/x-ui
@@ -61,6 +87,92 @@ xhttp_path=$(gen_random_string 10)
 config_username=$(gen_random_string 10)
 config_password=$(gen_random_string 10)
 AUTODOMAIN="n"
+
+repo_asset_exists() {
+    [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/$1" ]]
+}
+copy_or_fetch_repo_file() {
+    local rel_path="$1"
+    local dest="$2"
+    mkdir -p "$(dirname "$dest")"
+    if repo_asset_exists "$rel_path"; then
+        cp "$SCRIPT_DIR/$rel_path" "$dest"
+    else
+        curl -fsSL "${REPO_RAW_BASE}/${rel_path}" -o "$dest"
+    fi
+}
+copy_repo_dir_or_fail() {
+    local rel_path="$1"
+    local dest="$2"
+    [[ -n "$SCRIPT_DIR" && -d "$SCRIPT_DIR/$rel_path" ]] || { echo "Required local repo directory not found: $rel_path. Run installer from a local clone of this repo."; exit 1; }
+    rm -rf "$dest"
+    mkdir -p "$(dirname "$dest")"
+    cp -a "$SCRIPT_DIR/$rel_path" "$dest"
+}
+replace_web_placeholders() {
+    local target="$1"
+    sed -i \
+        -e "s/\${DOMAIN}/$domain/g" \
+        -e "s#\${SUB_JSON_PATH}#$json_path#g" \
+        -e "s#\${SUB_PATH}#$sub_path#g" \
+        -e "s#\${WEB_PATH}#$web_path#g" \
+        -e "s#\${SUB2SINGBOX_PATH}#$sub2singbox_path#g" \
+        "$target"
+}
+install_builtin_fake_site() {
+    mkdir -p /var/www/html
+    cat > /var/www/html/index.html <<'EOF'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Service Portal</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+    .card {
+      width: min(92vw, 720px);
+      padding: 32px;
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.88);
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.45);
+    }
+    h1 { margin: 0 0 12px; font-size: 2rem; }
+    p { line-height: 1.6; color: #cbd5e1; }
+    .pill {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #0f766e;
+      color: #f0fdfa;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="pill">Operational</div>
+    <h1>Service Portal</h1>
+    <p>This host is online and serving encrypted traffic through the edge gateway.</p>
+    <p>Administrative endpoints are published on non-public routes. If you reached this page directly, no further action is required.</p>
+  </main>
+</body>
+</html>
+EOF
+}
 
 ##################################Random Port and Path #################################################
 #RNDSTR=$(tr -dc A-Za-z0-9 </dev/urandom | head -c "$(shuf -i 6-12 -n 1)")
@@ -342,6 +454,9 @@ cat > "/etc/nginx/snippets/includes.conf" << EOF
 		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 		proxy_pass http://127.0.0.1:8080/;
 		}
+    location = /${web_path} {
+        return 302 /${web_path}/\$is_args\$args;
+    }
     # Path to open clash.yaml and generate YAML
     location ~ ^/${web_path}/clashmeta/(.+)$ {
         default_type text/plain;
@@ -352,10 +467,9 @@ cat > "/etc/nginx/snippets/includes.conf" << EOF
         try_files /clash.yaml =404;
     }
     # web
-    location ~ ^/${web_path} {
-        root /var/www/subpage;
+    location /${web_path}/ {
+        alias /var/www/subpage/;
         index index.html;
-        try_files \$uri \$uri/ /index.html =404;
     }
  	#Subscription Path (simple/encode)
         location /${sub_path} {
@@ -521,7 +635,7 @@ fi
 
 ##############################generate uri's###########################################################
 sub_uri=https://${domain}/${sub_path}/
-json_uri=https://${domain}/${web_path}?name=
+json_uri=https://${domain}/${web_path}/?name=
 ##############################generate keys###########################################################
 shor=($(openssl rand -hex 8) $(openssl rand -hex 8) $(openssl rand -hex 8) $(openssl rand -hex 8) $(openssl rand -hex 8) $(openssl rand -hex 8) $(openssl rand -hex 8) $(openssl rand -hex 8))
 
@@ -1064,17 +1178,22 @@ su -c "/usr/bin/sub2sing-box server --bind 127.0.0.1 --port 8080 & disown" root
 
 ######################install_fake_site#################################################################
 
-sudo su -c "bash <(wget -qO- https://raw.githubusercontent.com/mozaroc/x-ui-pro/refs/heads/master/randomfakehtml.sh)"
+if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/randomfakehtml.sh" ]]; then
+    bash "$SCRIPT_DIR/randomfakehtml.sh"
+else
+    echo "WARN: randomfakehtml.sh is not available locally; installing bundled fallback page"
+    install_builtin_fake_site
+fi
 
 ######################install_web_sub_page##############################################################
 
-URL_SUB_PAGE=( "https://github.com/legiz-ru/x-ui-pro/raw/master/sub-3x-ui.html"
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/sub-3x-ui-classical.html"
+REPO_SUB_PAGE=( "sub-3x-ui.html"
+		"sub-3x-ui-classical.html"
 	)
-URL_CLASH_SUB=( "https://github.com/legiz-ru/x-ui-pro/raw/master/clash/clash.yaml"
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/clash/clash_skrepysh.yaml"
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/clash/clash_fullproxy_without_ru.yaml"
-  		"https://github.com/legiz-ru/x-ui-pro/raw/master/clash/clash_refilter_ech.yaml"
+REPO_CLASH_SUB=( "clash/clash.yaml"
+		"clash/clash_skrepysh.yaml"
+		"clash/clash_fullproxy_without_ru.yaml"
+  		"clash/clash_refilter_ech.yaml"
 	)
 DEST_DIR_SUB_PAGE="/var/www/subpage"
 DEST_FILE_SUB_PAGE="$DEST_DIR_SUB_PAGE/index.html"
@@ -1082,15 +1201,16 @@ DEST_FILE_CLASH_SUB="$DEST_DIR_SUB_PAGE/clash.yaml"
 
 sudo mkdir -p "$DEST_DIR_SUB_PAGE"
 
-sudo curl -L "${URL_CLASH_SUB[$CLASH]}" -o "$DEST_FILE_CLASH_SUB"
-sudo curl -L "${URL_SUB_PAGE[$CUSTOMWEBSUB]}" -o "$DEST_FILE_SUB_PAGE"
+copy_or_fetch_repo_file "${REPO_CLASH_SUB[$CLASH]}" "$DEST_FILE_CLASH_SUB"
+copy_or_fetch_repo_file "${REPO_SUB_PAGE[$CUSTOMWEBSUB]}" "$DEST_FILE_SUB_PAGE"
+rm -rf "$DEST_DIR_SUB_PAGE/assets" "$DEST_DIR_SUB_PAGE/vendor"
+copy_repo_dir_or_fail "vendor" "$DEST_DIR_SUB_PAGE/vendor"
 
-sed -i "s/\${DOMAIN}/$domain/g" "$DEST_FILE_SUB_PAGE"
-sed -i "s/\${DOMAIN}/$domain/g" "$DEST_FILE_CLASH_SUB"
-sed -i "s#\${SUB_JSON_PATH}#$json_path#g" "$DEST_FILE_SUB_PAGE"
-sed -i "s#\${SUB_PATH}#$sub_path#g" "$DEST_FILE_SUB_PAGE"
-sed -i "s#\${SUB_PATH}#$sub_path#g" "$DEST_FILE_CLASH_SUB"
-sed -i "s|sub.legiz.ru|$domain/$sub2singbox_path|g" "$DEST_FILE_SUB_PAGE"
+replace_web_placeholders "$DEST_FILE_SUB_PAGE"
+replace_web_placeholders "$DEST_FILE_CLASH_SUB"
+while IFS= read -r -d '' file; do
+    replace_web_placeholders "$file"
+done < <(find "$DEST_DIR_SUB_PAGE/vendor/sb-rule-sets" -type f -name '*.json' -print0 2>/dev/null)
 
 #while true; do	
 #	if [[ -n "$tg_escaped_link" ]]; then
@@ -1134,7 +1254,7 @@ if systemctl is-active --quiet x-ui; then clear
  	echo -e "Username:  ${config_username} \n" 
 	echo -e "Password:  ${config_password} \n" 
 	msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    msg_inf "Web Sub Page your first client: https://${domain}/${web_path}?name=first\n"
+    msg_inf "Web Sub Page your first client: https://${domain}/${web_path}/?name=first\n"
     msg_inf "Your local sub2sing-box instance: https://${domain}/$sub2singbox_path/\n"
   msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 	msg_inf "Please Save this Screen!!"	

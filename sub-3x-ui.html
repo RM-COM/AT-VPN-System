@@ -5,11 +5,11 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<meta name="theme-color" content="#282a36">
 		<title>3x-ui sub page</title>
-		<link href="https://raw.githubusercontent.com/dstreletskiy/marzban-sub-page/refs/heads/main/img/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180">
-		<link href="https://raw.githubusercontent.com/streletskiy/marzban-sub-page/refs/heads/main/img/favicon-16x16.png" rel="icon" sizes="16x16" type="image/png">
-		<link href="https://raw.githubusercontent.com/streletskiy/marzban-sub-page/refs/heads/main/img/favicon-32x32.png" rel="icon" sizes="32x32" type="image/png">
-		<link rel="stylesheet" id="dynamic-stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+		<link href="./vendor/upstream/marz-sub-page/img/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180">
+		<link href="./vendor/upstream/marz-sub-page/img/favicon-16x16.png" rel="icon" sizes="16x16" type="image/png">
+		<link href="./vendor/upstream/marz-sub-page/img/favicon-32x32.png" rel="icon" sizes="32x32" type="image/png">
+		<link rel="stylesheet" id="dynamic-stylesheet" href="./vendor/lib/bootstrap/bootstrap.min.css" crossorigin="anonymous">
+		<link rel="stylesheet" href="./vendor/lib/bootstrap-icons/bootstrap-icons.min.css">
 		<script>
 document.addEventListener("DOMContentLoaded", function () {
             toggleCustomTemplateInput();
@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
             };
 
             var sub2sbbase64 = btoa(JSON.stringify(jsonData));
-            var sub2sb = "sing-box://import-remote-profile/?url=https://sub.legiz.ru/convert?data=";
+            var sub2sb = "sing-box://import-remote-profile/?url=https://${DOMAIN}/${SUB2SINGBOX_PATH}/convert?data=";
             var fullUrl = sub2sb + sub2sbbase64 + "#" + encodeURIComponent(username);
             window.open(fullUrl);
         }
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
             };
 
             var sub2sbbase64 = btoa(JSON.stringify(jsonData));
-            var sub2sb = "https://sub.legiz.ru/convert?data=";
+            var sub2sb = "https://${DOMAIN}/${SUB2SINGBOX_PATH}/convert?data=";
             var sbUrl = sub2sb + sub2sbbase64;
 
             navigator.clipboard.writeText(sbUrl).then(function () {
@@ -394,7 +394,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			
 			<!-- Logo, support and language switcher -->
 			<header class="d-flex flex-wrap align-items-center gap-2 mb-5 justify-content-between">
-				<img src="https://raw.githubusercontent.com/streletskiy/marzban-sub-page/refs/heads/main/img/logo.png" alt="Logo" width="32" height="32">
+					<img src="./vendor/upstream/marz-sub-page/img/logo.png" alt="Logo" width="32" height="32">
 				<ul class="nav align-items-center">
 					<li class="nav-item"><a class="nav-link my-nav-link fw-semibold px-2" id="href-support" rel="noopener noreferrer" target="_blank" x-text="$t('support')"></a></li>
 					<li class="nav-item">
@@ -535,16 +535,16 @@ document.addEventListener("DOMContentLoaded", function () {
 								<div class="form-group">
 								  <label for="templateSelect"><span x-text="$t('sub2sb_template')"></span></label>
 								  <select id="templateSelect" class="form-control" onchange="toggleCustomTemplateInput()" required>
-									<option value="https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle.json">
+									<option value="https://${DOMAIN}/${WEB_PATH}/vendor/sb-rule-sets/ru-bundle.json">
 									  ru-bundle
 									</option>
-									<option value="https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle-refilter.json">
+									<option value="https://${DOMAIN}/${WEB_PATH}/vendor/sb-rule-sets/ru-bundle-refilter.json">
 									  ru-bundle-refilter
 									</option>
-									<option value="https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/re-filter.json">
+									<option value="https://${DOMAIN}/${WEB_PATH}/vendor/sb-rule-sets/re-filter.json">
 									  re-filter
 									</option>
-									<option value="https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/secret-sing-box.json">
+									<option value="https://${DOMAIN}/${WEB_PATH}/vendor/sb-rule-sets/secret-sing-box.json">
 									  secret-sing-box
 									</option>
 									<option value="custom">custom</option>
@@ -1298,25 +1298,25 @@ document.addEventListener("DOMContentLoaded", function () {
 			
 			<a id="href-donate"><button type="button" class="btn my-btn mt-4 w-100" x-text="$t('donate')"></button></a>
 		</div>
-		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"></script>
-		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/alpinejs-i18n@2.x.x/dist/cdn.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+		<script src="./vendor/lib/bootstrap/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+		<script defer src="./vendor/lib/alpine/alpine.min.js"></script>
+		<script src="./vendor/lib/alpine/alpine-i18n.min.js"></script>
+		<script src="./vendor/lib/qrcodejs/qrcode.min.js"></script>
 		<script type="module" defer>
 			// Fix flags emoji in some browsers on Windows
-			import { polyfillCountryFlagEmojis } from "https://cdn.skypack.dev/country-flag-emoji-polyfill";
-			polyfillCountryFlagEmojis();
+			import { polyfillCountryFlagEmojis } from "./vendor/lib/country-flag-emoji-polyfill/country-flag-emoji-polyfill.js";
+			polyfillCountryFlagEmojis("Twemoji Country Flags", "./vendor/lib/country-flag-emoji-polyfill/TwemojiCountryFlags.woff2");
 		</script>
 		<script>  
 			// Tutorial images links
 			const images = {
 				en: {
-					imgV2rayNg1: "https://raw.githubusercontent.com/streletskiy/marzban-sub-page/refs/heads/main/img/v2rayNg-en-1.png",
-					imgV2rayNg2: "https://raw.githubusercontent.com/streletskiy/marzban-sub-page/refs/heads/main/img/v2rayNg-en-2.png",
+					imgV2rayNg1: "./vendor/upstream/marz-sub-page/img/v2rayNg-en-1.png",
+					imgV2rayNg2: "./vendor/upstream/marz-sub-page/img/v2rayNg-en-2.png",
 				},
 				ru: {
-					imgV2rayNg1: "https://raw.githubusercontent.com/streletskiy/marzban-sub-page/refs/heads/main/img/v2rayNg-ru-1.png",
-					imgV2rayNg2: "https://raw.githubusercontent.com/streletskiy/marzban-sub-page/refs/heads/main/img/v2rayNg-ru-2.png",
+					imgV2rayNg1: "./vendor/upstream/marz-sub-page/img/v2rayNg-ru-1.png",
+					imgV2rayNg2: "./vendor/upstream/marz-sub-page/img/v2rayNg-ru-2.png",
 				}
 			};
 						
@@ -1862,12 +1862,12 @@ document.addEventListener("DOMContentLoaded", function () {
 				if (['ar', 'he', 'fa'].includes(language)) {
 					html.setAttribute('dir', 'rtl');
 					switchStylesheet(
-						'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css'
+						'./vendor/lib/bootstrap/bootstrap.rtl.min.css'
 					);
 				} else {
 					html.setAttribute('dir', 'ltr');
 					switchStylesheet(
-						'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
+						'./vendor/lib/bootstrap/bootstrap.min.css'
 					);
 				}
 			}
@@ -2058,53 +2058,9 @@ document.addEventListener("DOMContentLoaded", function () {
 				// --- Separate servers links block end ---
 			});
 			
-			// Get link to the latest version of cmfa
-			async function getLatestReleaseName(url) {
-				if (!url || typeof url !== 'string') {
-					throw new Error('A valid URL must be provided.');
-				}
-				try {
-					const response = await fetch(url);
-						
-					if (!response.ok) {
-					throw new Error(`Network response was not ok: ${response.statusText}`);
-					}
-					const latest = await response.json();
-						
-					if ((!latest || !latest.tag_name) && (!latest || !latest.name)) {
-					throw new Error('The response does not contain the expected data.');
-					}
-					return latest.tag_name || latest.name;
-				} 
-				catch (error) {
-					console.error('Error fetching the latest release name:', error);
-					throw error;
-				}
-			}
-			const cmfa_api = 'https://api.github.com/repos/MetaCubeX/ClashMetaForAndroid/releases/latest';	
-			document.addEventListener('DOMContentLoaded', async () => {
-				try {
-					const cmfaName = await getLatestReleaseName(cmfa_api);
-					const cmfa = document.getElementById('cmfa');
-					let cmfa_version = cmfaName.substring(1);
-					cmfa.href = `https://github.com/MetaCubeX/ClashMetaForAndroid/releases/download/${cmfaName}/cmfa-${cmfa_version}-meta-universal-release.apk`;
-				} 
-				catch (error) {
-					console.error('Failed to update link:', error);
-				}
-			})
-
-			const clashvergerev_api = 'https://api.github.com/repos/clash-verge-rev/clash-verge-rev/releases/latest';	
-			document.addEventListener('DOMContentLoaded', async () => {
-				try {
-					const clashvergerevName = await getLatestReleaseName(clashvergerev_api);
-					const clashvergerev = document.getElementById('clashvergerev');
-					let clashvergerev_version = clashvergerevName.substring(1);
-					clashvergerev.href = `https://github.com/clash-verge-rev/clash-verge-rev/releases/download/${clashvergerevName}/Clash.Verge_${clashvergerev_version}_x64-setup.exe`;
-				} 
-				catch (error) {
-					console.error('Failed to update link:', error);
-				}
+			document.addEventListener('DOMContentLoaded', () => {
+				document.getElementById('cmfa').href = 'https://github.com/MetaCubeX/ClashMetaForAndroid/releases/download/v2.11.21/cmfa-2.11.21-meta-universal-release.apk';
+				document.getElementById('clashvergerev').href = 'https://github.com/clash-verge-rev/clash-verge-rev/releases/download/v2.4.0/Clash.Verge_2.4.0_x64-setup.exe';
 			});
 		</script>
 	</body

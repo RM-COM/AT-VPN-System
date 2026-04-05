@@ -1,0 +1,16 @@
+payload:
+  - GEOSITE,youtube
+  - GEOSITE,google-gemini
+  - GEOSITE,ookla-speedtest
+  - PROCESS-NAME,org.zwanoo.android.speedtest
+  - GEOSITE,cloudflare
+  - GEOIP,cloudflare
+  - PROCESS-NAME,Discord
+  - PROCESS-NAME,Discord.exe
+  - DOMAIN-SUFFIX,ip.sb
+  - DOMAIN-SUFFIX,2ip.io
+  - DOMAIN-SUFFIX,dnsleaktest.com
+  - DOMAIN-SUFFIX,browserleaks.com
+  - DOMAIN-SUFFIX,ua
+  - DOMAIN-SUFFIX,wdfiles.com
+  - DOMAIN-SUFFIX,pling.com

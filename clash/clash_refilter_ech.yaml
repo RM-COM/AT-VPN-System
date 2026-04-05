@@ -61,7 +61,7 @@ proxy-groups:
     use:
       - sub
     type: url-test
-    url: http://cp.cloudflare.com
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/probes/generate_204
     interval: 300
     tolerance: 150
     lazy: true
@@ -74,32 +74,32 @@ proxy-providers:
     interval: 3600
     health-check:
       enable: true
-      url: https://www.gstatic.com/generate_204
+      url: https://${DOMAIN}/${WEB_PATH}/vendor/probes/generate_204
       interval: 300
       timeout: 5000
       lazy: true
-      expected-status: 204
+      expected-status: 200
 
 rule-providers:
   refilter_noech:
     type: http
     behavior: domain
     format: mrs
-    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/re-filter/re-filter-noech.mrs
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/rules/re-filter/re-filter-noech.mrs
     path: ./re-filter/noech.mrs
     interval: 86400
   refilter_ech:
     type: http
     behavior: domain
     format: mrs
-    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/re-filter/re-filter-ech.mrs
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/rules/re-filter/re-filter-ech.mrs
     path: ./re-filter/ech.mrs
     interval: 86400
   refilter_ipsum:
     type: http
     behavior: ipcidr
     format: mrs
-    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/re-filter/ip-rule.mrs
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/rules/re-filter/ip-rule.mrs
     path: ./re-filter/ip-rule.mrs
     interval: 86400
 rules:

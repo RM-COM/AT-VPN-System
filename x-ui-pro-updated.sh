@@ -1,13 +1,21 @@
 #!/bin/bash
 #################### x-ui-pro v2.4.3 @ github.com/GFW4Fun ##############################################
 set -o pipefail
-trap '(( $? )) && printf "[ERROR] Script exited with code %d\n" "$?" >&2' EXIT
+trap 'rc=$?; (( rc )) && printf "[ERROR] Script exited with code %d\n" "$rc" >&2' EXIT
 
 ##############################Constants##################################################################
 XUIDB="/etc/x-ui/x-ui.db"
 IP4_REGEX="^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$"
 IP6_REGEX="([a-f0-9:]+:+)+[a-f0-9]+"
 PKG_MGR=$(type apt &>/dev/null && echo "apt" || echo "yum")
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+case "$SCRIPT_SOURCE" in
+	/dev/fd/*|/proc/self/fd/*) SCRIPT_DIR="" ;;
+	*) SCRIPT_DIR=$(cd -- "$(dirname -- "$SCRIPT_SOURCE")" >/dev/null 2>&1 && pwd -P) ;;
+esac
+REPO_SLUG="${REPO_SLUG:-mozaroc/x-ui-pro}"
+REPO_REF="${REPO_REF:-master}"
+REPO_RAW_BASE="${REPO_RAW_BASE:-https://raw.githubusercontent.com/${REPO_SLUG}/${REPO_REF}}"
 
 # Color codes used by install_panel()
 green='\033[0;32m'
@@ -23,6 +31,314 @@ msg_inf() { printf '\e[1;34m%s\e[0m\n' "$1"; }
 die()     { msg_err "$1"; exit "${2:-1}"; }
 warn()    { printf '\e[1;33mWARN: %s\e[0m\n' "$1" >&2; }
 need_cmd() { command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"; }
+is_yes() {
+	case "${1,,}" in
+		y|yes|1|true|on) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+timestamp() { date '+%Y-%m-%d %H:%M:%S'; }
+trim_slashes() {
+	local value="${1#/}"
+	value="${value%/}"
+	printf '%s' "$value"
+}
+DEBUG_MODE="n"
+DRY_RUN="n"
+VERIFY_MODE="n"
+STAGE="all"
+SKIP_CLEANUP="n"
+KEEP_ARTIFACTS="n"
+DEBUG_ROOT="/root/x-ui-pro-debug"
+DEBUG_DIR=""
+DEBUG_LOG=""
+append_debug_log() {
+	[[ -n "$DEBUG_LOG" ]] || return 0
+	printf '[%s] %s\n' "$(timestamp)" "$*" >> "$DEBUG_LOG"
+}
+capture_file_if_exists() {
+	local source_path="$1" artifact_path="$2"
+	[[ -n "$DEBUG_DIR" && -e "$source_path" ]] || return 0
+	mkdir -p "$DEBUG_DIR/$(dirname "$artifact_path")"
+	cp -a "$source_path" "$DEBUG_DIR/$artifact_path" 2>/dev/null || true
+}
+capture_command_output() {
+	local artifact_path="$1"
+	shift
+	[[ -n "$DEBUG_DIR" ]] || return 0
+	mkdir -p "$DEBUG_DIR/$(dirname "$artifact_path")"
+	"$@" > "$DEBUG_DIR/$artifact_path" 2>&1 || true
+}
+init_debug_session() {
+	if [[ -n "$DEBUG_DIR" ]]; then
+		return 0
+	fi
+	if ! is_yes "$DEBUG_MODE" && ! is_yes "$KEEP_ARTIFACTS"; then
+		return 0
+	fi
+	DEBUG_DIR="${DEBUG_ROOT}/$(date '+%Y%m%d-%H%M%S')"
+	mkdir -p "$DEBUG_DIR"
+	DEBUG_LOG="${DEBUG_DIR}/run.log"
+	touch "$DEBUG_LOG"
+	append_debug_log "Debug session initialized"
+	append_debug_log "Script path: ${SCRIPT_SOURCE}"
+	append_debug_log "Script directory: ${SCRIPT_DIR:-<stream>}"
+	if is_yes "$DEBUG_MODE"; then
+		exec 9>>"$DEBUG_LOG"
+		export BASH_XTRACEFD=9
+		export PS4='+ [$(date "+%Y-%m-%d %H:%M:%S")] ${BASH_SOURCE##*/}:${LINENO}: '
+		set -x
+	fi
+	msg_inf "Debug artifacts: ${DEBUG_DIR}"
+}
+print_runtime_context() {
+	append_debug_log "Runtime context:"
+	append_debug_log "  domain=${domain:-<empty>}"
+	append_debug_log "  reality_domain=${reality_domain:-<empty>}"
+	append_debug_log "  panel_port=${panel_port:-<empty>}"
+	append_debug_log "  panel_path=${panel_path:-<empty>}"
+	append_debug_log "  sub_path=${sub_path:-<empty>}"
+	append_debug_log "  json_path=${json_path:-<empty>}"
+	append_debug_log "  web_path=${web_path:-<empty>}"
+	append_debug_log "  sub2singbox_path=${sub2singbox_path:-<empty>}"
+	append_debug_log "  sub_uri=${sub_uri:-<empty>}"
+	append_debug_log "  json_uri=${json_uri:-<empty>}"
+}
+print_execution_plan() {
+	msg_inf "DRY-RUN: инсталляция не будет менять систему."
+	msg_inf "План действий:"
+	msg_inf "1. Подготовка окружения и очистка предыдущей установки."
+	msg_inf "2. Генерация путей, портов и конфигурации."
+	msg_inf "3. Установка пакетов, SSL и nginx."
+	msg_inf "4. Установка 3x-ui, sub2sing-box, fake-site и web-sub."
+	msg_inf "5. Проверка сервисов и вывод итоговых данных."
+	print_runtime_context
+}
+load_existing_runtime_context() {
+	local detected_site
+	if [[ -f "$XUIDB" ]]; then
+		panel_port=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webPort" LIMIT 1;' 2>/dev/null)
+		panel_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webBasePath" LIMIT 1;' 2>/dev/null)")
+		sub_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subPath" LIMIT 1;' 2>/dev/null)")
+		json_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subJsonPath" LIMIT 1;' 2>/dev/null)")
+		sub_uri=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subURI" LIMIT 1;' 2>/dev/null)
+		json_uri=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subJsonURI" LIMIT 1;' 2>/dev/null)
+	fi
+	if [[ -z "$domain" ]]; then
+		domain=$(printf '%s\n%s\n' "$sub_uri" "$json_uri" | sed -nE 's#https?://([^/]+)/.*#\1#p' | head -n1)
+	fi
+	if [[ -z "$web_path" ]]; then
+		web_path=$(printf '%s' "$json_uri" | sed -nE 's#https?://[^/]+/([^/?]+)/?.*#\1#p' | head -n1)
+	fi
+	if [[ -f /etc/nginx/snippets/includes.conf ]]; then
+		if [[ -z "$sub2singbox_path" ]]; then
+			sub2singbox_path=$(sed -nE 's#^[[:space:]]*location /([^/]+)/ \{#\1#p' /etc/nginx/snippets/includes.conf | head -n1)
+		fi
+		if [[ -z "$web_path" ]]; then
+			web_path=$(sed -nE 's#^[[:space:]]*location = /([^[:space:]]+) \{#\1#p' /etc/nginx/snippets/includes.conf | head -n1)
+		fi
+	fi
+	if [[ -z "$domain" ]]; then
+		detected_site=$(grep -Rsl "listen 7443 ssl http2 proxy_protocol;" /etc/nginx/sites-enabled 2>/dev/null | head -n1)
+		[[ -n "$detected_site" ]] && domain=$(basename "$detected_site")
+	fi
+	if [[ -z "$sub_uri" && -n "$domain" && -n "$sub_path" ]]; then
+		sub_uri="https://${domain}/${sub_path}/"
+	fi
+	if [[ -z "$json_uri" && -n "$domain" && -n "$web_path" ]]; then
+		json_uri="https://${domain}/${web_path}/?name="
+	fi
+	print_runtime_context
+}
+record_verify_result() {
+	local status="$1" message="$2"
+	append_debug_log "VERIFY ${status}: ${message}"
+	if [[ "$status" == "PASS" ]]; then
+		printf '[PASS] %s\n' "$message"
+	else
+		printf '[FAIL] %s\n' "$message"
+	fi
+}
+verify_existing_installation() {
+	local failures=0
+	local sqlite_result="" curl_output=""
+	init_debug_session
+	load_existing_runtime_context
+
+	capture_file_if_exists "/etc/nginx/nginx.conf" "files/nginx.conf"
+	capture_file_if_exists "/etc/nginx/snippets/includes.conf" "files/includes.conf"
+	capture_file_if_exists "/etc/nginx/stream-enabled/stream.conf" "files/stream.conf"
+	capture_file_if_exists "/var/www/subpage/index.html" "files/subpage/index.html"
+	capture_file_if_exists "/var/www/subpage/clash.yaml" "files/subpage/clash.yaml"
+	capture_file_if_exists "$XUIDB" "files/x-ui.db"
+	capture_command_output "commands/systemctl-nginx.txt" systemctl status nginx --no-pager
+	capture_command_output "commands/systemctl-x-ui.txt" systemctl status x-ui --no-pager
+	capture_command_output "commands/nginx-test.txt" nginx -t
+	capture_command_output "commands/nginx-dump.txt" nginx -T
+
+	if [[ -f "$XUIDB" ]]; then
+		record_verify_result "PASS" "Файл базы x-ui найден: ${XUIDB}"
+	else
+		record_verify_result "FAIL" "Файл базы x-ui не найден: ${XUIDB}"
+		failures=$((failures + 1))
+	fi
+
+	if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
+		sqlite_result=$(sqlite3 "$XUIDB" 'PRAGMA integrity_check;' 2>&1)
+		append_debug_log "sqlite integrity_check: ${sqlite_result}"
+		if [[ "$sqlite_result" == "ok" ]]; then
+			record_verify_result "PASS" "SQLite integrity_check вернул ok"
+		else
+			record_verify_result "FAIL" "SQLite integrity_check вернул: ${sqlite_result}"
+			failures=$((failures + 1))
+		fi
+	fi
+
+	if nginx -t >/dev/null 2>&1; then
+		record_verify_result "PASS" "Конфигурация nginx проходит nginx -t"
+	else
+		record_verify_result "FAIL" "Конфигурация nginx не проходит nginx -t"
+		failures=$((failures + 1))
+	fi
+
+	if systemctl is-active --quiet nginx; then
+		record_verify_result "PASS" "Сервис nginx активен"
+	else
+		record_verify_result "FAIL" "Сервис nginx неактивен"
+		failures=$((failures + 1))
+	fi
+
+	if systemctl is-active --quiet x-ui; then
+		record_verify_result "PASS" "Сервис x-ui активен"
+	else
+		record_verify_result "FAIL" "Сервис x-ui неактивен"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -f /var/www/subpage/index.html ]]; then
+		record_verify_result "PASS" "Локальная web-sub страница найдена"
+	else
+		record_verify_result "FAIL" "Локальная web-sub страница не найдена"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -f /var/www/subpage/clash.yaml ]]; then
+		record_verify_result "PASS" "Локальный clash.yaml найден"
+	else
+		record_verify_result "FAIL" "Локальный clash.yaml не найден"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -d /var/www/subpage/vendor/sb-rule-sets ]] && find /var/www/subpage/vendor/sb-rule-sets -type f -name '*.json' | grep -q .; then
+		record_verify_result "PASS" "Локальные sb-rule-sets присутствуют"
+	else
+		record_verify_result "FAIL" "Локальные sb-rule-sets отсутствуют"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -n "$domain" && -n "$web_path" ]]; then
+		if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${web_path}/" 2>&1); then
+			record_verify_result "PASS" "Web-sub страница отвечает через локальный HTTPS"
+			[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/websub-index-body.html"
+		else
+			record_verify_result "FAIL" "Web-sub страница не отвечает через локальный HTTPS"
+			append_debug_log "curl output: ${curl_output}"
+			failures=$((failures + 1))
+		fi
+	else
+		record_verify_result "FAIL" "Не удалось определить domain/web_path для локальной HTTP-проверки"
+		failures=$((failures + 1))
+	fi
+
+	if (( failures > 0 )); then
+		append_debug_log "Verification finished with failures: ${failures}"
+		return 1
+	fi
+
+	append_debug_log "Verification finished successfully"
+	return 0
+}
+repo_asset_exists() { [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/$1" ]]; }
+copy_or_fetch_repo_file() {
+	local rel_path="$1" dest="$2"
+	mkdir -p "$(dirname "$dest")"
+	if repo_asset_exists "$rel_path"; then
+		cp "$SCRIPT_DIR/$rel_path" "$dest"
+	else
+		curl -fsSL "${REPO_RAW_BASE}/${rel_path}" -o "$dest"
+	fi
+}
+copy_repo_dir_or_fail() {
+	local rel_path="$1" dest="$2"
+	[[ -n "$SCRIPT_DIR" && -d "$SCRIPT_DIR/$rel_path" ]] || die "Required local repo directory not found: $rel_path. Run installer from a local clone of this repo."
+	rm -rf "$dest"
+	mkdir -p "$(dirname "$dest")"
+	cp -a "$SCRIPT_DIR/$rel_path" "$dest"
+}
+replace_web_placeholders() {
+	local target="$1"
+	sed -i \
+		-e "s/\${DOMAIN}/$domain/g" \
+		-e "s#\${SUB_JSON_PATH}#$json_path#g" \
+		-e "s#\${SUB_PATH}#$sub_path#g" \
+		-e "s#\${WEB_PATH}#$web_path#g" \
+		-e "s#\${SUB2SINGBOX_PATH}#$sub2singbox_path#g" \
+		"$target"
+}
+install_builtin_fake_site() {
+	mkdir -p /var/www/html
+	cat > /var/www/html/index.html <<'EOF'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Service Portal</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+    .card {
+      width: min(92vw, 720px);
+      padding: 32px;
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.88);
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.45);
+    }
+    h1 { margin: 0 0 12px; font-size: 2rem; }
+    p { line-height: 1.6; color: #cbd5e1; }
+    .pill {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #0f766e;
+      color: #f0fdfa;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="pill">Operational</div>
+    <h1>Service Portal</h1>
+    <p>This host is online and serving encrypted traffic through the edge gateway.</p>
+    <p>Administrative endpoints are published on non-public routes. If you reached this page directly, no further action is required.</p>
+  </main>
+</body>
+</html>
+EOF
+}
 
 ##############################Root Check##################################################################
 ensure_root() {
@@ -77,8 +393,8 @@ check_cpu() {
 	local cpu_model
 	cpu_model=$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs)
 	if [[ "$cpu_model" == *"QEMU"* ]]; then
-		msg_err "QEMU virtual CPU detected ($cpu_model). Please contact your hosting provider's support and request changing the CPU model to host CPU."
-		return 1
+		warn "QEMU virtual CPU detected ($cpu_model). Installation will continue, but network or performance issues are still possible. For production prefer a host CPU model."
+		return 0
 	fi
 	return 0
 }
@@ -172,6 +488,12 @@ parse_args() {
 	CLASH=0
 	CUSTOMWEBSUB=0
 	AUTODOMAIN="n"
+	DEBUG_MODE="n"
+	DRY_RUN="n"
+	VERIFY_MODE="n"
+	STAGE="all"
+	SKIP_CLEANUP="n"
+	KEEP_ARTIFACTS="n"
 
 	while [[ "$#" -gt 0 ]]; do
 		case "$1" in
@@ -184,6 +506,12 @@ parse_args() {
 			-websub) CUSTOMWEBSUB="$2"; shift 2;;
 			-clash) CLASH="$2"; shift 2;;
 			-uninstall) UNINSTALL="$2"; shift 2;;
+			-debug) DEBUG_MODE="$2"; shift 2;;
+			-dry_run) DRY_RUN="$2"; shift 2;;
+			-verify) VERIFY_MODE="$2"; shift 2;;
+			-stage) STAGE="$2"; shift 2;;
+			-skip_cleanup) SKIP_CLEANUP="$2"; shift 2;;
+			-keep_artifacts) KEEP_ARTIFACTS="$2"; shift 2;;
 			*) shift 1;;
 		esac
 	done
@@ -202,6 +530,11 @@ uninstall_xui() {
 
 ##############################Clean Previous Install######################################################
 clean_previous_install() {
+	if is_yes "$SKIP_CLEANUP"; then
+		msg_inf "SKIP_CLEANUP активирован: пропускаю удаление предыдущей установки."
+		append_debug_log "Cleanup skipped because SKIP_CLEANUP is enabled"
+		return 0
+	fi
 	systemctl stop x-ui 2>/dev/null
 	rm -rf /etc/systemd/system/x-ui.service
 	rm -rf /usr/local/x-ui
@@ -376,6 +709,9 @@ EOF
 		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 		proxy_pass http://127.0.0.1:8080/;
 		}
+    location = /${web_path} {
+        return 302 /${web_path}/\$is_args\$args;
+    }
     # Path to open clash.yaml and generate YAML
     location ~ ^/${web_path}/clashmeta/(.+)$ {
         default_type text/plain;
@@ -386,10 +722,9 @@ EOF
         try_files /clash.yaml =404;
     }
     # web
-    location ~ ^/${web_path} {
-        root /var/www/subpage;
+    location /${web_path}/ {
+        alias /var/www/subpage/;
         index index.html;
-        try_files \$uri \$uri/ /index.html =404;
     }
  	#Subscription Path (simple/encode)
         location /${sub_path} {
@@ -562,7 +897,7 @@ if [[ -f "$XUIDB" ]]; then
         output=$(/usr/local/x-ui/bin/xray-linux-amd64 x25519)
 
         private_key=$(echo "$output" | grep "^PrivateKey:" | awk '{print $2}')
-        public_key=$(echo "$output" | grep "^Password:" | awk '{print $2}')
+        public_key=$(echo "$output" | grep "^PublicKey:" | awk '{print $2}')
 
         client_id=$(/usr/local/x-ui/bin/xray-linux-amd64 uuid)
         client_id2=$(/usr/local/x-ui/bin/xray-linux-amd64 uuid)
@@ -1097,20 +1432,25 @@ install_sub2singbox() {
 
 ##############################Install Fake Site###########################################################
 install_fake_site() {
-	bash <(wget -qO- https://raw.githubusercontent.com/mozaroc/x-ui-pro/refs/heads/master/randomfakehtml.sh)
+	if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/randomfakehtml.sh" ]]; then
+		bash "$SCRIPT_DIR/randomfakehtml.sh"
+	else
+		warn "randomfakehtml.sh is not available locally; installing bundled fallback page"
+		install_builtin_fake_site
+	fi
 }
 
 ##############################Install Web Sub Page########################################################
 install_web_sub_page() {
-	local URL_SUB_PAGE=(
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/sub-3x-ui.html"
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/sub-3x-ui-classical.html"
+	local REPO_SUB_PAGE=(
+		"sub-3x-ui.html"
+		"sub-3x-ui-classical.html"
 	)
-	local URL_CLASH_SUB=(
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/clash/clash.yaml"
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/clash/clash_skrepysh.yaml"
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/clash/clash_fullproxy_without_ru.yaml"
-		"https://github.com/legiz-ru/x-ui-pro/raw/master/clash/clash_refilter_ech.yaml"
+	local REPO_CLASH_SUB=(
+		"clash/clash.yaml"
+		"clash/clash_skrepysh.yaml"
+		"clash/clash_fullproxy_without_ru.yaml"
+		"clash/clash_refilter_ech.yaml"
 	)
 	local DEST_DIR_SUB_PAGE="/var/www/subpage"
 	local DEST_FILE_SUB_PAGE="$DEST_DIR_SUB_PAGE/index.html"
@@ -1118,15 +1458,17 @@ install_web_sub_page() {
 
 	mkdir -p "$DEST_DIR_SUB_PAGE"
 
-	curl -L "${URL_CLASH_SUB[$CLASH]}" -o "$DEST_FILE_CLASH_SUB"
-	curl -L "${URL_SUB_PAGE[$CUSTOMWEBSUB]}" -o "$DEST_FILE_SUB_PAGE"
+	copy_or_fetch_repo_file "${REPO_CLASH_SUB[$CLASH]}" "$DEST_FILE_CLASH_SUB"
+	copy_or_fetch_repo_file "${REPO_SUB_PAGE[$CUSTOMWEBSUB]}" "$DEST_FILE_SUB_PAGE"
+	rm -rf "$DEST_DIR_SUB_PAGE/assets" "$DEST_DIR_SUB_PAGE/vendor"
+	copy_repo_dir_or_fail "vendor" "$DEST_DIR_SUB_PAGE/vendor"
 
-	sed -i "s/\${DOMAIN}/$domain/g" "$DEST_FILE_SUB_PAGE"
-	sed -i "s/\${DOMAIN}/$domain/g" "$DEST_FILE_CLASH_SUB"
-	sed -i "s#\${SUB_JSON_PATH}#$json_path#g" "$DEST_FILE_SUB_PAGE"
-	sed -i "s#\${SUB_PATH}#$sub_path#g" "$DEST_FILE_SUB_PAGE"
-	sed -i "s#\${SUB_PATH}#$sub_path#g" "$DEST_FILE_CLASH_SUB"
-	sed -i "s|sub.legiz.ru|$domain/$sub2singbox_path|g" "$DEST_FILE_SUB_PAGE"
+	replace_web_placeholders "$DEST_FILE_SUB_PAGE"
+	replace_web_placeholders "$DEST_FILE_CLASH_SUB"
+	while IFS= read -r -d '' file; do
+		replace_web_placeholders "$file"
+	done < <(find "$DEST_DIR_SUB_PAGE/vendor/sb-rule-sets" -type f -name '*.json' -print0 2>/dev/null)
+	append_debug_log "Web-sub assets deployed to ${DEST_DIR_SUB_PAGE}"
 }
 
 ##############################Setup Crontab###############################################################
@@ -1161,7 +1503,7 @@ show_details() {
 		printf 'Username:  %s\n\n' "${config_username}"
 		printf 'Password:  %s\n\n' "${config_password}"
 		msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-		msg_inf "Web Sub Page your first client: https://${domain}/${web_path}?name=first"
+		msg_inf "Web Sub Page your first client: https://${domain}/${web_path}/?name=first"
 		printf '\n'
 		msg_inf "Your local sub2sing-box instance: https://${domain}/$sub2singbox_path/"
 		printf '\n'
@@ -1177,9 +1519,49 @@ show_details() {
 main() {
 	# 1. Parse arguments BEFORE any destructive action
 	parse_args "$@"
+	init_debug_session
+	append_debug_log "Stage=${STAGE} Debug=${DEBUG_MODE} DryRun=${DRY_RUN} Verify=${VERIFY_MODE} SkipCleanup=${SKIP_CLEANUP} KeepArtifacts=${KEEP_ARTIFACTS}"
+
+	case "$STAGE" in
+		all|verify|websub) ;;
+		*) die "Unsupported stage: ${STAGE}. Supported values: all, verify, websub." ;;
+	esac
+
+	if [[ "$STAGE" == "verify" ]]; then
+		if is_yes "$DRY_RUN"; then
+			msg_inf "DRY-RUN verify: будет выполнена только диагностика текущей установки."
+			load_existing_runtime_context
+			exit 0
+		fi
+		verify_existing_installation || die "Проверка текущей установки завершилась с ошибками."
+		msg_ok "Проверка текущей установки завершена успешно."
+		exit 0
+	fi
+
+	if [[ "$STAGE" == "websub" ]]; then
+		load_existing_runtime_context
+		if [[ -z "$domain" || -z "$web_path" || -z "$sub_path" || -z "$json_path" || -z "$sub2singbox_path" ]]; then
+			die "Не удалось восстановить runtime-контекст для stage=websub. Сначала установите систему или передайте параметры вручную."
+		fi
+		if is_yes "$DRY_RUN"; then
+			msg_inf "DRY-RUN websub: локальная web-sub страница будет переустановлена без полной переустановки стека."
+			print_runtime_context
+			exit 0
+		fi
+		install_web_sub_page
+		if is_yes "$VERIFY_MODE"; then
+			verify_existing_installation || die "Переустановка web-sub завершилась, но проверки не прошли."
+		fi
+		msg_ok "Web-sub страница переустановлена из локального репозитория."
+		exit 0
+	fi
 
 	# 2. Handle uninstall early (no wipe needed)
 	if [[ "${UNINSTALL}" == *"y"* ]]; then
+		if is_yes "$DRY_RUN"; then
+			msg_inf "DRY-RUN uninstall: удаление не будет выполнено."
+			exit 0
+		fi
 		uninstall_xui
 		clear && msg_ok "Completely Uninstalled!"
 		exit 0
@@ -1225,8 +1607,8 @@ main() {
 		RealityMainDomain=${reality_domain}
 	fi
 
-	# 6. NOW do destructive cleanup (after args parsed, uninstall handled)
-	clean_previous_install
+	# 6. Read existing XUI DB before cleanup so upgrade diagnostics keep access to the old database.
+	read_existing_xui_db
 
 	# 7. Generate random ports and paths
 	sub_port=$(make_port)
@@ -1243,12 +1625,23 @@ main() {
 	xhttp_path=$(gen_random_string 10)
 	config_username=$(gen_random_string 10)
 	config_password=$(gen_random_string 10)
+	sub_uri="https://${domain}/${sub_path}/"
+	json_uri="https://${domain}/${web_path}/?name="
+	print_runtime_context
 
-	# 8. Install packages & disable UFW initially
+	if is_yes "$DRY_RUN"; then
+		print_execution_plan
+		exit 0
+	fi
+
+	# 8. NOW do destructive cleanup (after args parsed, uninstall handled)
+	clean_previous_install
+
+	# 9. Install packages & disable UFW initially
 	ufw disable 2>/dev/null
 	install_packages
 
-	# 9. Auto-domain DNS verification
+	# 10. Auto-domain DNS verification
 	if [[ "${AUTODOMAIN}" == *"y"* ]]; then
 		if ! resolve_to_ip "$domain"; then
 			die "Auto-domain $domain does not resolve to this server IP ($IP4). Fix DNS/service and retry."
@@ -1258,22 +1651,15 @@ main() {
 		fi
 	fi
 
-	# 10. Obtain SSL certificates (DRY)
+	# 11. Obtain SSL certificates
 	obtain_ssl "$domain"
 	obtain_ssl "$reality_domain"
-
-	# 11. Read existing XUI DB (if upgrading)
-	read_existing_xui_db
 
 	# 12. Setup nginx configs
 	setup_nginx
 	enable_nginx_sites
 
-	# 13. Generate URIs
-	sub_uri="https://${domain}/${sub_path}/"
-	json_uri="https://${domain}/${web_path}?name="
-
-	# 14. Install or restart X-UI panel
+	# 13. Install or restart X-UI panel
 	if systemctl is-active --quiet x-ui; then
 		x-ui restart
 	else
@@ -1285,25 +1671,29 @@ main() {
 		x-ui restart
 	fi
 
-	# 15. Tune system (idempotent sysctl)
+	# 14. Tune system (idempotent sysctl)
 	tune_system
 
-	# 16. Install sub2sing-box
+	# 15. Install sub2sing-box
 	install_sub2singbox
 
-	# 17. Install fake site
+	# 16. Install fake site
 	install_fake_site
 
-	# 18. Install web sub page
+	# 17. Install web sub page
 	install_web_sub_page
 
-	# 19. Setup crontab
+	# 18. Setup crontab
 	setup_crontab
 
-	# 20. Setup UFW
+	# 19. Setup UFW
 	setup_ufw
 
-	# 21. Show details
+	if is_yes "$VERIFY_MODE"; then
+		verify_existing_installation || die "Установка завершилась, но итоговые проверки не прошли."
+	fi
+
+	# 20. Show details
 	show_details
 }
 

@@ -58,7 +58,7 @@
             };
 
             var sub2sbbase64 = btoa(JSON.stringify(jsonData));
-            var sub2sb = "sing-box://import-remote-profile/?url=https://sub.legiz.ru/convert?data=";
+            var sub2sb = "sing-box://import-remote-profile/?url=https://${DOMAIN}/${SUB2SINGBOX_PATH}/convert?data=";
             var fullUrl = sub2sb + sub2sbbase64 + "#" + encodeURIComponent(name);
             window.open(fullUrl);
         }
@@ -99,7 +99,7 @@
             };
 
             var sub2sbbase64 = btoa(JSON.stringify(jsonData));
-            var sub2sb = "https://sub.legiz.ru/convert?data=";
+            var sub2sb = "https://${DOMAIN}/${SUB2SINGBOX_PATH}/convert?data=";
             var sbUrl = sub2sb + sub2sbbase64;
 
             navigator.clipboard.writeText(sbUrl).then(function () {
@@ -208,14 +208,14 @@
         <button class="button" onclick="copyXrayJsonLink()">Скопировать ссылку xray json</button>
         <p style="line-height: 2em;"><i>Выберите шаблон sing-box:</i></p>
         <select id="templateSelect" onchange="toggleCustomTemplateInput()" required>
-            <option value="https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle.json"
+            <option value="https://${DOMAIN}/${WEB_PATH}/vendor/sb-rule-sets/ru-bundle.json"
                 selected>ru-bundle</option>
             <option
-                value="https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle-refilter.json">
+                value="https://${DOMAIN}/${WEB_PATH}/vendor/sb-rule-sets/ru-bundle-refilter.json">
                 ru-bundle-refilter</option>
-            <option value="https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/re-filter.json">
+            <option value="https://${DOMAIN}/${WEB_PATH}/vendor/sb-rule-sets/re-filter.json">
                 re-filter</option>
-            <option value="https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/secret-sing-box.json">
+            <option value="https://${DOMAIN}/${WEB_PATH}/vendor/sb-rule-sets/secret-sing-box.json">
                 secret-sing-box</option>
             <option value="custom">Свой шаблон</option>
         </select><br>

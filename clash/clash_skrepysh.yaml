@@ -60,7 +60,7 @@ proxy-groups:
     use:
       - sub
     type: url-test
-    url: http://cp.cloudflare.com
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/probes/generate_204
     interval: 300
     tolerance: 150
     lazy: true
@@ -73,51 +73,51 @@ proxy-providers:
     interval: 3600
     health-check:
       enable: true
-      url: https://www.gstatic.com/generate_204
+      url: https://${DOMAIN}/${WEB_PATH}/vendor/probes/generate_204
       interval: 300
       timeout: 5000
       lazy: true
-      expected-status: 204
+      expected-status: 200
 
 rule-providers:
   skrepysh-proxy:
     type: http
-    url: https://github.com/Skrepysh/mihomo-rulesets/raw/refs/heads/main/skrepysh-rulesets/skrepysh-proxy.yaml
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/rules/skrepysh/skrepysh-proxy.yaml
     interval: 86400
     proxy: DIRECT
     behavior: classical
     format: yaml
   skrepysh-direct:
     type: http
-    url: https://github.com/Skrepysh/mihomo-rulesets/raw/refs/heads/main/skrepysh-rulesets/skrepysh-direct.yaml
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/rules/skrepysh/skrepysh-direct.yaml
     interval: 86400
     proxy: DIRECT
     behavior: classical
     format: yaml
   skrepysh-reject:
     type: http
-    url: https://github.com/Skrepysh/mihomo-rulesets/raw/refs/heads/main/skrepysh-rulesets/skrepysh-reject.yaml
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/rules/skrepysh/skrepysh-reject.yaml
     interval: 86400
     proxy: DIRECT
     behavior: classical
     format: yaml
   ru-bundle:
     type: http
-    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/ru-bundle/rule.mrs
+    url: https://${DOMAIN}/${WEB_PATH}/vendor/rules/ru-bundle/rule.mrs
     interval: 86400
     proxy: DIRECT
     behavior: domain
     format: mrs
   torrent-clients:
     type: http
-    url: 'https://raw.githubusercontent.com/legiz-ru/mihomo-rule-sets/refs/heads/main/other/torrent-clients.yaml'
+    url: 'https://${DOMAIN}/${WEB_PATH}/vendor/rules/other/torrent-clients.yaml'
     interval: 86400
     proxy: DIRECT
     behavior: classical
     format: yaml
   torrent-trackers:
     type: http
-    url: 'https://raw.githubusercontent.com/legiz-ru/mihomo-rule-sets/refs/heads/main/other/torrent-trackers.mrs'
+    url: 'https://${DOMAIN}/${WEB_PATH}/vendor/rules/other/torrent-trackers.mrs'
     interval: 86400
     proxy: DIRECT
     behavior: domain
