@@ -49,6 +49,7 @@ VERIFY_MODE="n"
 STAGE="all"
 SKIP_CLEANUP="n"
 KEEP_ARTIFACTS="n"
+CONFIRM_RESET="n"
 DEBUG_ROOT="/root/x-ui-pro-debug"
 DEBUG_DIR=""
 DEBUG_LOG=""
@@ -112,6 +113,16 @@ print_execution_plan() {
 	msg_inf "3. Установка пакетов, SSL и nginx."
 	msg_inf "4. Установка 3x-ui, sub2sing-box, fake-site и web-sub."
 	msg_inf "5. Проверка сервисов и вывод итоговых данных."
+	print_runtime_context
+}
+print_reset_plan() {
+	msg_inf "DRY-RUN reset: staging-РЅРѕРґР° РЅРµ Р±СѓРґРµС‚ РёР·РјРµРЅРµРЅР°."
+	msg_inf "РџР»Р°РЅ reset-РїРѕС‚РѕРєР°:"
+	msg_inf "1. РЎРЅСЏС‚СЊ debug-Р°СЂС‚РµС„Р°РєС‚С‹ С‚РµРєСѓС‰РµРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ."
+	msg_inf "2. РћСЃС‚Р°РЅРѕРІРёС‚СЊ nginx, x-ui Рё sub2sing-box."
+	msg_inf "3. Р’С‹РїРѕР»РЅРёС‚СЊ РїРѕР»РЅС‹Р№ uninstall x-ui/nginx/certbot."
+	msg_inf "4. РЈРґР°Р»РёС‚СЊ РѕСЃС‚Р°С‚РѕС‡РЅС‹Рµ РєР°С‚Р°Р»РѕРіРё web-sub, nginx, certbot Рё Р±РёРЅР°СЂРЅРёРєРё."
+	msg_inf "5. РџСЂРѕРІРµСЂРёС‚СЊ, С‡С‚Рѕ РїРѕСЂС‚С‹ 80/443 СЃРІРѕР±РѕРґРЅС‹, Р° Р°СЂС‚РµС„Р°РєС‚С‹ СѓСЃС‚Р°РЅРѕРІРєРё РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‚."
 	print_runtime_context
 }
 load_existing_runtime_context() {
@@ -257,6 +268,118 @@ verify_existing_installation() {
 
 	append_debug_log "Verification finished successfully"
 	return 0
+}
+verify_reset_state() {
+	local failures=0
+	local path listener_output
+
+	if systemctl is-active --quiet nginx; then
+		record_verify_result "FAIL" "РЎРµСЂРІРёСЃ nginx РІСЃС‘ РµС‰С‘ Р°РєС‚РёРІРµРЅ РїРѕСЃР»Рµ reset"
+		failures=$((failures + 1))
+	else
+		record_verify_result "PASS" "РЎРµСЂРІРёСЃ nginx РѕСЃС‚Р°РЅРѕРІР»РµРЅ/СѓРґР°Р»С‘РЅ"
+	fi
+
+	if systemctl is-active --quiet x-ui; then
+		record_verify_result "FAIL" "РЎРµСЂРІРёСЃ x-ui РІСЃС‘ РµС‰С‘ Р°РєС‚РёРІРµРЅ РїРѕСЃР»Рµ reset"
+		failures=$((failures + 1))
+	else
+		record_verify_result "PASS" "РЎРµСЂРІРёСЃ x-ui РѕСЃС‚Р°РЅРѕРІР»РµРЅ/СѓРґР°Р»С‘РЅ"
+	fi
+
+	if pgrep -x "sub2sing-box" >/dev/null 2>&1; then
+		record_verify_result "FAIL" "РџСЂРѕС†РµСЃСЃ sub2sing-box РІСЃС‘ РµС‰С‘ Р·Р°РїСѓС‰РµРЅ"
+		failures=$((failures + 1))
+	else
+		record_verify_result "PASS" "РџСЂРѕС†РµСЃСЃ sub2sing-box РѕСЃС‚Р°РЅРѕРІР»РµРЅ"
+	fi
+
+	for path in \
+		"/etc/x-ui" \
+		"/usr/local/x-ui" \
+		"/etc/nginx" \
+		"/var/www/subpage" \
+		"/etc/letsencrypt" \
+		"/var/lib/letsencrypt" \
+		"/var/log/letsencrypt" \
+		"/usr/bin/x-ui" \
+		"/usr/bin/sub2sing-box"; do
+		if [[ -e "$path" ]]; then
+			record_verify_result "FAIL" "РћСЃС‚Р°С‚РѕС‡РЅС‹Р№ РїСѓС‚СЊ РµС‰С‘ СЃСѓС‰РµСЃС‚РІСѓРµС‚: $path"
+			failures=$((failures + 1))
+		else
+			record_verify_result "PASS" "РџСѓС‚СЊ РѕС‡РёС‰РµРЅ: $path"
+		fi
+	done
+
+	if command -v nginx >/dev/null 2>&1; then
+		record_verify_result "FAIL" "Р‘РёРЅР°СЂРЅРёРє nginx РІСЃС‘ РµС‰С‘ РґРѕСЃС‚СѓРїРµРЅ РІ PATH"
+		failures=$((failures + 1))
+	else
+		record_verify_result "PASS" "Р‘РёРЅР°СЂРЅРёРє nginx СѓРґР°Р»С‘РЅ РёР· PATH"
+	fi
+
+	if command -v x-ui >/dev/null 2>&1; then
+		record_verify_result "FAIL" "Р‘РёРЅР°СЂРЅРёРє x-ui РІСЃС‘ РµС‰С‘ РґРѕСЃС‚СѓРїРµРЅ РІ PATH"
+		failures=$((failures + 1))
+	else
+		record_verify_result "PASS" "Р‘РёРЅР°СЂРЅРёРє x-ui СѓРґР°Р»С‘РЅ РёР· PATH"
+	fi
+
+	if command -v sub2sing-box >/dev/null 2>&1; then
+		record_verify_result "FAIL" "Р‘РёРЅР°СЂРЅРёРє sub2sing-box РІСЃС‘ РµС‰С‘ РґРѕСЃС‚СѓРїРµРЅ РІ PATH"
+		failures=$((failures + 1))
+	else
+		record_verify_result "PASS" "Р‘РёРЅР°СЂРЅРёРє sub2sing-box СѓРґР°Р»С‘РЅ РёР· PATH"
+	fi
+
+	if command -v ss >/dev/null 2>&1; then
+		listener_output=$(ss -ltn 2>/dev/null | awk 'NR > 1 && $4 ~ /:(80|443)$/ {print}')
+		append_debug_log "Reset listener check: ${listener_output:-<empty>}"
+		if [[ -n "$listener_output" ]]; then
+			record_verify_result "FAIL" "РџРѕСЂС‚С‹ 80/443 РІСЃС‘ РµС‰С‘ Р·Р°РЅСЏС‚С‹: ${listener_output//$'\n'/; }"
+			failures=$((failures + 1))
+		else
+			record_verify_result "PASS" "РџРѕСЂС‚С‹ 80/443 СЃРІРѕР±РѕРґРЅС‹"
+		fi
+	fi
+
+	if (( failures > 0 )); then
+		append_debug_log "Reset verification finished with failures: ${failures}"
+		return 1
+	fi
+
+	append_debug_log "Reset verification finished successfully"
+	return 0
+}
+reset_staging_node() {
+	init_debug_session
+	load_existing_runtime_context
+
+	capture_file_if_exists "/etc/nginx/nginx.conf" "pre-reset/nginx.conf"
+	capture_file_if_exists "/etc/nginx/snippets/includes.conf" "pre-reset/includes.conf"
+	capture_file_if_exists "/etc/nginx/stream-enabled/stream.conf" "pre-reset/stream.conf"
+	capture_file_if_exists "/var/www/subpage/index.html" "pre-reset/subpage/index.html"
+	capture_file_if_exists "/var/www/subpage/clash.yaml" "pre-reset/subpage/clash.yaml"
+	capture_file_if_exists "$XUIDB" "pre-reset/x-ui.db"
+	capture_command_output "pre-reset/systemctl-nginx.txt" systemctl status nginx --no-pager
+	capture_command_output "pre-reset/systemctl-x-ui.txt" systemctl status x-ui --no-pager
+	capture_command_output "pre-reset/ss-ltn.txt" ss -ltn
+
+	if is_yes "$DRY_RUN"; then
+		print_reset_plan
+		return 0
+	fi
+
+	if ! is_yes "$CONFIRM_RESET"; then
+		die "stage=reset является destructive-операцией. Повторите запуск с -confirm_reset yes."
+	fi
+
+	msg_inf "Р—Р°РїСѓСЃРєР°СЋ staging reset: С‚РµРєСѓС‰Р°СЏ СѓСЃС‚Р°РЅРѕРІРєР° Р±СѓРґРµС‚ РїРѕР»РЅРѕСЃС‚СЊСЋ СѓРґР°Р»РµРЅР°."
+	append_debug_log "Starting staging reset"
+	uninstall_xui
+	verify_reset_state || die "Reset staging-ноды завершился с ошибками. Проверьте debug-артефакты."
+	msg_ok "Staging reset завершён успешно."
 }
 repo_asset_exists() { [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/$1" ]]; }
 copy_or_fetch_repo_file() {
@@ -494,6 +617,7 @@ parse_args() {
 	STAGE="all"
 	SKIP_CLEANUP="n"
 	KEEP_ARTIFACTS="n"
+	CONFIRM_RESET="n"
 
 	while [[ "$#" -gt 0 ]]; do
 		case "$1" in
@@ -512,20 +636,53 @@ parse_args() {
 			-stage) STAGE="$2"; shift 2;;
 			-skip_cleanup) SKIP_CLEANUP="$2"; shift 2;;
 			-keep_artifacts) KEEP_ARTIFACTS="$2"; shift 2;;
+			-confirm_reset) CONFIRM_RESET="$2"; shift 2;;
 			*) shift 1;;
 		esac
 	done
 }
 
 ##############################Uninstall###################################################################
+stop_sub2singbox() {
+	if pgrep -x "sub2sing-box" >/dev/null 2>&1; then
+		pkill -x "sub2sing-box" 2>/dev/null || true
+	fi
+}
+remove_reset_residuals() {
+	local path
+	stop_sub2singbox
+	systemctl stop nginx x-ui 2>/dev/null || true
+	systemctl disable nginx x-ui 2>/dev/null || true
+	for path in \
+		"/etc/systemd/system/x-ui.service" \
+		"/etc/systemd/system/multi-user.target.wants/x-ui.service" \
+		"/usr/local/x-ui" \
+		"/etc/x-ui" \
+		"/usr/bin/x-ui" \
+		"/usr/bin/sub2sing-box" \
+		"/var/www/subpage" \
+		"/var/www/html" \
+		"/etc/nginx" \
+		"/usr/share/nginx" \
+		"/etc/letsencrypt" \
+		"/var/lib/letsencrypt" \
+		"/var/log/letsencrypt"; do
+		rm -rf "$path"
+	done
+	systemctl daemon-reload 2>/dev/null || true
+	systemctl reset-failed nginx x-ui 2>/dev/null || true
+	fuser -k 80/tcp 80/udp 443/tcp 443/udp 2>/dev/null || true
+}
 uninstall_xui() {
-	printf 'y\n' | x-ui uninstall
-	rm -rf "/etc/x-ui/" "/usr/local/x-ui/" "/usr/bin/x-ui/"
-	"$PKG_MGR" -y remove nginx nginx-common nginx-core nginx-full python3-certbot-nginx
-	"$PKG_MGR" -y purge nginx nginx-common nginx-core nginx-full python3-certbot-nginx
-	"$PKG_MGR" -y autoremove
-	"$PKG_MGR" -y autoclean
-	rm -rf "/var/www/html/" "/etc/nginx/" "/usr/share/nginx/"
+	if command -v x-ui >/dev/null 2>&1; then
+		printf 'y\n' | x-ui uninstall || true
+	fi
+	remove_reset_residuals
+	"$PKG_MGR" -y remove certbot python3-certbot-nginx nginx nginx-common nginx-core nginx-full || true
+	"$PKG_MGR" -y purge certbot python3-certbot-nginx nginx nginx-common nginx-core nginx-full || true
+	"$PKG_MGR" -y autoremove || true
+	"$PKG_MGR" -y autoclean || true
+	remove_reset_residuals
 }
 
 ##############################Clean Previous Install######################################################
@@ -1520,11 +1677,11 @@ main() {
 	# 1. Parse arguments BEFORE any destructive action
 	parse_args "$@"
 	init_debug_session
-	append_debug_log "Stage=${STAGE} Debug=${DEBUG_MODE} DryRun=${DRY_RUN} Verify=${VERIFY_MODE} SkipCleanup=${SKIP_CLEANUP} KeepArtifacts=${KEEP_ARTIFACTS}"
+	append_debug_log "Stage=${STAGE} Debug=${DEBUG_MODE} DryRun=${DRY_RUN} Verify=${VERIFY_MODE} SkipCleanup=${SKIP_CLEANUP} KeepArtifacts=${KEEP_ARTIFACTS} ConfirmReset=${CONFIRM_RESET}"
 
 	case "$STAGE" in
-		all|verify|websub) ;;
-		*) die "Unsupported stage: ${STAGE}. Supported values: all, verify, websub." ;;
+		all|verify|websub|reset) ;;
+		*) die "Unsupported stage: ${STAGE}. Supported values: all, verify, websub, reset." ;;
 	esac
 
 	if [[ "$STAGE" == "verify" ]]; then
@@ -1553,6 +1710,11 @@ main() {
 			verify_existing_installation || die "Переустановка web-sub завершилась, но проверки не прошли."
 		fi
 		msg_ok "Web-sub страница переустановлена из локального репозитория."
+		exit 0
+	fi
+
+	if [[ "$STAGE" == "reset" ]]; then
+		reset_staging_node
 		exit 0
 	fi
 
