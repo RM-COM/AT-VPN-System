@@ -20,7 +20,7 @@ get_web_roots() {
 
 	if command -v nginx >/dev/null 2>&1; then
 		while IFS= read -r root; do
-			[ -n "$root" ] && roots+=("$root")
+			[ -n "$root" ] && roots+=("${root%/}")
 		done < <(nginx -T 2>/dev/null | awk '/[[:space:]]root[[:space:]]/ {gsub(";", "", $2); print $2}')
 	fi
 
@@ -229,6 +229,37 @@ fix_restored_permissions() {
 	fi
 }
 
+trim_slashes() {
+	local value="${1#/}"
+	value="${value%/}"
+	printf '%s' "$value"
+}
+
+load_restore_runtime_context() {
+	RESTORE_DOMAIN=""
+	RESTORE_WEB_PATH=""
+	RESTORE_SUB_URI=""
+	RESTORE_JSON_URI=""
+
+	if [ -f /etc/x-ui/x-ui.db ] && command -v sqlite3 >/dev/null 2>&1; then
+		RESTORE_SUB_URI=$(sqlite3 -list /etc/x-ui/x-ui.db 'SELECT value FROM settings WHERE key="subURI" LIMIT 1;' 2>/dev/null)
+		RESTORE_JSON_URI=$(sqlite3 -list /etc/x-ui/x-ui.db 'SELECT value FROM settings WHERE key="subJsonURI" LIMIT 1;' 2>/dev/null)
+	fi
+
+	if [ -z "$RESTORE_DOMAIN" ]; then
+		RESTORE_DOMAIN=$(printf '%s\n%s\n' "$RESTORE_SUB_URI" "$RESTORE_JSON_URI" | sed -nE 's#https?://([^/]+)/.*#\1#p' | head -n1)
+	fi
+
+	if [ -z "$RESTORE_WEB_PATH" ]; then
+		RESTORE_WEB_PATH=$(printf '%s' "$RESTORE_JSON_URI" | sed -nE 's#https?://[^/]+/([^/?]+)/?.*#\1#p' | head -n1)
+	fi
+
+	if [ -f /etc/nginx/snippets/includes.conf ] && [ -z "$RESTORE_WEB_PATH" ]; then
+		RESTORE_WEB_PATH=$(sed -nE 's#^[[:space:]]*location = /([^[:space:]]+) \{#\1#p' /etc/nginx/snippets/includes.conf | head -n1)
+		RESTORE_WEB_PATH=$(trim_slashes "$RESTORE_WEB_PATH")
+	fi
+}
+
 start_restored_services() {
 	systemctl daemon-reload 2>/dev/null || true
 	if [ -f /etc/systemd/system/x-ui.service ]; then
@@ -236,10 +267,10 @@ start_restored_services() {
 	fi
 	if command -v nginx >/dev/null 2>&1; then
 		systemctl enable nginx 2>/dev/null || true
-		systemctl start nginx 2>/dev/null || true
+		systemctl restart nginx 2>/dev/null || true
 	fi
 	if [ -f /etc/systemd/system/x-ui.service ]; then
-		systemctl start x-ui 2>/dev/null || true
+		systemctl restart x-ui 2>/dev/null || true
 	fi
 	if [ -x /usr/bin/sub2sing-box ] && ! pgrep -x "sub2sing-box" >/dev/null 2>&1; then
 		nohup /usr/bin/sub2sing-box server --bind 127.0.0.1 --port 8080 >/dev/null 2>&1 &
@@ -274,6 +305,17 @@ verify_restore_result() {
 		echo "[PASS] sub2sing-box process is active"
 	else
 		echo "[FAIL] sub2sing-box process is inactive or binary is missing"
+	fi
+
+	load_restore_runtime_context
+	if command -v curl >/dev/null 2>&1 && [ -n "$RESTORE_DOMAIN" ] && [ -n "$RESTORE_WEB_PATH" ]; then
+		if curl -kfsS --resolve "${RESTORE_DOMAIN}:443:127.0.0.1" "https://${RESTORE_DOMAIN}/${RESTORE_WEB_PATH}/" >/dev/null 2>&1; then
+			echo "[PASS] local HTTPS web-sub responds after restore"
+		else
+			echo "[FAIL] local HTTPS web-sub does not respond after restore"
+		fi
+	else
+		echo "[FAIL] restore runtime context is incomplete for HTTPS web-sub check"
 	fi
 }
 
