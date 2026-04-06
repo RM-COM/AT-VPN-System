@@ -89,6 +89,7 @@ XUI_VERSION=v2.8.11 SUB2SINGBOX_VERSION=v0.0.9 SUB2SINGBOX_ARCH=amd64 sudo bash 
 - [2026-04-06 04:44:23] при повторной установке на те же домены вывод содержит `Reusing existing certificate ...`.
 - [2026-04-06 05:28:47] install-лог не должен содержать warning `duplicate MIME type`.
 - [2026-04-06 05:46:14] install-лог при явном pinning должен показывать `Using pinned x-ui version: ...` и `Using pinned sub2sing-box version: ...`.
+- [2026-04-07 01:12:08] при запуске из локального клона и при наличии зеркал в `vendor/releases/` install-лог должен показывать `Using local mirrored release archive: vendor/releases/3x-ui/...` и `Using local mirrored release archive: vendor/releases/sub2sing-box/...`.
 
 ### 4. Повторная verify-проверка
 
@@ -163,3 +164,4 @@ sudo bash ./backup.sh
 - [2026-04-06 04:44:23] `backup -> uninstall -> restore -> verify` подтверждён.
 - [2026-04-06 05:13:22] client-side локализация `sub2sing-box` UI подтверждена: локальные CSS/JS/JSON по путям `${WEB_PATH}/vendor/lib/sub2sing-box-ui/*` и `${WEB_PATH}/vendor/sb-rule-sets/*` отвечают `200 OK`.
 - [2026-04-06 05:28:47] warning `duplicate MIME type` после `stage=websub` и repeated install устранён и больше не воспроизводится на staging.
+- [2026-04-07 01:12:08] clean install на пустой staging-ноде подтверждён уже и для сценария локальных release-архивов: installer использует зеркалированные `vendor/releases/3x-ui/...` и `vendor/releases/sub2sing-box/...`, а затем успешно проходит финальный `stage=verify`.
