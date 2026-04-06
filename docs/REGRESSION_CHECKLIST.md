@@ -37,6 +37,7 @@ sudo bash ./x-ui-pro-updated.sh -stage verify -debug yes -keep_artifacts yes
 - [2026-04-06 04:44:23] `nginx -t` проходит успешно.
 - [2026-04-06 04:44:23] `nginx`, `x-ui`, `sub2sing-box` активны.
 - [2026-04-06 04:44:23] web-sub по локальному `HTTPS` отвечает, локальный `clash.yaml` и `sb-rule-sets` существуют.
+- [2026-04-06 05:13:22] `sub2sing-box` UI отвечает по локальному `HTTPS` и не содержит runtime-ссылок на `unpkg.com`, `fonts.googleapis.com` и внешние raw JSON `sb-rule-sets`.
 
 ### 2. Reset staging
 
@@ -150,3 +151,4 @@ sudo bash ./backup.sh
 - [2026-04-06 04:44:23] repeated install success-path подтверждён на тех же доменах с reuse сертификатов.
 - [2026-04-06 04:44:23] `stage=websub` подтверждён.
 - [2026-04-06 04:44:23] `backup -> uninstall -> restore -> verify` подтверждён.
+- [2026-04-06 05:13:22] client-side локализация `sub2sing-box` UI подтверждена: локальные CSS/JS/JSON по путям `${WEB_PATH}/vendor/lib/sub2sing-box-ui/*` и `${WEB_PATH}/vendor/sb-rule-sets/*` отвечают `200 OK`.

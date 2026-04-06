@@ -163,6 +163,7 @@ sudo bash ./backup.sh
 - локальная выдача `clash.yaml`
 - работа `nginx`, `x-ui`, `sub2sing-box`
 - внешняя client-side проверка web-sub, `clashmeta/first` и `sub2sing-box` endpoint
+- локальная выдача runtime-ассетов `sub2sing-box` UI без `unpkg.com`, `fonts.googleapis.com` и внешних raw JSON `sb-rule-sets`
 
 Отдельный обязательный regression-маршрут теперь формализован в:
 

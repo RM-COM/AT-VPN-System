@@ -279,6 +279,26 @@ verify_existing_installation() {
 		failures=$((failures + 1))
 	fi
 
+	if [[ -n "$domain" && -n "$sub2singbox_path" ]]; then
+		if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${sub2singbox_path}/" 2>&1); then
+			record_verify_result "PASS" "sub2sing-box UI responds through local HTTPS"
+			[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/sub2sing-box-ui.html"
+			if grep -Eq 'https://unpkg\.com/|https://fonts\.googleapis\.com/|https://github\.com/legiz-ru/sb-rule-sets/raw/main/\.github/sub2sing-box/' <<<"$curl_output"; then
+				record_verify_result "FAIL" "sub2sing-box UI still contains external runtime asset/template URLs"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "sub2sing-box UI uses local runtime assets and local template URLs"
+			fi
+		else
+			record_verify_result "FAIL" "sub2sing-box UI does not respond through local HTTPS"
+			append_debug_log "sub2sing-box curl output: ${curl_output}"
+			failures=$((failures + 1))
+		fi
+	else
+		record_verify_result "FAIL" "Не удалось определить domain/sub2singbox_path для проверки sub2sing-box UI"
+		failures=$((failures + 1))
+	fi
+
 	if (( failures > 0 )); then
 		append_debug_log "Verification finished with failures: ${failures}"
 		return 1
@@ -420,6 +440,61 @@ copy_repo_dir_or_fail() {
 	rm -rf "$dest"
 	mkdir -p "$(dirname "$dest")"
 	cp -a "$SCRIPT_DIR/$rel_path" "$dest"
+}
+sub2singbox_ui_asset_base() {
+	printf '/%s/vendor/lib/sub2sing-box-ui' "$web_path"
+}
+sub2singbox_rule_set_base() {
+	printf '/%s/vendor/sb-rule-sets' "$web_path"
+}
+ensure_sub2singbox_local_ui_proxy() {
+	local includes="/etc/nginx/snippets/includes.conf"
+	local tmp asset_base rules_base
+
+	[[ -f "$includes" ]] || return 0
+
+	asset_base=$(sub2singbox_ui_asset_base)
+	rules_base=$(sub2singbox_rule_set_base)
+
+	tmp=$(mktemp)
+	awk -v asset_base="$asset_base" -v rules_base="$rules_base" '
+		BEGIN { inblock = 0; normalize = 0 }
+		/^[[:space:]]*#sub2sing-box/ { inblock = 1 }
+		{
+			if (inblock && normalize) {
+				if ($0 ~ /proxy_pass http:\/\/127\.0\.0\.1:8080\//) {
+					print
+					normalize = 0
+					next
+				}
+				if ($0 ~ /proxy_set_header Accept-Encoding "";/ || $0 ~ /sub_filter_once off;/ || $0 ~ /sub_filter_types text\/html;/ || $0 ~ /^[[:space:]]*sub_filter /) {
+					next
+				}
+			}
+
+			print
+			if (inblock && $0 ~ /proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;/) {
+				print "\t\tproxy_set_header Accept-Encoding \"\";"
+				print "\t\tsub_filter_once off;"
+				print "\t\tsub_filter_types text/html;"
+				print "\t\tsub_filter '\''https://unpkg.com/mdui@2/mdui.css'\'' '\''" asset_base "/mdui.css'\'';"
+				print "\t\tsub_filter '\''https://unpkg.com/mdui@2/mdui.global.js'\'' '\''" asset_base "/mdui.global.js'\'';"
+				print "\t\tsub_filter '\''https://fonts.googleapis.com/css?family=Roboto|Noto+Sans+SC&display=swap'\'' '\''" asset_base "/sub2sing-box-fonts.css'\'';"
+				print "\t\tsub_filter '\''https://fonts.googleapis.com/icon?family=Material+Icons+Outlined'\'' '\''" asset_base "/material-icons-outlined.css'\'';"
+				print "\t\tsub_filter '\''https://fonts.googleapis.com/icon?family=Material+Icons'\'' '\''" asset_base "/material-icons.css'\'';"
+				print "\t\tsub_filter '\''https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle.json'\'' '\''" rules_base "/ru-bundle.json'\'';"
+				print "\t\tsub_filter '\''https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle-refilter.json'\'' '\''" rules_base "/ru-bundle-refilter.json'\'';"
+				print "\t\tsub_filter '\''https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/re-filter.json'\'' '\''" rules_base "/re-filter.json'\'';"
+				print "\t\tsub_filter '\''https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/secret-sing-box.json'\'' '\''" rules_base "/secret-sing-box.json'\'';"
+				normalize = 1
+			}
+			if (inblock && $0 ~ /^[[:space:]]*}[[:space:]]*$/) {
+				inblock = 0
+			}
+		}
+	' "$includes" > "$tmp"
+	mv "$tmp" "$includes"
+	append_debug_log "Normalized sub2sing-box proxy block for local UI assets"
 }
 replace_web_placeholders() {
 	local target="$1"
@@ -977,6 +1052,18 @@ EOF
 		proxy_set_header Host \$host;
 		proxy_set_header X-Real-IP \$remote_addr;
 		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+		proxy_set_header Accept-Encoding "";
+		sub_filter_once off;
+		sub_filter_types text/html;
+		sub_filter 'https://unpkg.com/mdui@2/mdui.css' '$(sub2singbox_ui_asset_base)/mdui.css';
+		sub_filter 'https://unpkg.com/mdui@2/mdui.global.js' '$(sub2singbox_ui_asset_base)/mdui.global.js';
+		sub_filter 'https://fonts.googleapis.com/css?family=Roboto|Noto+Sans+SC&display=swap' '$(sub2singbox_ui_asset_base)/sub2sing-box-fonts.css';
+		sub_filter 'https://fonts.googleapis.com/icon?family=Material+Icons+Outlined' '$(sub2singbox_ui_asset_base)/material-icons-outlined.css';
+		sub_filter 'https://fonts.googleapis.com/icon?family=Material+Icons' '$(sub2singbox_ui_asset_base)/material-icons.css';
+		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle.json' '$(sub2singbox_rule_set_base)/ru-bundle.json';
+		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle-refilter.json' '$(sub2singbox_rule_set_base)/ru-bundle-refilter.json';
+		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/re-filter.json' '$(sub2singbox_rule_set_base)/re-filter.json';
+		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/secret-sing-box.json' '$(sub2singbox_rule_set_base)/secret-sing-box.json';
 		proxy_pass http://127.0.0.1:8080/;
 		}
     location = /${web_path} {
@@ -1847,6 +1934,9 @@ main() {
 			exit 0
 		fi
 		install_web_sub_page
+		ensure_sub2singbox_local_ui_proxy
+		nginx -t >/dev/null 2>&1 || die "nginx validation failed after updating web/sub2sing-box UI."
+		systemctl reload nginx >/dev/null 2>&1 || die "Failed to reload nginx after updating web/sub2sing-box UI."
 		if is_yes "$VERIFY_MODE"; then
 			verify_existing_installation || die "Переустановка web-sub завершилась, но проверки не прошли."
 		fi

@@ -65,6 +65,8 @@
 - [2026-04-06 04:44:23] Формализованный regression-контур теперь вынесен в отдельный документ `REGRESSION_CHECKLIST.md`; он становится каноническим staging-маршрутом до тех пор, пока набор обязательных сценариев не изменится архитектурно.
 - [2026-04-06 04:48:57] Клиентская внешняя проверка показала разделение остаточных зависимостей: web-sub и `clash` уже обслуживаются локально нашим сервером, но встроенный UI `sub2sing-box` всё ещё ссылается на `unpkg.com` как на внешний frontend CDN.
 - [2026-04-06 04:52:02] Точный состав frontend-зависимостей `sub2sing-box` UI уже подтверждён внешней проверкой: `https://unpkg.com/mdui@2/mdui.css`, `https://unpkg.com/mdui@2/mdui.global.js`, `https://fonts.googleapis.com/css?family=Roboto|Noto+Sans+SC&display=swap`, `https://fonts.googleapis.com/icon?family=Material+Icons`, `https://fonts.googleapis.com/icon?family=Material+Icons+Outlined`.
+- [2026-04-06 05:13:22] Для `sub2sing-box` выбран путь без модификации самого бинарника: HTML ответа переписывается на лету в `nginx` через `sub_filter`, а локальные ассеты и template JSON обслуживаются из `/var/www/subpage/vendor/`.
+- [2026-04-06 05:13:22] В локальном font-bundle `sub2sing-box` UI используется прагматичная схема: `Roboto` и минимальные `Noto Sans SC` latin/cyrillic subset-файлы лежат локально, а CJK-глифы при необходимости добираются через системный fallback, без внешних запросов к Google Fonts.
 
 ## Ограничения текущего этапа
 
@@ -75,3 +77,4 @@
 - [2026-04-06 03:10:17] Full operational regression `backup -> uninstall -> restore -> verify` уже закрыт; следующий этап смещается с восстановления install-контура на формализацию regression-checklist, клиентские сценарии и дальнейший рефакторинг.
 - [2026-04-06 04:44:23] Формализация regression-checklist закрыта на уровне документации; следующий шаг теперь смещается с описания маршрута на клиентские проверки и дальнейшую очистку technical debt.
 - [2026-04-06 04:48:57] Первый client-side smoke-test уже выполнен; следующий шаг смещается с базовой проверки URL на устранение найденных остаточных внешних ссылок и косметического technical debt.
+- [2026-04-06 05:13:22] Локализация runtime-зависимостей `sub2sing-box` UI закрыта; следующий шаг смещается с клиентских CDN/JSON-утечек на оставшийся technical debt и стратегию по внешним бинарникам.
