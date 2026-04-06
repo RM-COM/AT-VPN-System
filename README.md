@@ -80,6 +80,16 @@ sudo bash ./x-ui-pro-updated.sh -install yes -panel 1 -auto_domain yes -debug ye
 
 По умолчанию они указывают на `AT-VPN-System`, но их можно переопределить через переменные окружения перед запуском installer.
 
+Там же теперь зафиксированы и проверенные pinned-версии внешних бинарников:
+
+- `XUI_REPO_SLUG`
+- `XUI_VERSION`
+- `SUB2SINGBOX_REPO_SLUG`
+- `SUB2SINGBOX_VERSION`
+- `SUB2SINGBOX_ARCH`
+
+Поддерживаемый install-путь умеет работать с этими значениями напрямую, поэтому переход на новую версию теперь можно делать осознанно, а не только через неявный `latest`.
+
 ## Диагностика и debug-mode
 
 Проверка уже установленной системы:
@@ -176,6 +186,7 @@ sudo bash ./backup.sh
 - внешняя client-side проверка web-sub, `clashmeta/first` и `sub2sing-box` endpoint
 - локальная выдача runtime-ассетов `sub2sing-box` UI без `unpkg.com`, `fonts.googleapis.com` и внешних raw JSON `sb-rule-sets`
 - отсутствие forbidden upstream-ссылок и неожиданных внешних URL вне allowlist в `stage=verify`
+- repeated install с явным пиннингом `XUI_VERSION=v2.8.11` и `SUB2SINGBOX_VERSION=v0.0.9`
 
 Отдельный обязательный regression-маршрут теперь формализован в:
 

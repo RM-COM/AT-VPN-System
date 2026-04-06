@@ -26,6 +26,11 @@
 - `ipwho.is`
 - `Let's Encrypt` через `certbot`
 
+Уточнение:
+
+- [2026-04-06 05:46:14] Установщик больше не тянет `x-ui.sh` с ветки `main` отдельно: CLI берётся из того же tarball-архива `3x-ui`, что и основной runtime.
+- [2026-04-06 05:46:14] Для `3x-ui` и `sub2sing-box` введён явный pinning через `XUI_REPO_SLUG`, `XUI_VERSION`, `SUB2SINGBOX_REPO_SLUG`, `SUB2SINGBOX_VERSION`, `SUB2SINGBOX_ARCH`.
+
 ### Legacy-файлы
 
 - `x-ui-pro-old.sh` сохранён как исторический файл и по-прежнему содержит старые внешние ссылки

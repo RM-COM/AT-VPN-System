@@ -50,6 +50,9 @@
 - [2026-04-06 05:38:01] Web-sub страница теперь использует проектные ссылки `PROJECT_SUPPORT_URL` и `PROJECT_DONATE_URL`, которые можно переопределить через окружение; по умолчанию они указывают на репозиторий `AT-VPN-System`.
 - [2026-04-06 05:38:01] `stage=verify` теперь проверяет не только runtime-ассеты, но и пользовательские внешние ссылки: устаревшие upstream URL и неожиданные внешние домены вне allowlist считаются regression-ошибкой.
 - [2026-04-06 05:38:01] На staging подтверждено, что web-sub больше не содержит `gozargah_marzban`, `Gozargah/Marzban#donation`, `example.com/path/to/template.json` и `BLUEBL0B/Secret-Sing-Box`.
+- [2026-04-06 05:46:14] Внешние бинарники теперь управляются явно: install-путь поддерживает `XUI_REPO_SLUG`, `XUI_VERSION`, `SUB2SINGBOX_REPO_SLUG`, `SUB2SINGBOX_VERSION`, `SUB2SINGBOX_ARCH`, а `.env.example` уже содержит проверенные значения по умолчанию.
+- [2026-04-06 05:46:14] `3x-ui` CLI теперь берётся из того же tarball-архива, что и остальная payload-часть релиза, поэтому install не смешивает pinned-версию tarball с отдельным raw-файлом из `main`.
+- [2026-04-06 05:46:14] На staging подтверждён install/repeated install с явным пиннингом `v2.8.11` для `3x-ui` и `v0.0.9` для `sub2sing-box`; verify после такого прохода остаётся полностью зелёным.
 
 ## Как использовать сейчас
 

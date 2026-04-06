@@ -82,3 +82,7 @@
 - [2026-04-06 05:38:01] В `sub-3x-ui.html` удалены устаревшие ссылки `gozargah_marzban` / `Gozargah/Marzban#donation`, placeholder `example.com/path/to/template.json` и подключены project links форка через новые placeholders.
 - [2026-04-06 05:38:01] В `sub-3x-ui-classical.html` ссылки на `BLUEBL0B/Secret-Sing-Box` обновлены до актуального `legiz-ru/Secret-Sing-Box`.
 - [2026-04-06 05:38:01] На staging VPS `stage=websub -verify yes`, repeated install через `x-ui-pro.sh` и внешний smoke-test подтвердили: forbidden upstream-ссылки больше не воспроизводятся, а web-sub и `sub2sing-box` используют только локальные или allowlist-внешние URL.
+- [2026-04-06 05:46:14] В `x-ui-pro-updated.sh` введён явный pinning внешних бинарников через `XUI_REPO_SLUG`, `XUI_VERSION`, `SUB2SINGBOX_REPO_SLUG`, `SUB2SINGBOX_VERSION`, `SUB2SINGBOX_ARCH`.
+- [2026-04-06 05:46:14] Install-контур `3x-ui` больше не скачивает `x-ui.sh` отдельно с ветки `main`: CLI теперь берётся из того же tarball, что и остальная `3x-ui` payload-часть, поэтому version pin распространяется и на него.
+- [2026-04-06 05:46:14] Установка `sub2sing-box` переведена с жёстко вшитого `v0.0.9 linux_amd64` на управляемые переменные версии и архива, сохраняя текущий проверенный default `v0.0.9` / `amd64`.
+- [2026-04-06 05:46:14] На staging VPS repeated install подтверждён с явными `XUI_VERSION=v2.8.11`, `SUB2SINGBOX_VERSION=v0.0.9`, `SUB2SINGBOX_ARCH=amd64`; install-лог показывает pinned-версии, а финальный `stage=verify` остаётся полностью зелёным.

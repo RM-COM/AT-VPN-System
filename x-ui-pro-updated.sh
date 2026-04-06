@@ -17,6 +17,11 @@ REPO_SLUG="${REPO_SLUG:-mozaroc/x-ui-pro}"
 REPO_REF="${REPO_REF:-master}"
 REPO_RAW_BASE="${REPO_RAW_BASE:-https://raw.githubusercontent.com/${REPO_SLUG}/${REPO_REF}}"
 SUB2SINGBOX_SERVICE="/etc/systemd/system/sub2sing-box.service"
+XUI_REPO_SLUG="${XUI_REPO_SLUG:-MHSanaei/3x-ui}"
+XUI_VERSION="${XUI_VERSION:-v2.8.11}"
+SUB2SINGBOX_REPO_SLUG="${SUB2SINGBOX_REPO_SLUG:-legiz-ru/sub2sing-box}"
+SUB2SINGBOX_VERSION="${SUB2SINGBOX_VERSION:-v0.0.9}"
+SUB2SINGBOX_ARCH="${SUB2SINGBOX_ARCH:-amd64}"
 PROJECT_REPO_URL="${PROJECT_REPO_URL:-https://github.com/RM-COM/AT-VPN-System}"
 PROJECT_SUPPORT_URL="${PROJECT_SUPPORT_URL:-${PROJECT_REPO_URL}}"
 PROJECT_DONATE_URL="${PROJECT_DONATE_URL:-${PROJECT_REPO_URL}}"
@@ -45,6 +50,12 @@ timestamp() { date '+%Y-%m-%d %H:%M:%S'; }
 trim_slashes() {
 	local value="${1#/}"
 	value="${value%/}"
+	printf '%s' "$value"
+}
+ensure_version_tag() {
+	local value="$1"
+	[[ -n "$value" ]] || return 0
+	[[ "$value" == v* ]] || value="v${value}"
 	printf '%s' "$value"
 }
 escape_sed_replacement() {
@@ -1698,44 +1709,34 @@ install_panel() {
 apt-get update && apt-get install -y -q wget curl tar tzdata
     cd /usr/local/
 
-    # Download resources
-    if [ $# == 0 ]; then
-        tag_version=$(curl -Ls "https://api.github.com/repos/MHSanaei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-        if [[ ! -n "$tag_version" ]]; then
+    local requested_tag="${1:-$XUI_VERSION}"
+    local tag_version="" tag_version_numeric="" min_version="2.3.5" url=""
+
+    if [[ -n "$requested_tag" ]]; then
+        tag_version=$(ensure_version_tag "$requested_tag")
+        tag_version_numeric=${tag_version#v}
+        if [[ "$(printf '%s\n' "$min_version" "$tag_version_numeric" | sort -V | head -n1)" != "$min_version" ]]; then
+            printf '%bPlease use a newer version (at least v%s). Exiting installation.%b\n' "${red}" "$min_version" "${plain}"
+            exit 1
+        fi
+        echo -e "Using pinned x-ui version: ${tag_version}"
+    else
+        tag_version=$(curl -Ls "https://api.github.com/repos/${XUI_REPO_SLUG}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        if [[ -z "$tag_version" ]]; then
             printf '%bTrying to fetch version with IPv4...%b\n' "${yellow}" "${plain}"
-            tag_version=$(curl -4 -Ls "https://api.github.com/repos/MHSanaei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-            if [[ ! -n "$tag_version" ]]; then
+            tag_version=$(curl -4 -Ls "https://api.github.com/repos/${XUI_REPO_SLUG}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+            if [[ -z "$tag_version" ]]; then
                 printf '%bFailed to fetch x-ui version, it may be due to GitHub API restrictions, please try it later%b\n' "${red}" "${plain}"
                 exit 1
             fi
         fi
         echo -e "Got x-ui latest version: ${tag_version}, beginning the installation..."
-        wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/MHSanaei/3x-ui/releases/download/${tag_version}/x-ui-linux-$(arch).tar.gz
-        if [[ $? -ne 0 ]]; then
-            printf '%bDownloading x-ui failed, please be sure that your server can access GitHub%b\n' "${red}" "${plain}"
-            exit 1
-        fi
-    else
-        tag_version=$1
-        tag_version_numeric=${tag_version#v}
-        min_version="2.3.5"
-
-        if [[ "$(printf '%s\n' "$min_version" "$tag_version_numeric" | sort -V | head -n1)" != "$min_version" ]]; then
-            printf '%bPlease use a newer version (at least v2.3.5). Exiting installation.%b\n' "${red}" "${plain}"
-            exit 1
-        fi
-
-        url="https://github.com/MHSanaei/3x-ui/releases/download/${tag_version}/x-ui-linux-$(arch).tar.gz"
-        echo -e "Beginning to install x-ui $1"
-        wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz ${url}
-        if [[ $? -ne 0 ]]; then
-            printf '%bDownload x-ui %s failed, please check if the version exists%b\n' "${red}" "$1" "${plain}"
-            exit 1
-        fi
     fi
-    wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/MHSanaei/3x-ui/main/x-ui.sh
+
+    url="https://github.com/${XUI_REPO_SLUG}/releases/download/${tag_version}/x-ui-linux-$(arch).tar.gz"
+    wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz "${url}"
     if [[ $? -ne 0 ]]; then
-        printf '%bFailed to download x-ui.sh%b\n' "${red}" "${plain}"
+        printf '%bDownload x-ui %s failed, please check if the version exists and GitHub is reachable%b\n' "${red}" "${tag_version}" "${plain}"
         exit 1
     fi
 
@@ -1766,13 +1767,13 @@ apt-get update && apt-get install -y -q wget curl tar tzdata
     fi
     chmod +x x-ui "$xray_target"
 
-    # Update x-ui cli and se set permission
-    mv -f /usr/bin/x-ui-temp /usr/bin/x-ui
+    # Use the CLI script bundled with the exact tarball version.
+    cp -f x-ui.sh /usr/bin/x-ui
     chmod +x /usr/bin/x-ui
 	config_after_install
 
     if [[ "$release" == "alpine" ]]; then
-        wget --inet4-only -O /etc/init.d/x-ui https://raw.githubusercontent.com/MHSanaei/3x-ui/main/x-ui.rc
+        wget --inet4-only -O /etc/init.d/x-ui "https://raw.githubusercontent.com/${XUI_REPO_SLUG}/${tag_version}/x-ui.rc"
         if [[ $? -ne 0 ]]; then
             printf '%bFailed to download x-ui.rc%b\n' "${red}" "${plain}"
             exit 1
@@ -1867,11 +1868,17 @@ install_sub2singbox() {
 	fi
 	rm -f "$SUB2SINGBOX_SERVICE" /etc/systemd/system/multi-user.target.wants/sub2sing-box.service
 	systemctl daemon-reload 2>/dev/null || true
-	wget -P /root/ https://github.com/legiz-ru/sub2sing-box/releases/download/v0.0.9/sub2sing-box_0.0.9_linux_amd64.tar.gz
-	tar -xvzf /root/sub2sing-box_0.0.9_linux_amd64.tar.gz -C /root/ --strip-components=1 sub2sing-box_0.0.9_linux_amd64/sub2sing-box
+	local sub2singbox_version_tag sub2singbox_version_num sub2singbox_archive sub2singbox_url
+	sub2singbox_version_tag=$(ensure_version_tag "$SUB2SINGBOX_VERSION")
+	sub2singbox_version_num=${sub2singbox_version_tag#v}
+	sub2singbox_archive="sub2sing-box_${sub2singbox_version_num}_linux_${SUB2SINGBOX_ARCH}.tar.gz"
+	sub2singbox_url="https://github.com/${SUB2SINGBOX_REPO_SLUG}/releases/download/${sub2singbox_version_tag}/${sub2singbox_archive}"
+	printf 'Using pinned sub2sing-box version: %s (%s)\n' "${sub2singbox_version_tag}" "${SUB2SINGBOX_ARCH}"
+	wget -P /root/ "${sub2singbox_url}"
+	tar -xvzf "/root/${sub2singbox_archive}" -C /root/ --strip-components=1 "sub2sing-box_${sub2singbox_version_num}_linux_${SUB2SINGBOX_ARCH}/sub2sing-box"
 	mv /root/sub2sing-box /usr/bin/
 	chmod +x /usr/bin/sub2sing-box
-	rm /root/sub2sing-box_0.0.9_linux_amd64.tar.gz
+	rm "/root/${sub2singbox_archive}"
 	write_sub2singbox_service
 	systemctl daemon-reload
 	systemctl enable --now sub2sing-box.service

@@ -75,6 +75,12 @@ sudo bash ./x-ui-pro.sh -install yes -panel 1 -subdomain <домен> -reality_d
 sudo bash ./x-ui-pro.sh -install yes -panel 1 -subdomain 185.207.64.40.sslip.io -reality_domain 185-207-64-40.sslip.io -debug yes -keep_artifacts yes -verify yes
 ```
 
+Пример install с явным пиннингом бинарников:
+
+```bash
+XUI_VERSION=v2.8.11 SUB2SINGBOX_VERSION=v0.0.9 SUB2SINGBOX_ARCH=amd64 sudo bash ./x-ui-pro.sh -install yes -panel 1 -subdomain 185.207.64.40.sslip.io -reality_domain 185-207-64-40.sslip.io -debug yes -keep_artifacts yes -verify yes
+```
+
 Ожидаемый результат:
 
 - [2026-04-06 04:44:23] installer завершается с кодом `0`.
@@ -82,6 +88,7 @@ sudo bash ./x-ui-pro.sh -install yes -panel 1 -subdomain 185.207.64.40.sslip.io 
 - [2026-04-06 04:44:23] `SSH`-сеанс возвращается без ложного «подвисания».
 - [2026-04-06 04:44:23] при повторной установке на те же домены вывод содержит `Reusing existing certificate ...`.
 - [2026-04-06 05:28:47] install-лог не должен содержать warning `duplicate MIME type`.
+- [2026-04-06 05:46:14] install-лог при явном pinning должен показывать `Using pinned x-ui version: ...` и `Using pinned sub2sing-box version: ...`.
 
 ### 4. Повторная verify-проверка
 
