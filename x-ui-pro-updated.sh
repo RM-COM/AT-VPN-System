@@ -2242,5 +2242,377 @@ main() {
 	show_details
 }
 
+print_execution_plan() {
+	msg_inf "DRY-RUN: installation will not modify the system."
+	msg_inf "Execution plan:"
+	msg_inf "1. Prepare the environment and clean any previous installation state."
+	msg_inf "2. Generate paths, ports and runtime configuration."
+	msg_inf "3. Install packages, issue SSL and configure nginx."
+	msg_inf "4. Install 3x-ui, sub2sing-box, fake-site and web-sub."
+	msg_inf "5. Verify services and print final access details."
+	print_runtime_context
+}
+
+verify_existing_installation() {
+	local failures=0
+	local sqlite_result="" curl_output="" unexpected_urls=""
+	init_debug_session
+	load_existing_runtime_context
+
+	capture_file_if_exists "/etc/nginx/nginx.conf" "files/nginx.conf"
+	capture_file_if_exists "/etc/nginx/snippets/includes.conf" "files/includes.conf"
+	capture_file_if_exists "/etc/nginx/stream-enabled/stream.conf" "files/stream.conf"
+	capture_file_if_exists "/var/www/subpage/index.html" "files/subpage/index.html"
+	capture_file_if_exists "/var/www/subpage/clash.yaml" "files/subpage/clash.yaml"
+	capture_file_if_exists "$XUIDB" "files/x-ui.db"
+	capture_command_output "commands/systemctl-nginx.txt" systemctl status nginx --no-pager
+	capture_command_output "commands/systemctl-x-ui.txt" systemctl status x-ui --no-pager
+	if [[ -f "$SUB2SINGBOX_SERVICE" ]]; then
+		capture_command_output "commands/systemctl-sub2sing-box.txt" systemctl status sub2sing-box --no-pager
+	fi
+	capture_command_output "commands/nginx-test.txt" nginx -t
+	capture_command_output "commands/nginx-dump.txt" nginx -T
+
+	if [[ -f "$XUIDB" ]]; then
+		record_verify_result "PASS" "x-ui database file found: ${XUIDB}"
+	else
+		record_verify_result "FAIL" "x-ui database file not found: ${XUIDB}"
+		failures=$((failures + 1))
+	fi
+
+	if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
+		sqlite_result=$(sqlite3 "$XUIDB" 'PRAGMA integrity_check;' 2>&1)
+		append_debug_log "sqlite integrity_check: ${sqlite_result}"
+		if [[ "$sqlite_result" == "ok" ]]; then
+			record_verify_result "PASS" "SQLite integrity_check returned ok"
+		else
+			record_verify_result "FAIL" "SQLite integrity_check returned: ${sqlite_result}"
+			failures=$((failures + 1))
+		fi
+	fi
+
+	if verify_reality_inbound_keys; then
+		record_verify_result "PASS" "REALITY inbound contains valid private/public key pair"
+	else
+		record_verify_result "FAIL" "REALITY inbound is missing or contains invalid private/public key pair"
+		failures=$((failures + 1))
+	fi
+
+	if nginx -t >/dev/null 2>&1; then
+		record_verify_result "PASS" "nginx configuration passes nginx -t"
+	else
+		record_verify_result "FAIL" "nginx configuration fails nginx -t"
+		failures=$((failures + 1))
+	fi
+
+	if systemctl is-active --quiet nginx; then
+		record_verify_result "PASS" "nginx service is active"
+	else
+		record_verify_result "FAIL" "nginx service is inactive"
+		failures=$((failures + 1))
+	fi
+
+	if systemctl is-active --quiet x-ui; then
+		record_verify_result "PASS" "x-ui service is active"
+	else
+		record_verify_result "FAIL" "x-ui service is inactive"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -f "$SUB2SINGBOX_SERVICE" ]]; then
+		if systemctl is-active --quiet sub2sing-box; then
+			record_verify_result "PASS" "sub2sing-box service is active"
+		else
+			record_verify_result "FAIL" "sub2sing-box service is inactive"
+			failures=$((failures + 1))
+		fi
+	elif pgrep -x "sub2sing-box" >/dev/null 2>&1; then
+		record_verify_result "PASS" "sub2sing-box process is active"
+	else
+		record_verify_result "FAIL" "sub2sing-box process is inactive"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -f /var/www/subpage/index.html ]]; then
+		record_verify_result "PASS" "Local web-sub page found"
+	else
+		record_verify_result "FAIL" "Local web-sub page not found"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -f /var/www/subpage/clash.yaml ]]; then
+		record_verify_result "PASS" "Local clash.yaml found"
+	else
+		record_verify_result "FAIL" "Local clash.yaml not found"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -d /var/www/subpage/vendor/sb-rule-sets ]] && find /var/www/subpage/vendor/sb-rule-sets -type f -name '*.json' | grep -q .; then
+		record_verify_result "PASS" "Local sb-rule-sets are present"
+	else
+		record_verify_result "FAIL" "Local sb-rule-sets are missing"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -n "$domain" && -n "$web_path" ]]; then
+		if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${web_path}/" 2>&1); then
+			record_verify_result "PASS" "Web-sub page responds through local HTTPS"
+			[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/websub-index-body.html"
+			if contains_forbidden_external_reference "$curl_output"; then
+				record_verify_result "FAIL" "Web-sub page contains legacy upstream links or placeholder URLs"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "Web-sub page is free of legacy upstream links and placeholder URLs"
+			fi
+			unexpected_urls=$(collect_unexpected_external_urls "$curl_output")
+			if [[ -n "$unexpected_urls" ]]; then
+				record_verify_result "FAIL" "Web-sub page contains unexpected external links outside the allowlist"
+				append_debug_log "Unexpected web-sub external URLs: ${unexpected_urls//$'\n'/, }"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "Web-sub page uses only local and allowlist external links"
+			fi
+		else
+			record_verify_result "FAIL" "Web-sub page does not respond through local HTTPS"
+			append_debug_log "curl output: ${curl_output}"
+			failures=$((failures + 1))
+		fi
+	else
+		record_verify_result "FAIL" "Could not determine domain/web_path for the local HTTP check"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -n "$domain" && -n "$sub2singbox_path" ]]; then
+		if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${sub2singbox_path}/" 2>&1); then
+			record_verify_result "PASS" "sub2sing-box UI responds through local HTTPS"
+			[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/sub2sing-box-ui.html"
+			if grep -Eq 'https://unpkg\.com/|https://fonts\.googleapis\.com/|https://github\.com/legiz-ru/sb-rule-sets/raw/main/\.github/sub2sing-box/' <<<"$curl_output"; then
+				record_verify_result "FAIL" "sub2sing-box UI still contains external runtime asset/template URLs"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "sub2sing-box UI uses local runtime assets and local template URLs"
+			fi
+			if contains_forbidden_external_reference "$curl_output"; then
+				record_verify_result "FAIL" "sub2sing-box UI contains forbidden legacy external links"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "sub2sing-box UI does not contain forbidden legacy external links"
+			fi
+			unexpected_urls=$(collect_unexpected_external_urls "$curl_output")
+			if [[ -n "$unexpected_urls" ]]; then
+				record_verify_result "FAIL" "sub2sing-box UI contains unexpected external links outside allowlist"
+				append_debug_log "Unexpected sub2sing-box external URLs: ${unexpected_urls//$'\n'/, }"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "sub2sing-box UI uses only allowlist external links"
+			fi
+		else
+			record_verify_result "FAIL" "sub2sing-box UI does not respond through local HTTPS"
+			append_debug_log "sub2sing-box curl output: ${curl_output}"
+			failures=$((failures + 1))
+		fi
+	else
+		record_verify_result "FAIL" "Could not determine domain/sub2singbox_path for the sub2sing-box UI check"
+		failures=$((failures + 1))
+	fi
+
+	if (( failures > 0 )); then
+		append_debug_log "Verification finished with failures: ${failures}"
+		return 1
+	fi
+
+	append_debug_log "Verification finished successfully"
+	return 0
+}
+
+main() {
+	# 1. Parse arguments BEFORE any destructive action
+	parse_args "$@"
+	init_debug_session
+	append_debug_log "Stage=${STAGE} Debug=${DEBUG_MODE} DryRun=${DRY_RUN} Verify=${VERIFY_MODE} SkipCleanup=${SKIP_CLEANUP} KeepArtifacts=${KEEP_ARTIFACTS} ConfirmReset=${CONFIRM_RESET}"
+
+	case "$STAGE" in
+		all|verify|websub|reset) ;;
+		*) die "Unsupported stage: ${STAGE}. Supported values: all, verify, websub, reset." ;;
+	esac
+
+	if [[ "$STAGE" == "verify" ]]; then
+		if is_yes "$DRY_RUN"; then
+			msg_inf "DRY-RUN verify: only the current installation diagnostics will be executed."
+			load_existing_runtime_context
+			exit 0
+		fi
+		verify_existing_installation || die "Current installation verification finished with errors."
+		msg_ok "Current installation verification finished successfully."
+		exit 0
+	fi
+
+	if [[ "$STAGE" == "websub" ]]; then
+		load_existing_runtime_context
+		if [[ -z "$domain" || -z "$web_path" || -z "$sub_path" || -z "$json_path" || -z "$sub2singbox_path" ]]; then
+			die "Could not restore the runtime context for stage=websub. Install the system first or pass the parameters manually."
+		fi
+		if is_yes "$DRY_RUN"; then
+			msg_inf "DRY-RUN websub: the local web-sub page will be reinstalled without a full stack reinstall."
+			print_runtime_context
+			exit 0
+		fi
+		install_web_sub_page
+		ensure_sub2singbox_local_ui_proxy
+		nginx -t >/dev/null 2>&1 || die "nginx validation failed after updating web/sub2sing-box UI."
+		systemctl reload nginx >/dev/null 2>&1 || die "Failed to reload nginx after updating web/sub2sing-box UI."
+		if is_yes "$VERIFY_MODE"; then
+			verify_existing_installation || die "Web-sub reinstall completed, but the post-checks failed."
+		fi
+		msg_ok "Web-sub page reinstalled from the local repository."
+		exit 0
+	fi
+
+	if [[ "$STAGE" == "reset" ]]; then
+		reset_staging_node
+		exit 0
+	fi
+
+	# 2. Handle uninstall early (no wipe needed)
+	if [[ "${UNINSTALL}" == *"y"* ]]; then
+		if is_yes "$DRY_RUN"; then
+			msg_inf "DRY-RUN uninstall: removal will not be executed."
+			exit 0
+		fi
+		uninstall_xui
+		clear && msg_ok "Completely Uninstalled!"
+		exit 0
+	fi
+
+	# 3. Detect IPs (needed for auto-domain)
+	detect_ips
+
+	# 4. Auto-domain setup
+	if [[ "${AUTODOMAIN}" == *"y"* ]]; then
+		domain="${IP4}.cdn-one.org"
+		reality_domain="${IP4//./-}.cdn-one.org"
+	fi
+
+	# 5. Domain prompts
+	while true; do
+		if [[ -n "$domain" ]]; then
+			break
+		fi
+		printf "Enter available subdomain (sub.domain.tld): " && read domain
+	done
+
+	domain=$(echo "$domain" 2>&1 | tr -d '[:space:]')
+	SubDomain=$(echo "$domain" 2>&1 | sed 's/^[^ ]* \|\..*//g')
+	MainDomain=$(echo "$domain" 2>&1 | sed 's/.*\.\([^.]*\..*\)$/\1/')
+
+	if [[ "${SubDomain}.${MainDomain}" != "${domain}" ]]; then
+		MainDomain=${domain}
+	fi
+
+	while true; do
+		if [[ -n "$reality_domain" ]]; then
+			break
+		fi
+		printf "Enter available subdomain for REALITY (sub.domain.tld): " && read reality_domain
+	done
+
+	reality_domain=$(echo "$reality_domain" 2>&1 | tr -d '[:space:]')
+	RealitySubDomain=$(echo "$reality_domain" 2>&1 | sed 's/^[^ ]* \|\..*//g')
+	RealityMainDomain=$(echo "$reality_domain" 2>&1 | sed 's/.*\.\([^.]*\..*\)$/\1/')
+
+	if [[ "${RealitySubDomain}.${RealityMainDomain}" != "${reality_domain}" ]]; then
+		RealityMainDomain=${reality_domain}
+	fi
+
+	# 6. Read existing XUI DB before cleanup so upgrade diagnostics keep access to the old database.
+	read_existing_xui_db
+
+	# 7. Generate random ports and paths
+	sub_port=$(make_port)
+	panel_port=$(make_port)
+	web_path=$(gen_random_string 10)
+	sub2singbox_path=$(gen_random_string 10)
+	sub_path=$(gen_random_string 10)
+	json_path=$(gen_random_string 10)
+	panel_path=$(gen_random_string 10)
+	ws_port=$(make_port)
+	trojan_port=$(make_port)
+	ws_path=$(gen_random_string 10)
+	trojan_path=$(gen_random_string 10)
+	xhttp_path=$(gen_random_string 10)
+	config_username=$(gen_random_string 10)
+	config_password=$(gen_random_string 10)
+	sub_uri="https://${domain}/${sub_path}/"
+	json_uri="https://${domain}/${web_path}/?name="
+	print_runtime_context
+
+	if is_yes "$DRY_RUN"; then
+		print_execution_plan
+		exit 0
+	fi
+
+	# 8. NOW do destructive cleanup (after args parsed, uninstall handled)
+	clean_previous_install
+
+	# 9. Install packages & disable UFW initially
+	ufw disable 2>/dev/null
+	install_packages
+
+	# 10. Auto-domain DNS verification
+	if [[ "${AUTODOMAIN}" == *"y"* ]]; then
+		if ! resolve_to_ip "$domain"; then
+			die "Auto-domain $domain does not resolve to this server IP ($IP4). Fix DNS/service and retry."
+		fi
+		if ! resolve_to_ip "$reality_domain"; then
+			die "Auto-domain $reality_domain does not resolve to this server IP ($IP4). Fix DNS/service and retry."
+		fi
+	fi
+
+	# 11. Obtain SSL certificates
+	obtain_ssl "$domain"
+	obtain_ssl "$reality_domain"
+
+	# 12. Setup nginx configs
+	setup_nginx
+	enable_nginx_sites
+
+	# 13. Install or restart X-UI panel
+	if systemctl is-active --quiet x-ui; then
+		x-ui restart
+	else
+		install_panel
+		update_xui_db
+		if ! systemctl is-enabled --quiet x-ui; then
+			systemctl daemon-reload && systemctl enable x-ui.service
+		fi
+		x-ui restart
+	fi
+
+	# 14. Tune system (idempotent sysctl)
+	tune_system
+
+	# 15. Install sub2sing-box
+	install_sub2singbox
+
+	# 16. Install fake site
+	install_fake_site
+
+	# 17. Install web sub page
+	install_web_sub_page
+
+	# 18. Setup crontab
+	setup_crontab
+
+	# 19. Setup UFW
+	setup_ufw
+
+	if is_yes "$VERIFY_MODE"; then
+		verify_existing_installation || die "Installation completed, but the final post-checks failed."
+	fi
+
+	# 20. Show details
+	show_details
+}
+
 main "$@"
 #################################################N-joy##################################################
