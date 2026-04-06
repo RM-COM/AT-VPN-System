@@ -156,11 +156,16 @@ sudo bash ./backup.sh
 На staging-сервере уже подтверждены:
 
 - полный install-поток
+- repeated install поверх уже работающей ноды
 - `stage=verify`
 - `stage=websub`
 - локальная выдача web-sub через HTTPS
 - локальная выдача `clash.yaml`
 - работа `nginx`, `x-ui`, `sub2sing-box`
+
+Отдельный обязательный regression-маршрут теперь формализован в:
+
+- `docs/REGRESSION_CHECKLIST.md`
 
 ## Документация проекта
 
