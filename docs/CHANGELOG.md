@@ -91,3 +91,4 @@
 - [2026-04-06 20:52:47] В `x-ui-pro-updated.sh` исправлен парсинг `xray x25519`: installer больше не ищет несуществующие `PrivateKey:` / `PublicKey:`, а корректно разбирает реальный вывод Xray вида `Private key:` / `Public key:`.
 - [2026-04-06 20:52:47] В `x-ui-pro-updated.sh` добавлена жёсткая валидация `REALITY`-ключей: при пустом или битом `private/public key` installer теперь завершает установку ошибкой, вместо того чтобы тихо создать сломанный `REALITY`-inbound.
 - [2026-04-06 20:52:47] `stage=verify` усилен проверкой `REALITY`-inbound в `x-ui.db`: regression теперь фиксируется, если в базе отсутствует валидная пара `private/public key` для `security = reality`.
+- [2026-04-06 21:03:30] Для актуального `xray-linux-amd64` из `3x-ui v2.8.11` уточнён реальный формат `x25519`: публичный клиентский `REALITY`-ключ приходит как `Password`, а не как `PublicKey` / `Public key`; parser installer обновлён под этот формат.

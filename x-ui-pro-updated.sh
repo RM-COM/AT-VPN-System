@@ -793,7 +793,7 @@ extract_x25519_private_key() {
 	printf '%s\n' "$1" | awk -F': ' '/^Private[[:space:]]*[Kk]ey:/{print $2; exit}'
 }
 extract_x25519_public_key() {
-	printf '%s\n' "$1" | awk -F': ' '/^Public[[:space:]]*[Kk]ey:/{print $2; exit}'
+	printf '%s\n' "$1" | awk -F': ' '/^Public[[:space:]]*[Kk]ey:/{print $2; exit} /^Password:/{print $2; exit}'
 }
 generate_reality_x25519_pair() {
 	local xray_bin="$1" output=""
