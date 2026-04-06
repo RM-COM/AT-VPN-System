@@ -567,9 +567,7 @@ detect_ips() {
 
 resolve_to_ip() {
 	local host="$1"
-	local a
-	a=$(getent ahostsv4 "$host" 2>/dev/null | awk 'NR==1{print $1}')
-	[[ -n "$a" ]] && [[ "$a" == "$IP4" ]]
+	getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | grep -Fxq "$IP4"
 }
 
 ##############################Port & String Generators####################################################
@@ -611,6 +609,44 @@ arch() {
 		s390x) echo 's390x' ;;
 		*) printf '%bUnsupported CPU architecture!%b\n' "${green}" "${plain}" && exit 1 ;;
 	esac
+}
+xray_binary_path() {
+	local arch_name
+	arch_name=$(arch)
+	case "$arch_name" in
+		armv5|armv6|armv7)
+			if [[ -x /usr/local/x-ui/bin/xray-linux-arm ]]; then
+				printf '%s\n' "/usr/local/x-ui/bin/xray-linux-arm"
+			else
+				printf '%s\n' "/usr/local/x-ui/bin/xray-linux-${arch_name}"
+			fi
+			;;
+		*)
+			printf '%s\n' "/usr/local/x-ui/bin/xray-linux-${arch_name}"
+			;;
+	esac
+}
+detect_ssh_ports() {
+	local ports=()
+	local current_port
+	local port
+
+	current_port=$(printf '%s\n' "${SSH_CONNECTION:-}" | awk 'NF >= 4 {print $4}')
+	if [[ "$current_port" =~ ^[0-9]+$ ]]; then
+		ports+=("$current_port")
+	fi
+
+	if command -v sshd >/dev/null 2>&1; then
+		while IFS= read -r port; do
+			[[ "$port" =~ ^[0-9]+$ ]] && ports+=("$port")
+		done < <(sshd -T 2>/dev/null | awk '$1 == "port" {print $2}')
+	fi
+
+	if [[ ${#ports[@]} -eq 0 ]]; then
+		ports+=(22)
+	fi
+
+	printf '%s\n' "${ports[@]}" | awk 'NF && !seen[$0]++'
 }
 
 ##############################Sysctl Idempotent Writer#####################################################
@@ -709,7 +745,24 @@ uninstall_xui() {
 	"$PKG_MGR" -y purge certbot python3-certbot-nginx nginx nginx-common nginx-core nginx-full || true
 	"$PKG_MGR" -y autoremove || true
 	"$PKG_MGR" -y autoclean || true
-	remove_reset_residuals
+	stop_sub2singbox
+	systemctl stop nginx x-ui 2>/dev/null || true
+	systemctl disable x-ui sub2sing-box 2>/dev/null || true
+	rm -rf /etc/systemd/system/x-ui.service
+	rm -rf /etc/systemd/system/multi-user.target.wants/x-ui.service
+	rm -rf /etc/systemd/system/sub2sing-box.service
+	rm -rf /etc/systemd/system/multi-user.target.wants/sub2sing-box.service
+	rm -rf /usr/local/x-ui
+	rm -rf /etc/x-ui
+	rm -rf /usr/bin/x-ui
+	rm -rf /usr/bin/sub2sing-box
+	rm -rf /var/www/subpage
+	rm -rf /var/www/html
+	rm -rf /etc/nginx
+	rm -rf /usr/share/nginx
+	rm -rf /root/cert
+	systemctl daemon-reload 2>/dev/null || true
+	systemctl reset-failed nginx x-ui sub2sing-box 2>/dev/null || true
 }
 
 ##############################Clean Previous Install######################################################
@@ -719,13 +772,28 @@ clean_previous_install() {
 		append_debug_log "Cleanup skipped because SKIP_CLEANUP is enabled"
 		return 0
 	fi
-	systemctl stop x-ui 2>/dev/null
+	stop_sub2singbox
+	systemctl stop nginx x-ui 2>/dev/null || true
+	systemctl disable x-ui sub2sing-box 2>/dev/null || true
 	rm -rf /etc/systemd/system/x-ui.service
+	rm -rf /etc/systemd/system/multi-user.target.wants/x-ui.service
+	rm -rf /etc/systemd/system/sub2sing-box.service
+	rm -rf /etc/systemd/system/multi-user.target.wants/sub2sing-box.service
 	rm -rf /usr/local/x-ui
 	rm -rf /etc/x-ui
+	rm -rf /usr/bin/x-ui
+	rm -rf /usr/bin/sub2sing-box
+	rm -rf /var/www/subpage
+	rm -rf /var/www/html
+	rm -rf /root/cert
+	rm -f /etc/nginx/snippets/includes.conf
+	rm -f /etc/nginx/modules-enabled/50-mod-stream.conf
+	rm -f /etc/nginx/modules-enabled/70-mod-stream-geoip2.conf
 	rm -rf /etc/nginx/sites-enabled/*
 	rm -rf /etc/nginx/sites-available/*
 	rm -rf /etc/nginx/stream-enabled/*
+	systemctl daemon-reload 2>/dev/null || true
+	systemctl reset-failed nginx x-ui sub2sing-box 2>/dev/null || true
 }
 
 ##############################Install Packages############################################################
@@ -742,6 +810,13 @@ install_packages() {
 ##############################SSL Helper##################################################################
 obtain_ssl() {
 	local cert_domain="$1"
+	local cert_dir="/etc/letsencrypt/live/${cert_domain}"
+	if [[ -f "${cert_dir}/fullchain.pem" && -f "${cert_dir}/privkey.pem" ]] && \
+		openssl x509 -checkend 86400 -noout -in "${cert_dir}/fullchain.pem" >/dev/null 2>&1; then
+		msg_inf "Reusing existing certificate for ${cert_domain}"
+		append_debug_log "Reusing existing certificate for ${cert_domain}"
+		return 0
+	fi
 	certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email -d "$cert_domain"
 	if [[ ! -d "/etc/letsencrypt/live/${cert_domain}/" ]]; then
 		systemctl start nginx >/dev/null 2>&1
@@ -752,6 +827,7 @@ obtain_ssl() {
 ##############################Nginx Config################################################################
 setup_nginx() {
 	mkdir -p "/root/cert/${domain}"
+	mkdir -p /etc/nginx/modules-enabled /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/snippets /etc/nginx/stream-enabled
 	chmod 700 /root/cert/*
 
 	ln -sf "/etc/letsencrypt/live/${domain}/fullchain.pem" "/root/cert/${domain}/fullchain.pem"
@@ -1087,17 +1163,21 @@ EOF
 ##############################Update XUI DB###############################################################
 update_xui_db() {
 if [[ -f "$XUIDB" ]]; then
+		local xray_bin
         x-ui stop
-        output=$(/usr/local/x-ui/bin/xray-linux-amd64 x25519)
+		xray_bin=$(xray_binary_path)
+		[[ -x "$xray_bin" ]] || die "xray helper binary not found or not executable: ${xray_bin}"
+        output=$("$xray_bin" x25519)
 
         private_key=$(echo "$output" | grep "^PrivateKey:" | awk '{print $2}')
         public_key=$(echo "$output" | grep "^PublicKey:" | awk '{print $2}')
 
-        client_id=$(/usr/local/x-ui/bin/xray-linux-amd64 uuid)
-        client_id2=$(/usr/local/x-ui/bin/xray-linux-amd64 uuid)
-        client_id3=$(/usr/local/x-ui/bin/xray-linux-amd64 uuid)
+        client_id=$("$xray_bin" uuid)
+        client_id2=$("$xray_bin" uuid)
+        client_id3=$("$xray_bin" uuid)
 	trojan_pass=$(gen_random_string 10)
         emoji_flag=$(LC_ALL=en_US.UTF-8 curl -s https://ipwho.is/ | jq -r '.flag.emoji')
+		[[ -n "$emoji_flag" && "$emoji_flag" != "null" ]] || emoji_flag="VPN"
 
 	# Generate shortIds via loop
 	local shor=()
@@ -1525,11 +1605,13 @@ apt-get update && apt-get install -y -q wget curl tar tzdata
     chmod +x x-ui.sh
 
     # Check the system's architecture and rename the file accordingly
+	local xray_target="bin/xray-linux-$(arch)"
     if [[ $(arch) == "armv5" || $(arch) == "armv6" || $(arch) == "armv7" ]]; then
         mv bin/xray-linux-$(arch) bin/xray-linux-arm
         chmod +x bin/xray-linux-arm
+		xray_target="bin/xray-linux-arm"
     fi
-    chmod +x x-ui bin/xray-linux-$(arch)
+    chmod +x x-ui "$xray_target"
 
     # Update x-ui cli and se set permission
     mv -f /usr/bin/x-ui-temp /usr/bin/x-ui
@@ -1692,8 +1774,13 @@ setup_crontab() {
 
 ##############################Setup UFW###################################################################
 setup_ufw() {
+	local ssh_port
+
 	ufw disable
-	ufw allow 22/tcp
+	while IFS= read -r ssh_port; do
+		[[ "$ssh_port" =~ ^[0-9]+$ ]] || continue
+		ufw allow "${ssh_port}/tcp"
+	done < <(detect_ssh_ports)
 	ufw allow 80/tcp
 	ufw allow 443/tcp
 	ufw --force enable

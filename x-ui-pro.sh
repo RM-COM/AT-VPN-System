@@ -37,6 +37,13 @@ if [[ "$LEGACY_DEBUG_PASSTHROUGH" == "y" ]]; then
     msg_err "Для debug/stage режима нужен локальный x-ui-pro-updated.sh рядом с x-ui-pro.sh"
     exit 1
 fi
+UPDATED_SCRIPT="${SCRIPT_DIR}/x-ui-pro-updated.sh"
+if [[ -f "$UPDATED_SCRIPT" ]]; then
+    msg_inf "Legacy-скрипт передает выполнение в x-ui-pro-updated.sh"
+    exec bash "$UPDATED_SCRIPT" "$@"
+fi
+msg_err "Для запуска нужен локальный x-ui-pro-updated.sh рядом с x-ui-pro.sh"
+exit 1
 systemctl stop x-ui
 rm -rf /etc/systemd/system/x-ui.service
 rm -rf /usr/local/x-ui
