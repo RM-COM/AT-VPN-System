@@ -26,6 +26,9 @@
 - [2026-04-05 07:35:53] Полное удаление install-контура теперь чище: `uninstall_xui()` убирает остатки `sub2sing-box`, `web-sub`, `nginx`, `certbot`, каталоги сертификатов и бинарники.
 - [2026-04-05 08:02:47] Полный staging-цикл `reset -> install -> verify -> websub` теперь подтверждён в реальном runtime на VPS `185.207.64.40`.
 - [2026-04-05 08:02:47] Исправленный clean install после reset успешно поднимает `nginx`, `x-ui`, `sub2sing-box`, создаёт `x-ui.db`, разворачивает `/var/www/subpage` и проходит `nginx -t`.
+- [2026-04-06 03:10:17] `backup.sh` теперь покрывает полноценный backup/restore operational-контура форка: сохраняет `nginx`/SSL, базу и runtime `x-ui`, `sub2sing-box`, `root` `crontab` и web-root каталоги, а при restore восстанавливает их и перезапускает сервисы.
+- [2026-04-06 03:10:17] Legacy entrypoint `x-ui-pro.sh -uninstall yes` теперь использует актуальный uninstall-механизм `x-ui-pro-updated.sh`, а не исторический частичный сценарий.
+- [2026-04-06 03:10:17] Полный operational regression `backup -> uninstall -> restore -> verify` уже подтверждён реальным runtime-прогоном на staging VPS `185.207.64.40`.
 
 ## Как использовать сейчас
 
@@ -36,11 +39,12 @@
 - [2026-04-05 06:17:58] Для быстрой локальной переустановки только web-sub контура можно использовать `sudo bash ./x-ui-pro-updated.sh -stage websub -verify yes -debug yes`.
 - [2026-04-05 06:17:58] Для безопасного предпросмотра полной установки без изменения системы можно использовать `sudo bash ./x-ui-pro-updated.sh -dry_run yes -install yes -panel 1 -subdomain <домен> -reality_domain <домен>`.
 - [2026-04-05 06:56:44] Для установки с автоматическими тестовыми доменами можно использовать `sudo bash ./x-ui-pro-updated.sh -install yes -panel 1 -auto_domain yes -debug yes -keep_artifacts yes -verify yes`.
-- [2026-04-05 07:06:52] Для резервного копирования и восстановления состояния панели/`nginx` уже используется `sudo bash ./backup.sh`; этот путь нужно сохранить как поддерживаемый и проверить отдельно на staging.
+- [2026-04-06 03:10:17] Для резервного копирования и восстановления состояния панели/`nginx` используется `sudo bash ./backup.sh`; этот путь уже подтверждён отдельным runtime-регрессом на staging.
+- [2026-04-06 03:10:17] Для полного удаления через поддерживаемый legacy entrypoint можно использовать `sudo bash ./x-ui-pro.sh -uninstall yes`; теперь этот путь делегирует выполнение в актуальный uninstall-контур форка.
 - [2026-04-05 07:01:41] Локальный git-репозиторий уже переведён на схему `origin = AT-VPN-System`, `upstream = mozaroc/x-ui-pro`, базовая ветка — `main`.
 - [2026-04-05 07:23:54] Нормативный цикл публикации теперь жёстко фиксирован: после каждого завершённого этапа сначала выполняются `commit` и `push` в `origin`, и только затем следующий этап или очередной staging-прогон.
 - [2026-04-05 07:35:53] Для следующего runtime-этапа готов новый сценарий проверки: `stage reset -> install -> verify -> websub -> uninstall -> backup -> restore`.
-- [2026-04-05 08:02:47] После завершения текущего этапа следующая практическая runtime-очередь сужается до `uninstall`, `backup`, `restore`, так как `reset`, `install`, `verify` и `websub` уже подтверждены.
+- [2026-04-06 03:10:17] Operational-контур теперь подтверждён целиком: `stage reset -> install -> verify -> websub -> backup -> uninstall -> restore -> verify`.
 
 ## История действий и доступов
 
@@ -54,3 +58,5 @@
 - [2026-04-05 06:56:44] Выполнено реальное подключение по `SSH` к staging VPS `185.207.64.40`, туда загружена текущая рабочая копия форка и проведён полный install/smoke-test вне production-контура.
 - [2026-04-05 07:01:41] Подключён рабочий GitHub-репозиторий `https://github.com/RM-COM/AT-VPN-System.git`; доступ на `push` проверен через `git push --dry-run`.
 - [2026-04-05 07:04:56] Первый публичный commit форка опубликован в `https://github.com/RM-COM/AT-VPN-System.git` на ветке `main`.
+- [2026-04-06 03:10:17] На staging-ноду загружена актуальная ревизия ветки `codex/operational-regression`, после чего последовательно выполнены `stage=verify`, `backup.sh`, `x-ui-pro.sh -uninstall yes`, `backup.sh restore` и финальный `stage=verify`.
+- [2026-04-06 03:10:17] Backup текущего regression-этапа создан в каталоге `/backup/2026-04-06/00-08-08`; restore из него завершился успешно и вернул рабочие сервисы без ручных правок.
