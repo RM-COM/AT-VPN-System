@@ -36,6 +36,12 @@
 - Публичные DNS-адреса, встроенные в клиентские шаблоны
 - `routing.vpn.ru.com` и другие вспомогательные пользовательские ссылки
 - Публичные help/doc ссылки внутри `sub2sing-box` UI: GitHub README, инструкции `Secret-Sing-Box`, ссылки на App Store и Google Play
+- Проектные ссылки `PROJECT_SUPPORT_URL` и `PROJECT_DONATE_URL`, которые теперь настраиваются через переменные окружения и по умолчанию указывают на `AT-VPN-System`
+
+Уточнение:
+
+- [2026-04-06 05:38:01] Старые upstream-ссылки `gozargah_marzban`, `Gozargah/Marzban#donation`, placeholder `example.com/path/to/template.json` и legacy `BLUEBL0B/Secret-Sing-Box` больше не считаются допустимыми и проверяются как forbidden links в `stage=verify`.
+- [2026-04-06 05:38:01] Оставшиеся внешние пользовательские ссылки теперь рассматриваются как allowlist-поверхность: они допустимы только если относятся к реальным client download/help URL и явно проходят verify-проверку.
 
 ## Следующая практическая фаза
 

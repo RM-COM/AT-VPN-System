@@ -39,6 +39,7 @@ sudo bash ./x-ui-pro-updated.sh -stage verify -debug yes -keep_artifacts yes
 - [2026-04-06 04:44:23] `nginx`, `x-ui`, `sub2sing-box` активны.
 - [2026-04-06 04:44:23] web-sub по локальному `HTTPS` отвечает, локальный `clash.yaml` и `sb-rule-sets` существуют.
 - [2026-04-06 05:13:22] `sub2sing-box` UI отвечает по локальному `HTTPS` и не содержит runtime-ссылок на `unpkg.com`, `fonts.googleapis.com` и внешние raw JSON `sb-rule-sets`.
+- [2026-04-06 05:38:01] Web-sub и `sub2sing-box` UI не должны содержать forbidden upstream-ссылки (`gozargah_marzban`, `Gozargah/Marzban#donation`, `example.com/path/to/template.json`, `BLUEBL0B/Secret-Sing-Box`) и неожиданные внешние URL вне allowlist.
 
 ### 2. Reset staging
 

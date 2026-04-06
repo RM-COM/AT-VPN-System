@@ -16,6 +16,7 @@
 - Локальный `sub2sing-box` под `systemd`
 - Локальный набор fake-site шаблонов
 - Диагностический контур `debug-mode`
+- Проверка allowlist внешних пользовательских ссылок в `verify`
 - Сценарии удаления, резервного копирования и восстановления
 
 ## Канонический репозиторий
@@ -68,6 +69,16 @@ sudo bash ./x-ui-pro-updated.sh -install yes -panel 1 -auto_domain yes -debug ye
 - режим `wget | bash` для этого форка не считается основным и поддерживаемым способом установки
 - основной путь — запуск из локального клона репозитория
 - после выпуска сертификатов не следует менять домен без понимания последствий для `certbot`
+
+## Настройка пользовательских ссылок
+
+В `.env.example` зафиксированы проектные ссылки для web-sub страницы:
+
+- `PROJECT_REPO_URL`
+- `PROJECT_SUPPORT_URL`
+- `PROJECT_DONATE_URL`
+
+По умолчанию они указывают на `AT-VPN-System`, но их можно переопределить через переменные окружения перед запуском installer.
 
 ## Диагностика и debug-mode
 
@@ -164,6 +175,7 @@ sudo bash ./backup.sh
 - работа `nginx`, `x-ui`, `sub2sing-box`
 - внешняя client-side проверка web-sub, `clashmeta/first` и `sub2sing-box` endpoint
 - локальная выдача runtime-ассетов `sub2sing-box` UI без `unpkg.com`, `fonts.googleapis.com` и внешних raw JSON `sb-rule-sets`
+- отсутствие forbidden upstream-ссылок и неожиданных внешних URL вне allowlist в `stage=verify`
 
 Отдельный обязательный regression-маршрут теперь формализован в:
 

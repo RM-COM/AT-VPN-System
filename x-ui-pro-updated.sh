@@ -17,6 +17,9 @@ REPO_SLUG="${REPO_SLUG:-mozaroc/x-ui-pro}"
 REPO_REF="${REPO_REF:-master}"
 REPO_RAW_BASE="${REPO_RAW_BASE:-https://raw.githubusercontent.com/${REPO_SLUG}/${REPO_REF}}"
 SUB2SINGBOX_SERVICE="/etc/systemd/system/sub2sing-box.service"
+PROJECT_REPO_URL="${PROJECT_REPO_URL:-https://github.com/RM-COM/AT-VPN-System}"
+PROJECT_SUPPORT_URL="${PROJECT_SUPPORT_URL:-${PROJECT_REPO_URL}}"
+PROJECT_DONATE_URL="${PROJECT_DONATE_URL:-${PROJECT_REPO_URL}}"
 
 # Color codes used by install_panel()
 green='\033[0;32m'
@@ -43,6 +46,38 @@ trim_slashes() {
 	local value="${1#/}"
 	value="${value%/}"
 	printf '%s' "$value"
+}
+escape_sed_replacement() {
+	printf '%s' "$1" | sed 's/[\/&#\\]/\\&/g'
+}
+extract_https_urls() {
+	printf '%s' "$1" | grep -oE 'https://[^"'\''[:space:]<>()]+' | sed 's/[`,;]*$//' | sort -u
+}
+is_allowed_external_url() {
+	local url="$1"
+	[[ -n "$domain" && "$url" == "https://${domain}/"* ]] && return 0
+	[[ -n "$PROJECT_SUPPORT_URL" && "$url" == "${PROJECT_SUPPORT_URL}"* ]] && return 0
+	[[ -n "$PROJECT_DONATE_URL" && "$url" == "${PROJECT_DONATE_URL}"* ]] && return 0
+	case "$url" in
+		https://apps.apple.com/*|https://play.google.com/*|https://github.com/*|https://habr.com/*|https://v2raya.org/*|https://blancvpn.online/*|https://routing.vpn.ru.com/*|https://t.me/*)
+			return 0
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+collect_unexpected_external_urls() {
+	local content="$1" url
+	while IFS= read -r url; do
+		[[ -n "$url" ]] || continue
+		if ! is_allowed_external_url "$url"; then
+			printf '%s\n' "$url"
+		fi
+	done < <(extract_https_urls "$content")
+}
+contains_forbidden_external_reference() {
+	grep -Eq 'https://t\.me/gozargah_marzban|https://github\.com/Gozargah/Marzban#donation|https://example\.com/path/to/template\.json|https://github\.com/BLUEBL0B/Secret-Sing-Box/' <<<"$1"
 }
 DEBUG_MODE="n"
 DRY_RUN="n"
@@ -173,7 +208,7 @@ record_verify_result() {
 }
 verify_existing_installation() {
 	local failures=0
-	local sqlite_result="" curl_output=""
+	local sqlite_result="" curl_output="" unexpected_urls=""
 	init_debug_session
 	load_existing_runtime_context
 
@@ -269,6 +304,20 @@ verify_existing_installation() {
 		if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${web_path}/" 2>&1); then
 			record_verify_result "PASS" "Web-sub страница отвечает через локальный HTTPS"
 			[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/websub-index-body.html"
+			if contains_forbidden_external_reference "$curl_output"; then
+				record_verify_result "FAIL" "Web-sub страница содержит устаревшие upstream-ссылки или placeholder URL"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "Web-sub страница очищена от устаревших upstream-ссылок и placeholder URL"
+			fi
+			unexpected_urls=$(collect_unexpected_external_urls "$curl_output")
+			if [[ -n "$unexpected_urls" ]]; then
+				record_verify_result "FAIL" "Web-sub страница содержит неожиданные внешние ссылки вне allowlist"
+				append_debug_log "Unexpected web-sub external URLs: ${unexpected_urls//$'\n'/, }"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "Web-sub страница использует только локальные и allowlist-внешние ссылки"
+			fi
 		else
 			record_verify_result "FAIL" "Web-sub страница не отвечает через локальный HTTPS"
 			append_debug_log "curl output: ${curl_output}"
@@ -288,6 +337,20 @@ verify_existing_installation() {
 				failures=$((failures + 1))
 			else
 				record_verify_result "PASS" "sub2sing-box UI uses local runtime assets and local template URLs"
+			fi
+			if contains_forbidden_external_reference "$curl_output"; then
+				record_verify_result "FAIL" "sub2sing-box UI contains forbidden legacy external links"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "sub2sing-box UI does not contain forbidden legacy external links"
+			fi
+			unexpected_urls=$(collect_unexpected_external_urls "$curl_output")
+			if [[ -n "$unexpected_urls" ]]; then
+				record_verify_result "FAIL" "sub2sing-box UI contains unexpected external links outside allowlist"
+				append_debug_log "Unexpected sub2sing-box external URLs: ${unexpected_urls//$'\n'/, }"
+				failures=$((failures + 1))
+			else
+				record_verify_result "PASS" "sub2sing-box UI uses only allowlist external links"
 			fi
 		else
 			record_verify_result "FAIL" "sub2sing-box UI does not respond through local HTTPS"
@@ -497,12 +560,17 @@ ensure_sub2singbox_local_ui_proxy() {
 }
 replace_web_placeholders() {
 	local target="$1"
+	local project_support_url_escaped project_donate_url_escaped
+	project_support_url_escaped=$(escape_sed_replacement "$PROJECT_SUPPORT_URL")
+	project_donate_url_escaped=$(escape_sed_replacement "$PROJECT_DONATE_URL")
 	sed -i \
 		-e "s/\${DOMAIN}/$domain/g" \
 		-e "s#\${SUB_JSON_PATH}#$json_path#g" \
 		-e "s#\${SUB_PATH}#$sub_path#g" \
 		-e "s#\${WEB_PATH}#$web_path#g" \
 		-e "s#\${SUB2SINGBOX_PATH}#$sub2singbox_path#g" \
+		-e "s#\${PROJECT_SUPPORT_URL}#${project_support_url_escaped}#g" \
+		-e "s#\${PROJECT_DONATE_URL}#${project_donate_url_escaped}#g" \
 		"$target"
 }
 install_builtin_fake_site() {

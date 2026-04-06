@@ -78,3 +78,7 @@
 - [2026-04-06 05:17:31] `README.md`, `AI_CONTEXT`, `IMPLEMENTED`, `ROADMAP`, `MASTER_PLAN`, `RESUME_POINT`, `REPOSITORY_MAP` и `SERVICES_PLAN` синхронизированы с новой ролью `x-ui-pro.sh` как единого wrapper-entrypoint.
 - [2026-04-06 05:28:47] В `x-ui-pro-updated.sh` исправлена идемпотентность `sub2sing-box` proxy-блока: legacy-строка `sub_filter_types text/html;` теперь вычищается из уже установленного `includes.conf`, но больше не вставляется повторно.
 - [2026-04-06 05:28:47] На staging VPS повторно подтверждены `stage=websub`, repeated install через `x-ui-pro.sh` и финальный `stage=verify`; warning `duplicate MIME type "text/html"` больше не воспроизводится ни в `nginx -t`, ни в полном install-логе.
+- [2026-04-06 05:38:01] В `x-ui-pro-updated.sh` добавлены `PROJECT_REPO_URL`, `PROJECT_SUPPORT_URL`, `PROJECT_DONATE_URL`, placeholder-подстановка для web-sub страниц и verify-проверка forbidden/allowlist внешних URL.
+- [2026-04-06 05:38:01] В `sub-3x-ui.html` удалены устаревшие ссылки `gozargah_marzban` / `Gozargah/Marzban#donation`, placeholder `example.com/path/to/template.json` и подключены project links форка через новые placeholders.
+- [2026-04-06 05:38:01] В `sub-3x-ui-classical.html` ссылки на `BLUEBL0B/Secret-Sing-Box` обновлены до актуального `legiz-ru/Secret-Sing-Box`.
+- [2026-04-06 05:38:01] На staging VPS `stage=websub -verify yes`, repeated install через `x-ui-pro.sh` и внешний smoke-test подтвердили: forbidden upstream-ссылки больше не воспроизводятся, а web-sub и `sub2sing-box` используют только локальные или allowlist-внешние URL.

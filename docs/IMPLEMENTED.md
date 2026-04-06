@@ -47,6 +47,9 @@
 - [2026-04-06 05:13:22] Client-side smoke-test после фикса подтверждает уже не просто доступность `sub2sing-box` endpoint, а отсутствие runtime-утечек на `unpkg.com`, `fonts.googleapis.com` и внешние raw JSON `sb-rule-sets`.
 - [2026-04-06 05:28:47] Нормализация `sub2sing-box` proxy-блока в `stage=websub` теперь полностью идемпотентна: старые строки `sub_filter_types text/html;` удаляются из уже установленного `includes.conf`, а `nginx -t` после повторного применения не даёт warning про duplicate MIME.
 - [2026-04-06 05:28:47] Повторный install через новый чистый wrapper `x-ui-pro.sh` снова подтверждён на staging уже после этого фикса: runtime-лог остаётся чистым от `duplicate MIME`, а финальный `stage=verify` проходит полностью.
+- [2026-04-06 05:38:01] Web-sub страница теперь использует проектные ссылки `PROJECT_SUPPORT_URL` и `PROJECT_DONATE_URL`, которые можно переопределить через окружение; по умолчанию они указывают на репозиторий `AT-VPN-System`.
+- [2026-04-06 05:38:01] `stage=verify` теперь проверяет не только runtime-ассеты, но и пользовательские внешние ссылки: устаревшие upstream URL и неожиданные внешние домены вне allowlist считаются regression-ошибкой.
+- [2026-04-06 05:38:01] На staging подтверждено, что web-sub больше не содержит `gozargah_marzban`, `Gozargah/Marzban#donation`, `example.com/path/to/template.json` и `BLUEBL0B/Secret-Sing-Box`.
 
 ## Как использовать сейчас
 
