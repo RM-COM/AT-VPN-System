@@ -162,6 +162,7 @@ sudo bash ./backup.sh
 - локальная выдача web-sub через HTTPS
 - локальная выдача `clash.yaml`
 - работа `nginx`, `x-ui`, `sub2sing-box`
+- внешняя client-side проверка web-sub, `clashmeta/first` и `sub2sing-box` endpoint
 
 Отдельный обязательный regression-маршрут теперь формализован в:
 
