@@ -64,6 +64,7 @@
 - [2026-04-06 04:34:59] Для обхода внешнего exact-set rate limit в regression-практике уже подтверждён запасной путь: альтернативные публичные тестовые домены `sslip.io` позволяют заново прогонять clean install и repeated install, не откладывая проверку installer-кода.
 - [2026-04-06 04:44:23] Формализованный regression-контур теперь вынесен в отдельный документ `REGRESSION_CHECKLIST.md`; он становится каноническим staging-маршрутом до тех пор, пока набор обязательных сценариев не изменится архитектурно.
 - [2026-04-06 04:48:57] Клиентская внешняя проверка показала разделение остаточных зависимостей: web-sub и `clash` уже обслуживаются локально нашим сервером, но встроенный UI `sub2sing-box` всё ещё ссылается на `unpkg.com` как на внешний frontend CDN.
+- [2026-04-06 04:52:02] Точный состав frontend-зависимостей `sub2sing-box` UI уже подтверждён внешней проверкой: `https://unpkg.com/mdui@2/mdui.css`, `https://unpkg.com/mdui@2/mdui.global.js`, `https://fonts.googleapis.com/css?family=Roboto|Noto+Sans+SC&display=swap`, `https://fonts.googleapis.com/icon?family=Material+Icons`, `https://fonts.googleapis.com/icon?family=Material+Icons+Outlined`.
 
 ## Ограничения текущего этапа
 

@@ -35,11 +35,12 @@
 - Ссылки на App Store / Google Play / GitHub Releases / справочные статьи
 - Публичные DNS-адреса, встроенные в клиентские шаблоны
 - `routing.vpn.ru.com` и другие вспомогательные пользовательские ссылки
-- Web UI `sub2sing-box` по результатам client-side smoke-test всё ещё подтягивает frontend CSS с `unpkg.com`
+- Web UI `sub2sing-box` по результатам client-side smoke-test всё ещё подтягивает `mdui.css` и `mdui.global.js` с `unpkg.com`
+- Web UI `sub2sing-box` также использует `fonts.googleapis.com` для `Roboto`, `Noto Sans SC`, `Material Icons` и `Material Icons Outlined`
 
 ## Следующая практическая фаза
 
 1. Решить, зеркалировать ли `3x-ui` и `sub2sing-box` в активы самого форка
-2. Решить, как локализовать или проксировать frontend-ресурс `unpkg.com` для встроенного UI `sub2sing-box`
+2. Решить, как локализовать или проксировать ассеты `mdui.css`, `mdui.global.js`, Google Fonts и Material Icons для встроенного UI `sub2sing-box`
 3. Решить, какие пользовательские ссылки на загрузки и инструкции должны остаться внешними
 4. При необходимости дочистить оставшиеся fake-site шаблоны до полностью локального контента без внешних ссылок в HTML
