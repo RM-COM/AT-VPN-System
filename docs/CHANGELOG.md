@@ -99,3 +99,4 @@
 - [2026-04-07 01:12:08] В `x-ui-pro-updated.sh` реализован локальный install-путь release-архивов: installer сначала использует `vendor/releases/*` из клона репозитория, валидирует их по `SHA256SUMS`, и только при отсутствии локального архива уходит в upstream fallback.
 - [2026-04-07 01:12:08] На чистом staging VPS подтверждён полный install-путь с локальными зеркалированными архивами: install-лог содержит обе строки `Using local mirrored release archive: ...` для `3x-ui` и `sub2sing-box`.
 - [2026-04-07 01:12:08] После install с локальными release-архивами `stage=verify` снова завершился полным `PASS`, поэтому основной `amd64` install-контур уже подтверждён без обязательного upstream-download для `3x-ui` и `sub2sing-box`.
+- [2026-04-07 01:16:59] Проверенная ветка `codex/operational-regression` fast-forward перенесена в `main` и опубликована в `origin/main`; основной install-источник репозитория теперь совпадает с фактически подтверждённым staging-контуром.
