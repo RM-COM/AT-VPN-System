@@ -255,6 +255,13 @@ verify_existing_installation() {
 		fi
 	fi
 
+	if verify_reality_inbound_keys; then
+		record_verify_result "PASS" "REALITY inbound contains valid private/public key pair"
+	else
+		record_verify_result "FAIL" "REALITY inbound is missing or contains invalid private/public key pair"
+		failures=$((failures + 1))
+	fi
+
 	if nginx -t >/dev/null 2>&1; then
 		record_verify_result "PASS" "Конфигурация nginx проходит nginx -t"
 	else
@@ -778,6 +785,41 @@ xray_binary_path() {
 			printf '%s\n' "/usr/local/x-ui/bin/xray-linux-${arch_name}"
 			;;
 	esac
+}
+is_valid_reality_x25519_key() {
+	[[ "$1" =~ ^[A-Za-z0-9_-]{40,60}$ ]]
+}
+extract_x25519_private_key() {
+	printf '%s\n' "$1" | awk -F': ' '/^Private[[:space:]]*[Kk]ey:/{print $2; exit}'
+}
+extract_x25519_public_key() {
+	printf '%s\n' "$1" | awk -F': ' '/^Public[[:space:]]*[Kk]ey:/{print $2; exit}'
+}
+generate_reality_x25519_pair() {
+	local xray_bin="$1" output=""
+	output=$("$xray_bin" x25519)
+	append_debug_log "xray x25519 output: ${output//$'\n'/; }"
+	private_key=$(extract_x25519_private_key "$output")
+	public_key=$(extract_x25519_public_key "$output")
+	if ! is_valid_reality_x25519_key "$private_key"; then
+		die "Failed to parse REALITY private key from xray x25519 output."
+	fi
+	if ! is_valid_reality_x25519_key "$public_key"; then
+		die "Failed to parse REALITY public key from xray x25519 output."
+	fi
+}
+verify_reality_inbound_keys() {
+	local reality_stream="" reality_private_key="" reality_public_key=""
+	[[ -f "$XUIDB" ]] || return 1
+	command -v sqlite3 >/dev/null 2>&1 || return 1
+	command -v jq >/dev/null 2>&1 || return 1
+	reality_stream=$(sqlite3 -list "$XUIDB" "SELECT stream_settings FROM inbounds WHERE stream_settings LIKE '%\"security\": \"reality\"%' LIMIT 1;" 2>/dev/null)
+	[[ -n "$reality_stream" ]] || return 1
+	reality_private_key=$(printf '%s' "$reality_stream" | jq -r '.realitySettings.privateKey // empty' 2>/dev/null)
+	reality_public_key=$(printf '%s' "$reality_stream" | jq -r '.realitySettings.settings.publicKey // .realitySettings.publicKey // .realitySettings.password // empty' 2>/dev/null)
+	append_debug_log "Reality inbound private key length: ${#reality_private_key}"
+	append_debug_log "Reality inbound public key length: ${#reality_public_key}"
+	is_valid_reality_x25519_key "$reality_private_key" && is_valid_reality_x25519_key "$reality_public_key"
 }
 detect_ssh_ports() {
 	local ports=()
@@ -1331,10 +1373,7 @@ if [[ -f "$XUIDB" ]]; then
         x-ui stop
 		xray_bin=$(xray_binary_path)
 		[[ -x "$xray_bin" ]] || die "xray helper binary not found or not executable: ${xray_bin}"
-        output=$("$xray_bin" x25519)
-
-        private_key=$(echo "$output" | grep "^PrivateKey:" | awk '{print $2}')
-        public_key=$(echo "$output" | grep "^PublicKey:" | awk '{print $2}')
+		generate_reality_x25519_pair "$xray_bin"
 
         client_id=$("$xray_bin" uuid)
         client_id2=$("$xray_bin" uuid)
