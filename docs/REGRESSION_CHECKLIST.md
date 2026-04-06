@@ -35,6 +35,7 @@ sudo bash ./x-ui-pro-updated.sh -stage verify -debug yes -keep_artifacts yes
 
 - [2026-04-06 04:44:23] `x-ui.db` найдена и `sqlite integrity_check` возвращает `ok`.
 - [2026-04-06 04:44:23] `nginx -t` проходит успешно.
+- [2026-04-06 05:28:47] `nginx -t` не должен выводить warning `duplicate MIME type`.
 - [2026-04-06 04:44:23] `nginx`, `x-ui`, `sub2sing-box` активны.
 - [2026-04-06 04:44:23] web-sub по локальному `HTTPS` отвечает, локальный `clash.yaml` и `sb-rule-sets` существуют.
 - [2026-04-06 05:13:22] `sub2sing-box` UI отвечает по локальному `HTTPS` и не содержит runtime-ссылок на `unpkg.com`, `fonts.googleapis.com` и внешние raw JSON `sb-rule-sets`.
@@ -79,6 +80,7 @@ sudo bash ./x-ui-pro.sh -install yes -panel 1 -subdomain 185.207.64.40.sslip.io 
 - [2026-04-06 04:44:23] финальный экран печатается полностью.
 - [2026-04-06 04:44:23] `SSH`-сеанс возвращается без ложного «подвисания».
 - [2026-04-06 04:44:23] при повторной установке на те же домены вывод содержит `Reusing existing certificate ...`.
+- [2026-04-06 05:28:47] install-лог не должен содержать warning `duplicate MIME type`.
 
 ### 4. Повторная verify-проверка
 
@@ -152,3 +154,4 @@ sudo bash ./backup.sh
 - [2026-04-06 04:44:23] `stage=websub` подтверждён.
 - [2026-04-06 04:44:23] `backup -> uninstall -> restore -> verify` подтверждён.
 - [2026-04-06 05:13:22] client-side локализация `sub2sing-box` UI подтверждена: локальные CSS/JS/JSON по путям `${WEB_PATH}/vendor/lib/sub2sing-box-ui/*` и `${WEB_PATH}/vendor/sb-rule-sets/*` отвечают `200 OK`.
+- [2026-04-06 05:28:47] warning `duplicate MIME type` после `stage=websub` и repeated install устранён и больше не воспроизводится на staging.

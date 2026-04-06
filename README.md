@@ -42,7 +42,7 @@
 ## Основные скрипты
 
 - `x-ui-pro-updated.sh` — основной поддерживаемый installer и debug-runner.
-- `x-ui-pro.sh` — совместимый входной скрипт; флаги `install/debug/stage/uninstall` перенаправляет в `x-ui-pro-updated.sh`.
+- `x-ui-pro.sh` — совместимый входной wrapper-скрипт; поддерживаемый запуск всегда передаёт выполнение в `x-ui-pro-updated.sh`.
 - `backup.sh` — резервное копирование и восстановление `nginx`, SSL, `x-ui`, `sub2sing-box` и web-root файлов.
 - `randomfakehtml.sh` — установка локального fake-site из репозитория.
 - `x-ui-pro-old.sh` — legacy-файл, не являющийся основным поддерживаемым контуром.

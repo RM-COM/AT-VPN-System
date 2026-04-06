@@ -476,7 +476,6 @@ ensure_sub2singbox_local_ui_proxy() {
 			if (inblock && $0 ~ /proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;/) {
 				print "\t\tproxy_set_header Accept-Encoding \"\";"
 				print "\t\tsub_filter_once off;"
-				print "\t\tsub_filter_types text/html;"
 				print "\t\tsub_filter '\''https://unpkg.com/mdui@2/mdui.css'\'' '\''" asset_base "/mdui.css'\'';"
 				print "\t\tsub_filter '\''https://unpkg.com/mdui@2/mdui.global.js'\'' '\''" asset_base "/mdui.global.js'\'';"
 				print "\t\tsub_filter '\''https://fonts.googleapis.com/css?family=Roboto|Noto+Sans+SC&display=swap'\'' '\''" asset_base "/sub2sing-box-fonts.css'\'';"
@@ -1054,7 +1053,6 @@ EOF
 		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 		proxy_set_header Accept-Encoding "";
 		sub_filter_once off;
-		sub_filter_types text/html;
 		sub_filter 'https://unpkg.com/mdui@2/mdui.css' '$(sub2singbox_ui_asset_base)/mdui.css';
 		sub_filter 'https://unpkg.com/mdui@2/mdui.global.js' '$(sub2singbox_ui_asset_base)/mdui.global.js';
 		sub_filter 'https://fonts.googleapis.com/css?family=Roboto|Noto+Sans+SC&display=swap' '$(sub2singbox_ui_asset_base)/sub2sing-box-fonts.css';
