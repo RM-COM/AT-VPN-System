@@ -21,7 +21,7 @@ get_web_roots() {
 	if command -v nginx >/dev/null 2>&1; then
 		while IFS= read -r root; do
 			[ -n "$root" ] && roots+=("${root%/}")
-		done < <(nginx -T 2>/dev/null | awk '/[[:space:]]root[[:space:]]/ {gsub(";", "", $2); print $2}')
+		done < <(nginx -T 2>/dev/null | awk '/^[[:space:]]*root[[:space:]]+/ {gsub(";", "", $2); print $2}')
 	fi
 
 	for root in /var/www/html /var/www/subpage; do
@@ -110,7 +110,7 @@ backup_xui_runtime() {
 }
 
 backup_helper_binaries() {
-	archive_label "sub2sing-box" /usr/bin/sub2sing-box
+	archive_label "sub2sing-box" /usr/bin/sub2sing-box /etc/systemd/system/sub2sing-box.service
 	backup_root_crontab
 }
 
@@ -207,6 +207,7 @@ ensure_restore_packages() {
 
 stop_restore_services() {
 	systemctl stop nginx x-ui 2>/dev/null || true
+	systemctl stop sub2sing-box 2>/dev/null || true
 	pkill -x "sub2sing-box" 2>/dev/null || true
 }
 
@@ -217,6 +218,23 @@ restore_root_crontab() {
 		echo "Root crontab restored."
 		log "Root crontab restored from $cron_file"
 	fi
+}
+
+remove_legacy_sub2singbox_cron() {
+	local tmp_file
+
+	tmp_file=$(mktemp)
+	if crontab -l 2>/dev/null | grep -v 'sub2sing-box server --bind 127.0.0.1 --port 8080' > "$tmp_file"; then
+		if [ -s "$tmp_file" ]; then
+			crontab "$tmp_file"
+		else
+			crontab -r 2>/dev/null || true
+		fi
+	else
+		: > "$tmp_file"
+		crontab -r 2>/dev/null || true
+	fi
+	rm -f "$tmp_file"
 }
 
 fix_restored_permissions() {
@@ -272,7 +290,11 @@ start_restored_services() {
 	if [ -f /etc/systemd/system/x-ui.service ]; then
 		systemctl restart x-ui 2>/dev/null || true
 	fi
-	if [ -x /usr/bin/sub2sing-box ] && ! pgrep -x "sub2sing-box" >/dev/null 2>&1; then
+	if [ -f /etc/systemd/system/sub2sing-box.service ]; then
+		remove_legacy_sub2singbox_cron
+		systemctl enable sub2sing-box 2>/dev/null || true
+		systemctl restart sub2sing-box 2>/dev/null || true
+	elif [ -x /usr/bin/sub2sing-box ] && ! pgrep -x "sub2sing-box" >/dev/null 2>&1; then
 		nohup /usr/bin/sub2sing-box server --bind 127.0.0.1 --port 8080 >/dev/null 2>&1 &
 	fi
 }
@@ -301,10 +323,12 @@ verify_restore_result() {
 		echo "[FAIL] x-ui service is inactive or service file is missing"
 	fi
 
-	if [ -x /usr/bin/sub2sing-box ] && pgrep -x "sub2sing-box" >/dev/null 2>&1; then
+	if [ -f /etc/systemd/system/sub2sing-box.service ] && systemctl is-active --quiet sub2sing-box; then
+		echo "[PASS] sub2sing-box service is active"
+	elif [ -x /usr/bin/sub2sing-box ] && pgrep -x "sub2sing-box" >/dev/null 2>&1; then
 		echo "[PASS] sub2sing-box process is active"
 	else
-		echo "[FAIL] sub2sing-box process is inactive or binary is missing"
+		echo "[FAIL] sub2sing-box service/process is inactive or binary is missing"
 	fi
 
 	load_restore_runtime_context

@@ -13,7 +13,7 @@
 - Локальные `Clash`-шаблоны
 - Локальные `sing-box` rule-set шаблоны
 - Локальный `vendor/` с frontend-ассетами и зеркалированными rule-файлами
-- Локальный `sub2sing-box`
+- Локальный `sub2sing-box` под `systemd`
 - Локальный набор fake-site шаблонов
 - Диагностический контур `debug-mode`
 - Сценарии удаления, резервного копирования и восстановления
@@ -42,8 +42,8 @@
 ## Основные скрипты
 
 - `x-ui-pro-updated.sh` — основной поддерживаемый installer и debug-runner.
-- `x-ui-pro.sh` — совместимый входной скрипт; debug/stage-флаги перенаправляет в `x-ui-pro-updated.sh`.
-- `backup.sh` — резервное копирование и восстановление `nginx`, `x-ui`, `config.json` и web-root файлов.
+- `x-ui-pro.sh` — совместимый входной скрипт; флаги `install/debug/stage/uninstall` перенаправляет в `x-ui-pro-updated.sh`.
+- `backup.sh` — резервное копирование и восстановление `nginx`, SSL, `x-ui`, `sub2sing-box` и web-root файлов.
 - `randomfakehtml.sh` — установка локального fake-site из репозитория.
 - `x-ui-pro-old.sh` — legacy-файл, не являющийся основным поддерживаемым контуром.
 
@@ -145,9 +145,9 @@ sudo bash ./backup.sh
 
 Скрипт умеет:
 
-- сохранять `nginx`
-- сохранять `x-ui.db`
-- сохранять `config.json`
+- сохранять `nginx` и SSL-материалы
+- сохранять `x-ui.db` и runtime `x-ui`
+- сохранять бинарник и `systemd` unit `sub2sing-box`
 - сохранять web-root файлы
 - восстанавливать выбранный backup обратно на сервер
 

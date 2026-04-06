@@ -22,7 +22,7 @@ REPO_RAW_BASE="${REPO_RAW_BASE:-https://raw.githubusercontent.com/${REPO_SLUG}/$
 LEGACY_DEBUG_PASSTHROUGH="n"
 for arg in "$@"; do
     case "$arg" in
-        -debug|-dry_run|-verify|-stage|-skip_cleanup|-keep_artifacts|-uninstall)
+        -install|-debug|-dry_run|-verify|-stage|-skip_cleanup|-keep_artifacts|-uninstall)
             LEGACY_DEBUG_PASSTHROUGH="y"
             break
             ;;

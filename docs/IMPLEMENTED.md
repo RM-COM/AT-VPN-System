@@ -29,6 +29,9 @@
 - [2026-04-06 03:10:17] `backup.sh` теперь покрывает полноценный backup/restore operational-контура форка: сохраняет `nginx`/SSL, базу и runtime `x-ui`, `sub2sing-box`, `root` `crontab` и web-root каталоги, а при restore восстанавливает их и перезапускает сервисы.
 - [2026-04-06 03:10:17] Legacy entrypoint `x-ui-pro.sh -uninstall yes` теперь использует актуальный uninstall-механизм `x-ui-pro-updated.sh`, а не исторический частичный сценарий.
 - [2026-04-06 03:10:17] Полный operational regression `backup -> uninstall -> restore -> verify` уже подтверждён реальным runtime-прогоном на staging VPS `185.207.64.40`.
+- [2026-04-06 04:15:15] `sub2sing-box` в поддерживаемом install-контуре теперь работает как `systemd`-сервис `sub2sing-box.service`, а не как фоновый процесс из `su ... & disown` и не как `@reboot` cron-задача.
+- [2026-04-06 04:15:15] `x-ui-pro.sh -install yes` теперь перенаправляет установку в `x-ui-pro-updated.sh`, поэтому основной install-поток у форка фактически один и все новые исправления попадают в него сразу.
+- [2026-04-06 04:15:15] Runtime-проверка service-контура подтверждена на staging: `stage=verify` видит активный `sub2sing-box service`, а `backup -> uninstall -> restore -> verify` проходит успешно уже в service-модели.
 
 ## Как использовать сейчас
 
@@ -41,6 +44,7 @@
 - [2026-04-05 06:56:44] Для установки с автоматическими тестовыми доменами можно использовать `sudo bash ./x-ui-pro-updated.sh -install yes -panel 1 -auto_domain yes -debug yes -keep_artifacts yes -verify yes`.
 - [2026-04-06 03:10:17] Для резервного копирования и восстановления состояния панели/`nginx` используется `sudo bash ./backup.sh`; этот путь уже подтверждён отдельным runtime-регрессом на staging.
 - [2026-04-06 03:10:17] Для полного удаления через поддерживаемый legacy entrypoint можно использовать `sudo bash ./x-ui-pro.sh -uninstall yes`; теперь этот путь делегирует выполнение в актуальный uninstall-контур форка.
+- [2026-04-06 04:15:15] Для поддерживаемой установки через совместимый entrypoint можно использовать `sudo bash ./x-ui-pro.sh -install yes ...`; этот путь теперь тоже делегирует выполнение в `x-ui-pro-updated.sh`.
 - [2026-04-05 07:01:41] Локальный git-репозиторий уже переведён на схему `origin = AT-VPN-System`, `upstream = mozaroc/x-ui-pro`, базовая ветка — `main`.
 - [2026-04-05 07:23:54] Нормативный цикл публикации теперь жёстко фиксирован: после каждого завершённого этапа сначала выполняются `commit` и `push` в `origin`, и только затем следующий этап или очередной staging-прогон.
 - [2026-04-05 07:35:53] Для следующего runtime-этапа готов новый сценарий проверки: `stage reset -> install -> verify -> websub -> uninstall -> backup -> restore`.
@@ -60,3 +64,5 @@
 - [2026-04-05 07:04:56] Первый публичный commit форка опубликован в `https://github.com/RM-COM/AT-VPN-System.git` на ветке `main`.
 - [2026-04-06 03:10:17] На staging-ноду загружена актуальная ревизия ветки `codex/operational-regression`, после чего последовательно выполнены `stage=verify`, `backup.sh`, `x-ui-pro.sh -uninstall yes`, `backup.sh restore` и финальный `stage=verify`.
 - [2026-04-06 03:10:17] Backup текущего regression-этапа создан в каталоге `/backup/2026-04-06/00-08-08`; restore из него завершился успешно и вернул рабочие сервисы без ручных правок.
+- [2026-04-06 04:15:15] Для service-regression был создан новый backup `/backup/2026-04-06/01-13-17`; в архив `sub2sing-box-01-13-17.tar.gz` уже входит `usr/bin/sub2sing-box` и `etc/systemd/system/sub2sing-box.service`.
+- [2026-04-06 04:15:15] Повторный clean install retest через `x-ui-pro.sh -install yes` был остановлен внешним rate limit Let's Encrypt, а не внутренней ошибкой install-кода; staging восстановлен в рабочее состояние через `backup.sh restore`.

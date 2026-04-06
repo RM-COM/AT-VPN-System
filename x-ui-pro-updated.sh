@@ -16,6 +16,7 @@ esac
 REPO_SLUG="${REPO_SLUG:-mozaroc/x-ui-pro}"
 REPO_REF="${REPO_REF:-master}"
 REPO_RAW_BASE="${REPO_RAW_BASE:-https://raw.githubusercontent.com/${REPO_SLUG}/${REPO_REF}}"
+SUB2SINGBOX_SERVICE="/etc/systemd/system/sub2sing-box.service"
 
 # Color codes used by install_panel()
 green='\033[0;32m'
@@ -184,6 +185,9 @@ verify_existing_installation() {
 	capture_file_if_exists "$XUIDB" "files/x-ui.db"
 	capture_command_output "commands/systemctl-nginx.txt" systemctl status nginx --no-pager
 	capture_command_output "commands/systemctl-x-ui.txt" systemctl status x-ui --no-pager
+	if [[ -f "$SUB2SINGBOX_SERVICE" ]]; then
+		capture_command_output "commands/systemctl-sub2sing-box.txt" systemctl status sub2sing-box --no-pager
+	fi
 	capture_command_output "commands/nginx-test.txt" nginx -t
 	capture_command_output "commands/nginx-dump.txt" nginx -T
 
@@ -223,6 +227,20 @@ verify_existing_installation() {
 		record_verify_result "PASS" "Сервис x-ui активен"
 	else
 		record_verify_result "FAIL" "Сервис x-ui неактивен"
+		failures=$((failures + 1))
+	fi
+
+	if [[ -f "$SUB2SINGBOX_SERVICE" ]]; then
+		if systemctl is-active --quiet sub2sing-box; then
+			record_verify_result "PASS" "sub2sing-box service is active"
+		else
+			record_verify_result "FAIL" "sub2sing-box service is inactive"
+			failures=$((failures + 1))
+		fi
+	elif pgrep -x "sub2sing-box" >/dev/null 2>&1; then
+		record_verify_result "PASS" "sub2sing-box process is active"
+	else
+		record_verify_result "FAIL" "sub2sing-box process is inactive"
 		failures=$((failures + 1))
 	fi
 
@@ -287,11 +305,14 @@ verify_reset_state() {
 		record_verify_result "PASS" "x-ui service is stopped or removed"
 	fi
 
-	if pgrep -x "sub2sing-box" >/dev/null 2>&1; then
+	if systemctl is-active --quiet sub2sing-box; then
+		record_verify_result "FAIL" "sub2sing-box service is still active after reset"
+		failures=$((failures + 1))
+	elif pgrep -x "sub2sing-box" >/dev/null 2>&1; then
 		record_verify_result "FAIL" "sub2sing-box process is still running"
 		failures=$((failures + 1))
 	else
-		record_verify_result "PASS" "sub2sing-box process is stopped"
+		record_verify_result "PASS" "sub2sing-box service/process is stopped"
 	fi
 
 	for path in \
@@ -303,7 +324,9 @@ verify_reset_state() {
 		"/var/lib/letsencrypt" \
 		"/var/log/letsencrypt" \
 		"/usr/bin/x-ui" \
-		"/usr/bin/sub2sing-box"; do
+		"/usr/bin/sub2sing-box" \
+		"/etc/systemd/system/sub2sing-box.service" \
+		"/etc/systemd/system/multi-user.target.wants/sub2sing-box.service"; do
 		if [[ -e "$path" ]]; then
 			record_verify_result "FAIL" "Residual path still exists: $path"
 			failures=$((failures + 1))
@@ -644,6 +667,8 @@ parse_args() {
 
 ##############################Uninstall###################################################################
 stop_sub2singbox() {
+	systemctl stop sub2sing-box 2>/dev/null || true
+	systemctl disable sub2sing-box 2>/dev/null || true
 	if pgrep -x "sub2sing-box" >/dev/null 2>&1; then
 		pkill -x "sub2sing-box" 2>/dev/null || true
 	fi
@@ -656,6 +681,8 @@ remove_reset_residuals() {
 	for path in \
 		"/etc/systemd/system/x-ui.service" \
 		"/etc/systemd/system/multi-user.target.wants/x-ui.service" \
+		"/etc/systemd/system/sub2sing-box.service" \
+		"/etc/systemd/system/multi-user.target.wants/sub2sing-box.service" \
 		"/usr/local/x-ui" \
 		"/etc/x-ui" \
 		"/usr/bin/x-ui" \
@@ -670,7 +697,7 @@ remove_reset_residuals() {
 		rm -rf "$path"
 	done
 	systemctl daemon-reload 2>/dev/null || true
-	systemctl reset-failed nginx x-ui 2>/dev/null || true
+	systemctl reset-failed nginx x-ui sub2sing-box 2>/dev/null || true
 	fuser -k 80/tcp 80/udp 443/tcp 443/udp 2>/dev/null || true
 }
 uninstall_xui() {
@@ -1580,21 +1607,39 @@ tune_system() {
 }
 
 ##############################Install sub2sing-box########################################################
+write_sub2singbox_service() {
+	cat > "$SUB2SINGBOX_SERVICE" <<'EOF'
+[Unit]
+Description=Local sub2sing-box bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/sub2sing-box server --bind 127.0.0.1 --port 8080
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
 install_sub2singbox() {
-	if pgrep -x "sub2sing-box" > /dev/null; then
-		echo "kill sub2sing-box..."
-		pkill -x "sub2sing-box"
-	fi
+	stop_sub2singbox
 	if [ -f "/usr/bin/sub2sing-box" ]; then
 		echo "delete sub2sing-box..."
 		rm -f /usr/bin/sub2sing-box
 	fi
+	rm -f "$SUB2SINGBOX_SERVICE" /etc/systemd/system/multi-user.target.wants/sub2sing-box.service
+	systemctl daemon-reload 2>/dev/null || true
 	wget -P /root/ https://github.com/legiz-ru/sub2sing-box/releases/download/v0.0.9/sub2sing-box_0.0.9_linux_amd64.tar.gz
 	tar -xvzf /root/sub2sing-box_0.0.9_linux_amd64.tar.gz -C /root/ --strip-components=1 sub2sing-box_0.0.9_linux_amd64/sub2sing-box
 	mv /root/sub2sing-box /usr/bin/
 	chmod +x /usr/bin/sub2sing-box
 	rm /root/sub2sing-box_0.0.9_linux_amd64.tar.gz
-	su -c "/usr/bin/sub2sing-box server --bind 127.0.0.1 --port 8080 & disown" root
+	write_sub2singbox_service
+	systemctl daemon-reload
+	systemctl enable --now sub2sing-box.service
 }
 
 ##############################Install Fake Site###########################################################
@@ -1641,7 +1686,6 @@ install_web_sub_page() {
 ##############################Setup Crontab###############################################################
 setup_crontab() {
 	crontab -l | grep -v "certbot\|x-ui\|cloudflareips\|sub2sing-box" | crontab -
-	(crontab -l 2>/dev/null; echo '@reboot /usr/bin/sub2sing-box server --bind 127.0.0.1 --port 8080 > /dev/null 2>&1') | crontab -
 	(crontab -l 2>/dev/null; echo '@daily x-ui restart > /dev/null 2>&1 && nginx -s reload;') | crontab -
 	(crontab -l 2>/dev/null; echo '@monthly certbot renew --nginx --non-interactive --post-hook "nginx -s reload" > /dev/null 2>&1;') | crontab -
 }
