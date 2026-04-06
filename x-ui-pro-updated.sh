@@ -522,6 +522,43 @@ copy_repo_dir_or_fail() {
 	mkdir -p "$(dirname "$dest")"
 	cp -a "$SCRIPT_DIR/$rel_path" "$dest"
 }
+release_manifest_rel_path() {
+	printf '%s\n' 'vendor/releases/SHA256SUMS'
+}
+lookup_release_archive_sha256() {
+	local rel_path="$1" manifest="" expected=""
+	[[ -n "$SCRIPT_DIR" ]] || return 1
+	manifest="$SCRIPT_DIR/$(release_manifest_rel_path)"
+	[[ -f "$manifest" ]] || return 1
+	expected=$(awk -v p="$rel_path" '$2 == p { print $1; exit }' "$manifest")
+	[[ -n "$expected" ]] || return 1
+	printf '%s\n' "$expected"
+}
+verify_release_archive_checksum() {
+	local rel_path="$1" local_file="$2" expected="" actual=""
+	expected=$(lookup_release_archive_sha256 "$rel_path" 2>/dev/null || true)
+	[[ -n "$expected" ]] || return 0
+	actual=$(sha256sum "$local_file" | awk '{print $1}')
+	if [[ "${actual,,}" != "${expected,,}" ]]; then
+		die "Checksum mismatch for mirrored release archive: ${rel_path}"
+	fi
+	append_debug_log "Checksum verified for mirrored release archive: ${rel_path}"
+}
+copy_or_fetch_release_archive() {
+	local rel_path="$1" url="$2" dest="$3"
+	mkdir -p "$(dirname "$dest")"
+	if repo_asset_exists "$rel_path"; then
+		msg_inf "Using local mirrored release archive: ${rel_path}"
+		cp "$SCRIPT_DIR/$rel_path" "$dest"
+	else
+		warn "Local mirrored release archive not found: ${rel_path}. Falling back to upstream download."
+		wget -N -O "$dest" "$url"
+		if [[ $? -ne 0 ]]; then
+			die "Failed to download release archive: ${url}"
+		fi
+	fi
+	verify_release_archive_checksum "$rel_path" "$dest"
+}
 sub2singbox_ui_asset_base() {
 	printf '/%s/vendor/lib/sub2sing-box-ui' "$web_path"
 }
@@ -1750,6 +1787,7 @@ apt-get update && apt-get install -y -q wget curl tar tzdata
 
     local requested_tag="${1:-$XUI_VERSION}"
     local tag_version="" tag_version_numeric="" min_version="2.3.5" url=""
+	local xui_archive_name="" xui_archive_path="" xui_release_rel_path=""
 
     if [[ -n "$requested_tag" ]]; then
         tag_version=$(ensure_version_tag "$requested_tag")
@@ -1772,12 +1810,11 @@ apt-get update && apt-get install -y -q wget curl tar tzdata
         echo -e "Got x-ui latest version: ${tag_version}, beginning the installation..."
     fi
 
-    url="https://github.com/${XUI_REPO_SLUG}/releases/download/${tag_version}/x-ui-linux-$(arch).tar.gz"
-    wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz "${url}"
-    if [[ $? -ne 0 ]]; then
-        printf '%bDownload x-ui %s failed, please check if the version exists and GitHub is reachable%b\n' "${red}" "${tag_version}" "${plain}"
-        exit 1
-    fi
+	xui_archive_name="x-ui-linux-$(arch).tar.gz"
+	xui_archive_path="/usr/local/${xui_archive_name}"
+	xui_release_rel_path="vendor/releases/3x-ui/${tag_version}/${xui_archive_name}"
+    url="https://github.com/${XUI_REPO_SLUG}/releases/download/${tag_version}/${xui_archive_name}"
+	copy_or_fetch_release_archive "$xui_release_rel_path" "$url" "$xui_archive_path"
 
     # Stop x-ui service and remove old resources
     if [[ -e /usr/local/x-ui/ ]]; then
@@ -1790,8 +1827,8 @@ apt-get update && apt-get install -y -q wget curl tar tzdata
     fi
 
     # Extract resources and set permissions
-    tar zxvf x-ui-linux-$(arch).tar.gz
-    rm x-ui-linux-$(arch).tar.gz -f
+    tar zxvf "$xui_archive_name"
+    rm "$xui_archive_name" -f
 
     cd x-ui
     chmod +x x-ui
@@ -1908,16 +1945,19 @@ install_sub2singbox() {
 	rm -f "$SUB2SINGBOX_SERVICE" /etc/systemd/system/multi-user.target.wants/sub2sing-box.service
 	systemctl daemon-reload 2>/dev/null || true
 	local sub2singbox_version_tag sub2singbox_version_num sub2singbox_archive sub2singbox_url
+	local sub2singbox_release_rel_path sub2singbox_archive_path
 	sub2singbox_version_tag=$(ensure_version_tag "$SUB2SINGBOX_VERSION")
 	sub2singbox_version_num=${sub2singbox_version_tag#v}
 	sub2singbox_archive="sub2sing-box_${sub2singbox_version_num}_linux_${SUB2SINGBOX_ARCH}.tar.gz"
 	sub2singbox_url="https://github.com/${SUB2SINGBOX_REPO_SLUG}/releases/download/${sub2singbox_version_tag}/${sub2singbox_archive}"
+	sub2singbox_release_rel_path="vendor/releases/sub2sing-box/${sub2singbox_version_tag}/${sub2singbox_archive}"
+	sub2singbox_archive_path="/root/${sub2singbox_archive}"
 	printf 'Using pinned sub2sing-box version: %s (%s)\n' "${sub2singbox_version_tag}" "${SUB2SINGBOX_ARCH}"
-	wget -P /root/ "${sub2singbox_url}"
-	tar -xvzf "/root/${sub2singbox_archive}" -C /root/ --strip-components=1 "sub2sing-box_${sub2singbox_version_num}_linux_${SUB2SINGBOX_ARCH}/sub2sing-box"
+	copy_or_fetch_release_archive "$sub2singbox_release_rel_path" "$sub2singbox_url" "$sub2singbox_archive_path"
+	tar -xvzf "$sub2singbox_archive_path" -C /root/ --strip-components=1 "sub2sing-box_${sub2singbox_version_num}_linux_${SUB2SINGBOX_ARCH}/sub2sing-box"
 	mv /root/sub2sing-box /usr/bin/
 	chmod +x /usr/bin/sub2sing-box
-	rm "/root/${sub2singbox_archive}"
+	rm "$sub2singbox_archive_path"
 	write_sub2singbox_service
 	systemctl daemon-reload
 	systemctl enable --now sub2sing-box.service

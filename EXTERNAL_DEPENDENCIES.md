@@ -12,6 +12,9 @@
 - `vendor/rule-assets/*`
 - `vendor/upstream/marz-sub-page/*`
 - `vendor/probes/*`
+- `vendor/releases/3x-ui/v2.8.11/x-ui-linux-amd64.tar.gz`
+- `vendor/releases/sub2sing-box/v0.0.9/sub2sing-box_0.0.9_linux_amd64.tar.gz`
+- `vendor/releases/SHA256SUMS`
 
 Если установщик запускается из локального клона репозитория, эти файлы копируются с диска и обслуживаются из локального bundle-набора.
 
@@ -19,8 +22,8 @@
 
 ### Базовая установка и рантайм
 
-- `MHSanaei/3x-ui` release tarball и служебные скрипты
-- `legiz-ru/sub2sing-box` release tarball
+- `MHSanaei/3x-ui` release tarball для архитектур и версий, которые ещё не зеркалированы в `vendor/releases/`
+- `legiz-ru/sub2sing-box` release tarball для архитектур и версий, которые ещё не зеркалированы в `vendor/releases/`
 - `ipv4.icanhazip.com`
 - `ipv6.icanhazip.com`
 - `ipwho.is`
@@ -30,6 +33,7 @@
 
 - [2026-04-06 05:46:14] Установщик больше не тянет `x-ui.sh` с ветки `main` отдельно: CLI берётся из того же tarball-архива `3x-ui`, что и основной runtime.
 - [2026-04-06 05:46:14] Для `3x-ui` и `sub2sing-box` введён явный pinning через `XUI_REPO_SLUG`, `XUI_VERSION`, `SUB2SINGBOX_REPO_SLUG`, `SUB2SINGBOX_VERSION`, `SUB2SINGBOX_ARCH`.
+- [2026-04-07 01:10:00] Для проверенного сценария `amd64` зеркалированы локальные release-архивы `3x-ui v2.8.11` и `sub2sing-box v0.0.9`; installer теперь использует их из `vendor/releases/` при запуске из локального клона и проверяет `SHA256SUMS`.
 
 ### Legacy-файлы
 
