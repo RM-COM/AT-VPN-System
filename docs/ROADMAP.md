@@ -36,7 +36,8 @@
 - [2026-04-08 05:09:48] Первый кодовый срез в `codex/platform-v2` уже закрыт: модульный каркас `core / modules / providers` и selection-layer внедрены без изменения поведения `classic`.
 - [2026-04-08 05:34:52] Следующий шаг внутри `platform-v2` уже тоже закрыт: безопасные orchestration decision points installer'а переведены на selection-layer без открытия `stealth` и `AWG`.
 - [2026-04-08 05:58:05] Этот шаг уже закрыт: runtime-defaults и конфигурационные boundary-значения `classic` переведены на тот же selection-layer, а baseline-install result сохранён.
-- [2026-04-08 05:58:05] Новый ближайший шаг — вынести provider-level defaults `3x-ui` из `update_xui_db()` в metadata/selection-layer как ещё один безопасный срез до открытия `stealth` и `AWG`.
+- [2026-04-08 06:09:36] Этот шаг тоже уже закрыт: provider-level defaults `3x-ui` вынесены в metadata/selection-layer без изменения baseline-result.
+- [2026-04-08 06:09:36] Новый ближайший шаг — разобрать и вынести оставшиеся panel bootstrap/defaults верхнего уровня из install-flow как последний безопасный подготовительный срез перед открытием новых runtime-профилей.
 - [2026-04-05 05:53:47] Свести оставшиеся пользовательские внешние ссылки к управляемому списку: что зеркалим, что оставляем внешним сознательно.
 
 ## Бэклог

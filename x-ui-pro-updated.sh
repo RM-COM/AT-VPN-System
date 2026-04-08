@@ -60,6 +60,39 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 		PANEL_PROVIDER_PANEL_TITLE="X-UI Secure Panel"
 		PANEL_PROVIDER_SERVICE_NAME="x-ui"
 		PANEL_PROVIDER_CONTROL_BIN="x-ui"
+		PANEL_PROVIDER_WEB_LISTEN=""
+		PANEL_PROVIDER_WEB_DOMAIN=""
+		PANEL_PROVIDER_WEB_CERT_FILE=""
+		PANEL_PROVIDER_WEB_KEY_FILE=""
+		PANEL_PROVIDER_SESSION_MAX_AGE=60
+		PANEL_PROVIDER_PAGE_SIZE=50
+		PANEL_PROVIDER_EXPIRE_DIFF=0
+		PANEL_PROVIDER_TRAFFIC_DIFF=0
+		PANEL_PROVIDER_REMARK_MODEL="-ieo"
+		PANEL_PROVIDER_TG_BOT_ENABLE="false"
+		PANEL_PROVIDER_TG_BOT_TOKEN=""
+		PANEL_PROVIDER_TG_BOT_PROXY=""
+		PANEL_PROVIDER_TG_BOT_API_SERVER=""
+		PANEL_PROVIDER_TG_BOT_CHAT_ID=""
+		PANEL_PROVIDER_TG_RUN_TIME="@daily"
+		PANEL_PROVIDER_TG_BOT_BACKUP="false"
+		PANEL_PROVIDER_TG_BOT_LOGIN_NOTIFY="true"
+		PANEL_PROVIDER_TG_CPU=80
+		PANEL_PROVIDER_TG_LANG="en-US"
+		PANEL_PROVIDER_TIME_LOCATION="Europe/Moscow"
+		PANEL_PROVIDER_SECRET_ENABLE="false"
+		PANEL_PROVIDER_SUB_ENABLE="true"
+		PANEL_PROVIDER_SUB_DOMAIN=""
+		PANEL_PROVIDER_SUB_CERT_FILE=""
+		PANEL_PROVIDER_SUB_KEY_FILE=""
+		PANEL_PROVIDER_SUB_UPDATES=12
+		PANEL_PROVIDER_SUB_ENCRYPT="true"
+		PANEL_PROVIDER_SUB_SHOW_INFO="true"
+		PANEL_PROVIDER_SUB_JSON_FRAGMENT=""
+		PANEL_PROVIDER_SUB_JSON_NOISES=""
+		PANEL_PROVIDER_SUB_JSON_MUX=""
+		PANEL_PROVIDER_SUB_JSON_RULES=""
+		PANEL_PROVIDER_DATEPICKER="gregorian"
 		PLATFORM_METADATA_SOURCE="built-in"
 		case "${ENABLE_AWG,,}" in
 			n|no|0|false|off) ENABLE_AWG_STATE="disabled" ;;
@@ -257,6 +290,9 @@ print_runtime_context() {
 	append_debug_log "  public_http_port=$(platform_public_http_port)"
 	append_debug_log "  public_https_port=$(platform_public_https_port)"
 	append_debug_log "  sub2singbox_bind_port=$(platform_sub2singbox_bind_port)"
+	append_debug_log "  panel_provider_time_location=${PANEL_PROVIDER_TIME_LOCATION:-Europe/Moscow}"
+	append_debug_log "  panel_provider_tg_lang=${PANEL_PROVIDER_TG_LANG:-en-US}"
+	append_debug_log "  panel_provider_sub_updates=${PANEL_PROVIDER_SUB_UPDATES:-12}"
 	append_debug_log "  transport_web_tls_port=$(platform_transport_web_tls_port)"
 	append_debug_log "  transport_reality_site_tls_port=$(platform_transport_reality_site_tls_port)"
 	append_debug_log "  transport_reality_inbound_port=$(platform_transport_reality_inbound_port)"
@@ -1597,39 +1633,39 @@ if [[ -f "$XUIDB" ]]; then
 	     INSERT INTO "settings" ("key", "value") VALUES ("subURI",  '${sub_uri}');
              INSERT INTO "settings" ("key", "value") VALUES ("subJsonPath",  '${json_path}');
 	     INSERT INTO "settings" ("key", "value") VALUES ("subJsonURI",  '${json_uri}');
-             INSERT INTO "settings" ("key", "value") VALUES ("subEnable",  'true');
-             INSERT INTO "settings" ("key", "value") VALUES ("webListen",  '');
-	     INSERT INTO "settings" ("key", "value") VALUES ("webDomain",  '');
-             INSERT INTO "settings" ("key", "value") VALUES ("webCertFile",  '');
-	     INSERT INTO "settings" ("key", "value") VALUES ("webKeyFile",  '');
-      	     INSERT INTO "settings" ("key", "value") VALUES ("sessionMaxAge",  '60');
-             INSERT INTO "settings" ("key", "value") VALUES ("pageSize",  '50');
-             INSERT INTO "settings" ("key", "value") VALUES ("expireDiff",  '0');
-             INSERT INTO "settings" ("key", "value") VALUES ("trafficDiff",  '0');
-             INSERT INTO "settings" ("key", "value") VALUES ("remarkModel",  '-ieo');
-             INSERT INTO "settings" ("key", "value") VALUES ("tgBotEnable",  'false');
-             INSERT INTO "settings" ("key", "value") VALUES ("tgBotToken",  '');
-             INSERT INTO "settings" ("key", "value") VALUES ("tgBotProxy",  '');
-             INSERT INTO "settings" ("key", "value") VALUES ("tgBotAPIServer",  '');
-	     INSERT INTO "settings" ("key", "value") VALUES ("tgBotChatId",  '');
-             INSERT INTO "settings" ("key", "value") VALUES ("tgRunTime",  '@daily');
-	     INSERT INTO "settings" ("key", "value") VALUES ("tgBotBackup",  'false');
-             INSERT INTO "settings" ("key", "value") VALUES ("tgBotLoginNotify",  'true');
-	     INSERT INTO "settings" ("key", "value") VALUES ("tgCpu",  '80');
-             INSERT INTO "settings" ("key", "value") VALUES ("tgLang",  'en-US');
-	     INSERT INTO "settings" ("key", "value") VALUES ("timeLocation",  'Europe/Moscow');
-             INSERT INTO "settings" ("key", "value") VALUES ("secretEnable",  'false');
-	     INSERT INTO "settings" ("key", "value") VALUES ("subDomain",  '');
-             INSERT INTO "settings" ("key", "value") VALUES ("subCertFile",  '');
-	     INSERT INTO "settings" ("key", "value") VALUES ("subKeyFile",  '');
-             INSERT INTO "settings" ("key", "value") VALUES ("subUpdates",  '12');
-	     INSERT INTO "settings" ("key", "value") VALUES ("subEncrypt",  'true');
-             INSERT INTO "settings" ("key", "value") VALUES ("subShowInfo",  'true');
-	     INSERT INTO "settings" ("key", "value") VALUES ("subJsonFragment",  '');
-             INSERT INTO "settings" ("key", "value") VALUES ("subJsonNoises",  '');
-	     INSERT INTO "settings" ("key", "value") VALUES ("subJsonMux",  '');
-             INSERT INTO "settings" ("key", "value") VALUES ("subJsonRules",  '');
-	     INSERT INTO "settings" ("key", "value") VALUES ("datepicker",  'gregorian');
+             INSERT INTO "settings" ("key", "value") VALUES ("subEnable",  '${PANEL_PROVIDER_SUB_ENABLE:-true}');
+             INSERT INTO "settings" ("key", "value") VALUES ("webListen",  '${PANEL_PROVIDER_WEB_LISTEN:-}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("webDomain",  '${PANEL_PROVIDER_WEB_DOMAIN:-}');
+             INSERT INTO "settings" ("key", "value") VALUES ("webCertFile",  '${PANEL_PROVIDER_WEB_CERT_FILE:-}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("webKeyFile",  '${PANEL_PROVIDER_WEB_KEY_FILE:-}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("sessionMaxAge",  '${PANEL_PROVIDER_SESSION_MAX_AGE:-60}');
+             INSERT INTO "settings" ("key", "value") VALUES ("pageSize",  '${PANEL_PROVIDER_PAGE_SIZE:-50}');
+             INSERT INTO "settings" ("key", "value") VALUES ("expireDiff",  '${PANEL_PROVIDER_EXPIRE_DIFF:-0}');
+             INSERT INTO "settings" ("key", "value") VALUES ("trafficDiff",  '${PANEL_PROVIDER_TRAFFIC_DIFF:-0}');
+             INSERT INTO "settings" ("key", "value") VALUES ("remarkModel",  '${PANEL_PROVIDER_REMARK_MODEL:--ieo}');
+             INSERT INTO "settings" ("key", "value") VALUES ("tgBotEnable",  '${PANEL_PROVIDER_TG_BOT_ENABLE:-false}');
+             INSERT INTO "settings" ("key", "value") VALUES ("tgBotToken",  '${PANEL_PROVIDER_TG_BOT_TOKEN:-}');
+             INSERT INTO "settings" ("key", "value") VALUES ("tgBotProxy",  '${PANEL_PROVIDER_TG_BOT_PROXY:-}');
+             INSERT INTO "settings" ("key", "value") VALUES ("tgBotAPIServer",  '${PANEL_PROVIDER_TG_BOT_API_SERVER:-}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("tgBotChatId",  '${PANEL_PROVIDER_TG_BOT_CHAT_ID:-}');
+             INSERT INTO "settings" ("key", "value") VALUES ("tgRunTime",  '${PANEL_PROVIDER_TG_RUN_TIME:-@daily}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("tgBotBackup",  '${PANEL_PROVIDER_TG_BOT_BACKUP:-false}');
+             INSERT INTO "settings" ("key", "value") VALUES ("tgBotLoginNotify",  '${PANEL_PROVIDER_TG_BOT_LOGIN_NOTIFY:-true}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("tgCpu",  '${PANEL_PROVIDER_TG_CPU:-80}');
+             INSERT INTO "settings" ("key", "value") VALUES ("tgLang",  '${PANEL_PROVIDER_TG_LANG:-en-US}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("timeLocation",  '${PANEL_PROVIDER_TIME_LOCATION:-Europe/Moscow}');
+             INSERT INTO "settings" ("key", "value") VALUES ("secretEnable",  '${PANEL_PROVIDER_SECRET_ENABLE:-false}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("subDomain",  '${PANEL_PROVIDER_SUB_DOMAIN:-}');
+             INSERT INTO "settings" ("key", "value") VALUES ("subCertFile",  '${PANEL_PROVIDER_SUB_CERT_FILE:-}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("subKeyFile",  '${PANEL_PROVIDER_SUB_KEY_FILE:-}');
+             INSERT INTO "settings" ("key", "value") VALUES ("subUpdates",  '${PANEL_PROVIDER_SUB_UPDATES:-12}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("subEncrypt",  '${PANEL_PROVIDER_SUB_ENCRYPT:-true}');
+             INSERT INTO "settings" ("key", "value") VALUES ("subShowInfo",  '${PANEL_PROVIDER_SUB_SHOW_INFO:-true}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("subJsonFragment",  '${PANEL_PROVIDER_SUB_JSON_FRAGMENT:-}');
+             INSERT INTO "settings" ("key", "value") VALUES ("subJsonNoises",  '${PANEL_PROVIDER_SUB_JSON_NOISES:-}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("subJsonMux",  '${PANEL_PROVIDER_SUB_JSON_MUX:-}');
+             INSERT INTO "settings" ("key", "value") VALUES ("subJsonRules",  '${PANEL_PROVIDER_SUB_JSON_RULES:-}');
+	     INSERT INTO "settings" ("key", "value") VALUES ("datepicker",  '${PANEL_PROVIDER_DATEPICKER:-gregorian}');
              INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('1','1','first','0','0','0','0','0');
 	     INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('2','1','first_1','0','0','0','0','0');
 		   INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('3','1','firstX','0','0','0','0','0');

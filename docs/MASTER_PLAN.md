@@ -143,4 +143,5 @@
 - [2026-04-08 05:09:48] `[ПУНКТ 24 / СДЕЛАНО]` Первый кодовый срез `platform-v2` внедрён: каркас профилей и провайдеров существует в коде, проходит локальный shell-check и не меняет current-state baseline.
 - [2026-04-08 05:34:52] `[ПУНКТ 25 / СДЕЛАНО]` Безопасные внутренние decision points installer'а переведены на selection-layer через dispatcher-обёртки для ingress, panel provider и transport profile.
 - [2026-04-08 05:58:05] `[ПУНКТ 26 / СДЕЛАНО]` Runtime-defaults и boundary-конфигурация `classic` переведены на selection-layer: токены, политика генерации динамических портов, публичные порты, внутренние baseline-порты и локальная граница `sub2sing-box`.
-- [2026-04-08 05:58:05] `[ПУНКТ 27 / ДАЛЕЕ]` Следующий безопасный шаг — вынести provider-level defaults `3x-ui` из `update_xui_db()` в metadata/selection-layer, не меняя реальный install-result baseline и не открывая `stealth`/`AWG` раньше времени.
+- [2026-04-08 06:09:36] `[ПУНКТ 27 / СДЕЛАНО]` Provider-level defaults `3x-ui` вынесены из `update_xui_db()` в metadata/selection-layer без изменения baseline install-result.
+- [2026-04-08 06:09:36] `[ПУНКТ 28 / ДАЛЕЕ]` Следующий безопасный шаг — определить и вынести panel bootstrap/defaults верхнего уровня, которые ещё остаются в install-flow (`config_after_install()`, bootstrap path/port placeholders), не открывая `stealth` и `AWG` раньше времени.

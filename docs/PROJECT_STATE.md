@@ -65,6 +65,8 @@
 - [2026-04-08 05:34:52] Provider metadata теперь уже влияет на runtime-output и service/control слой `classic`, но при этом сама функциональная логика `classic` не изменена.
 - [2026-04-08 05:58:05] Runtime-defaults и boundary-значения `classic` теперь тоже частично подняты в selection-layer: длины токенов и учётных данных, политика генерации динамических портов, публичные порты `80/443`, внутренние порты `7443/8443/9443` и локальный порт `sub2sing-box`.
 - [2026-04-08 05:58:05] При этом install-result baseline по-прежнему не менялся: те же значения используются механически через helper-функции, а не через новые transport/provider-ветви выполнения.
+- [2026-04-08 06:09:36] Provider metadata `3x-ui` теперь покрывает не только service/control-идентичность, но и panel-defaults из блока `settings`: baseline-дефолты панели больше не размазаны между provider-файлом и SQL-литералами.
+- [2026-04-08 06:09:36] При этом transport/runtime часть baseline по-прежнему не менялась: в `codex/platform-v2` пока выносились только orchestration, runtime-defaults, boundary-константы и panel-provider defaults.
 
 ## Где смотреть детали
 
