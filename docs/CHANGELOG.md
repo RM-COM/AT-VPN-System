@@ -175,3 +175,6 @@
 - [2026-04-08 04:30:47] `docs/STAGING_RESET.md` переписан в корректной кодировке UTF-8, чтобы канонический эксплуатационный слой не ссылался на битый русскоязычный текст.
 - [2026-04-08 04:55:17] Открыта новая рабочая ветка `codex/platform-v2` от стабильного `main`.
 - [2026-04-08 04:55:17] В `codex/platform-v2` явным переносом собран безопасный подготовительный слой: archive-guard для `x-ui-pro-old.sh`, cleanup active-path в `x-ui-pro-updated.sh` и актуальный архитектурно-организационный слой `docs/`.
+- [2026-04-08 23:00:27] Для `stealth` закрыт operational parity baseline: на staging VPS `185.207.64.40` подтверждён маршрут `install -> verify -> websub -> backup -> uninstall -> restore -> reset -> reinstall -> verify`.
+- [2026-04-08 23:00:27] В `x-ui-pro-updated.sh` profile-aware cleanup/reset усилен для `stealth`: `verify_reset_state()` теперь проверяет все managed stack ports профиля, `remove_reset_residuals()` освобождает локальные stealth-boundary ports, а `enable_nginx_sites_stealth()` очищает `stream-enabled/stream.conf` и stream-модули.
+- [2026-04-08 23:00:27] В `backup.sh` restore-контур стал profile-aware для `stealth`: он определяет профиль по `x-ui.db`, проверяет роли `xray:443` и `nginx:7443`, подтверждает отсутствие `nginx stream.conf` и валидирует HTTPS web-sub через корректный публичный `443`.

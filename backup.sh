@@ -255,13 +255,25 @@ trim_slashes() {
 
 load_restore_runtime_context() {
 	RESTORE_DOMAIN=""
+	RESTORE_REALITY_DOMAIN=""
 	RESTORE_WEB_PATH=""
 	RESTORE_SUB_URI=""
 	RESTORE_JSON_URI=""
+	RESTORE_PLATFORM_PROFILE="classic"
+	RESTORE_TRANSPORT_PROFILE="classic-xray"
+	RESTORE_PUBLIC_HTTPS_PORT="443"
+	RESTORE_WEB_TLS_PORT="7443"
+	local detected_reality_port=""
 
 	if [ -f /etc/x-ui/x-ui.db ] && command -v sqlite3 >/dev/null 2>&1; then
 		RESTORE_SUB_URI=$(sqlite3 -list /etc/x-ui/x-ui.db 'SELECT value FROM settings WHERE key="subURI" LIMIT 1;' 2>/dev/null)
 		RESTORE_JSON_URI=$(sqlite3 -list /etc/x-ui/x-ui.db 'SELECT value FROM settings WHERE key="subJsonURI" LIMIT 1;' 2>/dev/null)
+		RESTORE_REALITY_DOMAIN=$(sqlite3 -list /etc/x-ui/x-ui.db "SELECT json_extract(stream_settings, '$.realitySettings.serverNames[0]') FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null | head -n1)
+		detected_reality_port=$(sqlite3 -list /etc/x-ui/x-ui.db "SELECT port FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null | tr -d '[:space:]')
+		if [ "$detected_reality_port" = "$RESTORE_PUBLIC_HTTPS_PORT" ]; then
+			RESTORE_PLATFORM_PROFILE="stealth"
+			RESTORE_TRANSPORT_PROFILE="stealth-xray"
+		fi
 	fi
 
 	if [ -z "$RESTORE_DOMAIN" ]; then
@@ -300,6 +312,8 @@ start_restored_services() {
 }
 
 verify_restore_result() {
+	local listener_output="" probe_port="" probe_url="" resolve_host="" stealth_failures=0
+
 	echo "Post-restore checks:"
 	if command -v nginx >/dev/null 2>&1; then
 		if nginx -t >/dev/null 2>&1; then
@@ -332,14 +346,42 @@ verify_restore_result() {
 	fi
 
 	load_restore_runtime_context
+	if [ "$RESTORE_PLATFORM_PROFILE" = "stealth" ] && command -v ss >/dev/null 2>&1; then
+		listener_output=$(ss -lntp 2>/dev/null || true)
+		if grep -Eq "[:.]${RESTORE_PUBLIC_HTTPS_PORT}[[:space:]].*xray" <<<"$listener_output"; then
+			echo "[PASS] stealth restore keeps xray on public ${RESTORE_PUBLIC_HTTPS_PORT}"
+		else
+			echo "[FAIL] stealth restore does not show xray on public ${RESTORE_PUBLIC_HTTPS_PORT}"
+			stealth_failures=$((stealth_failures + 1))
+		fi
+		if grep -Eq "[:.]${RESTORE_WEB_TLS_PORT}[[:space:]].*nginx" <<<"$listener_output"; then
+			echo "[PASS] stealth restore keeps nginx on local ${RESTORE_WEB_TLS_PORT}"
+		else
+			echo "[FAIL] stealth restore does not show nginx on local ${RESTORE_WEB_TLS_PORT}"
+			stealth_failures=$((stealth_failures + 1))
+		fi
+		if [ ! -f /etc/nginx/stream-enabled/stream.conf ]; then
+			echo "[PASS] stealth restore does not leave nginx stream.conf behind"
+		else
+			echo "[FAIL] stealth restore unexpectedly still has nginx stream.conf"
+			stealth_failures=$((stealth_failures + 1))
+		fi
+	fi
 	if command -v curl >/dev/null 2>&1 && [ -n "$RESTORE_DOMAIN" ] && [ -n "$RESTORE_WEB_PATH" ]; then
-		if curl -kfsS --resolve "${RESTORE_DOMAIN}:443:127.0.0.1" "https://${RESTORE_DOMAIN}/${RESTORE_WEB_PATH}/" >/dev/null 2>&1; then
+		probe_port="$RESTORE_PUBLIC_HTTPS_PORT"
+		probe_url="https://${RESTORE_DOMAIN}/${RESTORE_WEB_PATH}/"
+		resolve_host="${RESTORE_DOMAIN}:${RESTORE_PUBLIC_HTTPS_PORT}:127.0.0.1"
+		if curl -kfsS --resolve "$resolve_host" "$probe_url" >/dev/null 2>&1; then
 			echo "[PASS] local HTTPS web-sub responds after restore"
 		else
 			echo "[FAIL] local HTTPS web-sub does not respond after restore"
 		fi
 	else
 		echo "[FAIL] restore runtime context is incomplete for HTTPS web-sub check"
+	fi
+
+	if [ "$stealth_failures" -gt 0 ]; then
+		echo "[FAIL] stealth-specific restore checks reported ${stealth_failures} issue(s)"
 	fi
 }
 

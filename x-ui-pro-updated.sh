@@ -854,7 +854,8 @@ verify_existing_installation() {
 }
 verify_reset_state() {
 	local failures=0
-	local path listener_output
+	local path listener_output port_regex=""
+	local check_ports=() port_value
 
 	if systemctl is-active --quiet nginx; then
 		record_verify_result "FAIL" "nginx service is still active after reset"
@@ -922,13 +923,23 @@ verify_reset_state() {
 	fi
 
 	if command -v ss >/dev/null 2>&1; then
-		listener_output=$(ss -ltn 2>/dev/null | awk 'NR > 1 && $4 ~ /:(80|443)$/ {print}')
+		check_ports=("80" "443")
+		for port_value in "$(platform_transport_web_tls_port)" "$(platform_transport_reality_site_tls_port)"; do
+			[[ "$port_value" =~ ^[0-9]+$ ]] || continue
+			[[ "$port_value" == "80" || "$port_value" == "443" ]] && continue
+			if [[ ! " ${check_ports[*]} " =~ [[:space:]]${port_value}[[:space:]] ]]; then
+				check_ports+=("$port_value")
+			fi
+		done
+		port_regex=$(printf '%s|' "${check_ports[@]}")
+		port_regex="${port_regex%|}"
+		listener_output=$(ss -ltn 2>/dev/null | awk -v regex=":(${port_regex})$" 'NR > 1 && $4 ~ regex {print}')
 		append_debug_log "Reset listener check: ${listener_output:-<empty>}"
 		if [[ -n "$listener_output" ]]; then
-			record_verify_result "FAIL" "Ports 80/443 are still busy: ${listener_output//$'\n'/; }"
+			record_verify_result "FAIL" "Managed stack ports are still busy: ${listener_output//$'\n'/; }"
 			failures=$((failures + 1))
 		else
-			record_verify_result "PASS" "Ports 80/443 are free"
+			record_verify_result "PASS" "Managed stack ports are free"
 		fi
 	fi
 
@@ -1419,9 +1430,13 @@ stop_sub2singbox() {
 }
 remove_reset_residuals() {
 	local path
+	local extra_ports=()
+	local web_tls_port reality_site_tls_port
 	stop_sub2singbox
 	systemctl stop nginx x-ui 2>/dev/null || true
 	systemctl disable nginx x-ui 2>/dev/null || true
+	web_tls_port="$(platform_transport_web_tls_port)"
+	reality_site_tls_port="$(platform_transport_reality_site_tls_port)"
 	for path in \
 		"/etc/systemd/system/x-ui.service" \
 		"/etc/systemd/system/multi-user.target.wants/x-ui.service" \
@@ -1443,6 +1458,11 @@ remove_reset_residuals() {
 	systemctl daemon-reload 2>/dev/null || true
 	systemctl reset-failed nginx x-ui sub2sing-box 2>/dev/null || true
 	fuser -k 80/tcp 80/udp 443/tcp 443/udp 2>/dev/null || true
+	[[ "$web_tls_port" =~ ^[0-9]+$ && "$web_tls_port" != "80" && "$web_tls_port" != "443" ]] && extra_ports+=("$web_tls_port")
+	[[ "$reality_site_tls_port" =~ ^[0-9]+$ && "$reality_site_tls_port" != "80" && "$reality_site_tls_port" != "443" && "$reality_site_tls_port" != "$web_tls_port" ]] && extra_ports+=("$reality_site_tls_port")
+	for path in "${extra_ports[@]}"; do
+		fuser -k "${path}/tcp" "${path}/udp" 2>/dev/null || true
+	done
 }
 uninstall_xui() {
 	if command -v x-ui >/dev/null 2>&1; then
@@ -2124,6 +2144,8 @@ enable_nginx_sites_stealth() {
 		unlink "/etc/nginx/sites-enabled/default" >/dev/null 2>&1
 		rm -f "/etc/nginx/sites-enabled/default" "/etc/nginx/sites-available/default"
 		rm -f "/etc/nginx/sites-enabled/stream.conf"
+		rm -f "/etc/nginx/stream-enabled/stream.conf"
+		rm -f "/etc/nginx/modules-enabled/50-mod-stream.conf" "/etc/nginx/modules-enabled/70-mod-stream-geoip2.conf"
 		ln -sf "/etc/nginx/sites-available/${domain}" "/etc/nginx/sites-enabled/"
 		ln -sf "/etc/nginx/sites-available/${reality_domain}" "/etc/nginx/sites-enabled/"
 		ln -sf "/etc/nginx/sites-available/80.conf" "/etc/nginx/sites-enabled/"

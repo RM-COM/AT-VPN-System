@@ -65,6 +65,9 @@
 - [2026-04-08 22:32:50] Проверить, что весь обязательный operational маршрут `stealth` проходит не только на install/verify, но и на `backup/restore/reset/uninstall/repeated install`.
 - [2026-04-08 22:32:50] Уточнить и зафиксировать текущий naming transport-профилей, чтобы следующий stealth transport не был вшит хаотично.
 - [2026-04-08 22:32:50] Дочистить профиль-зависимые места installer'а, если они ещё наследуют classic-only ожидания.
+- [2026-04-08 23:00:27] Блок A закрыт: на staging `185.207.64.40` подтверждён маршрут `install -> verify -> websub -> backup -> uninstall -> restore -> reset -> reinstall -> verify` для `stealth/stealth-xray`.
+- [2026-04-08 23:00:27] Во время этого этапа исправлены реальные profile-aware хвосты: `verify_reset_state()` и `remove_reset_residuals()` теперь учитывают managed stack ports профиля, `enable_nginx_sites_stealth()` корректно очищает `stream-enabled/stream.conf`, а `backup.sh` стал profile-aware для `stealth` restore diagnostics.
+- [2026-04-08 23:00:27] Текущая активная точка исполнения смещается на блок B.
 
 ### Блок B. Открыть второй stealth transport
 
