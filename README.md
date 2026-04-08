@@ -133,6 +133,12 @@ sudo bash ./x-ui-pro-updated.sh -stage verify -debug yes -keep_artifacts yes
 sudo bash ./x-ui-pro-updated.sh -stage websub -verify yes -debug yes
 ```
 
+Server-side acceptance для текущего stealth-профиля:
+
+```bash
+sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -acceptance_minutes 5 -acceptance_interval_seconds 30
+```
+
 Безопасный предпросмотр install-сценария без изменения системы:
 
 ```bash
@@ -209,13 +215,20 @@ sudo bash ./backup.sh
 - repeated install поверх уже работающей ноды
 - `stage=verify`
 - `stage=websub`
+- `stage=acceptance` для server-side stealth soak и генерации чек-листа ручной клиентской приёмки
 - локальная выдача web-sub через HTTPS
 - локальная выдача `clash.yaml`
 - работа `nginx`, `x-ui`, `sub2sing-box`
 - внешняя client-side проверка web-sub, `clashmeta/first` и `sub2sing-box` endpoint
 - локальная выдача runtime-ассетов `sub2sing-box` UI без `unpkg.com`, `fonts.googleapis.com` и внешних raw JSON `sb-rule-sets`
 - отсутствие forbidden upstream-ссылок и неожиданных внешних URL вне allowlist в `stage=verify`
+- короткий server-side acceptance/soak для `stealth-xray` и `stealth-xhttp`
 - repeated install с явным пиннингом `XUI_VERSION=v2.8.11` и `SUB2SINGBOX_VERSION=v0.0.9`
+
+Важно:
+
+- `stage=acceptance` пока рассчитан именно на `stealth`-профили
+- он не заменяет живую проверку через `v2rayN`, а подготавливает сравнение и сохраняет `manual-client-checklist.md` в debug artifacts
 
 Отдельный обязательный regression-маршрут теперь формализован в:
 

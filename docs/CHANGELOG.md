@@ -1,5 +1,9 @@
 ﻿# CHANGELOG
 
+- [2026-04-09 00:30:57] В `codex/platform-v2` добавлен новый stage `acceptance` в `x-ui-pro-updated.sh`: для текущего stealth-профиля он выполняет строгий `verify`, затем гоняет повторяемые HTTPS-пробы `panel/web-sub/sub2sing-box/fallback`, сохраняет `acceptance/summary.txt` и пишет `manual-client-checklist.md` в debug artifacts.
+- [2026-04-09 00:30:57] На staging `185.207.64.40` этот новый server-side helper уже подтверждён для `stealth-xhttp` и `stealth-xray`; оба режима прошли короткий soak `1 minute / 10 seconds` без ошибок по всем четырём probe-точкам.
+- [2026-04-09 00:30:57] Документация блока C синхронизирована под новый контур: `README.md`, `OPERATIONS.md`, `ANTI_DPI_MATRIX.md`, `XRAY_DPI_PLAN.md`, `PROJECT_STATE.md`, `MASTER_PLAN.md`, `RESUME_POINT.md` и `ROADMAP.md` теперь отделяют server-side acceptance от ещё не закрытой живой клиентской приёмки.
+
 - [2026-04-08 22:29:01] В `codex/platform-v2` введён отдельный фазовый документ `docs/XRAY_DPI_PLAN.md`: текущий этап теперь формально разделён на завершение `Xray/DPI` слоя, последующий `AWG` и отдельный будущий блок ускорений.
 - [2026-04-08 22:29:01] Канонические документы `INDEX.md`, `MASTER_PLAN.md`, `ROADMAP.md`, `RESUME_POINT.md` и `PROJECT_STATE.md` синхронизированы с новым фокусом: `AWG` больше не считается немедленным следующим шагом до закрытия `Xray/DPI` этапа.
 - [2026-04-08 21:58:42] В `codex/platform-v2` усилен strict verify для `stealth`: `verify_existing_installation()` теперь дополнительно проверяет отсутствие `stream.conf`, связку `xray:443` и `nginx:7443`, привязку `REALITY` inbound к `443`, а также ответы panel и fallback root через публичный `443`.

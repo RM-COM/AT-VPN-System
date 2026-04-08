@@ -406,6 +406,8 @@ STAGE="all"
 SKIP_CLEANUP="n"
 KEEP_ARTIFACTS="n"
 CONFIRM_RESET="n"
+ACCEPTANCE_MINUTES="${ACCEPTANCE_MINUTES:-5}"
+ACCEPTANCE_INTERVAL_SECONDS="${ACCEPTANCE_INTERVAL_SECONDS:-30}"
 DEBUG_ROOT="/root/x-ui-pro-debug"
 DEBUG_DIR=""
 DEBUG_LOG=""
@@ -531,6 +533,18 @@ print_reset_plan() {
 	msg_inf "5. Verify that ports 80/443 are free and install artifacts are gone."
 	print_runtime_context
 }
+print_acceptance_plan() {
+	msg_inf "DRY-RUN acceptance: будет выполнен только план сравнительной приёмки stealth-профиля."
+	msg_inf "Acceptance plan:"
+	msg_inf "1. Восстановить runtime-контекст текущего stealth-профиля."
+	msg_inf "2. Выполнить строгий verify как базовую server-side приёмку."
+	msg_inf "3. Прогнать циклические HTTPS-пробы panel/web-sub/sub2sing-box/fallback через public 443."
+	msg_inf "4. Сохранить отчёт и чек-лист ручной клиентской проверки в debug artifacts."
+	msg_inf "5. Использовать отчёт для сравнения stealth-xray и stealth-xhttp."
+	msg_inf "Acceptance duration (minutes): ${ACCEPTANCE_MINUTES}"
+	msg_inf "Acceptance interval (seconds): ${ACCEPTANCE_INTERVAL_SECONDS}"
+	print_runtime_context
+}
 load_existing_runtime_context() {
 	local detected_site detected_reality_port detected_xhttp_inbound
 	if [[ "$PLATFORM_PROFILE" == "classic" && "$TRANSPORT_PROFILE" == "classic-xray" && -f "$XUIDB" ]]; then
@@ -602,6 +616,177 @@ record_verify_result() {
 	else
 		printf '[FAIL] %s\n' "$message"
 	fi
+}
+record_acceptance_result() {
+	local status="$1" message="$2"
+	append_debug_log "ACCEPT ${status}: ${message}"
+	if [[ "$status" == "PASS" ]]; then
+		printf '[PASS] %s\n' "$message"
+	else
+		printf '[FAIL] %s\n' "$message"
+	fi
+}
+acceptance_artifact_path() {
+	local name="$1"
+	[[ -n "$DEBUG_DIR" ]] || return 1
+	printf '%s/acceptance/%s' "$DEBUG_DIR" "$name"
+}
+capture_acceptance_snapshot() {
+	[[ -n "$DEBUG_DIR" ]] || return 0
+	capture_command_output "acceptance/ss-lntp.txt" ss -lntp
+	capture_command_output "acceptance/systemctl-nginx.txt" systemctl status nginx --no-pager
+	capture_command_output "acceptance/systemctl-x-ui.txt" systemctl status x-ui --no-pager
+	if [[ -f "$SUB2SINGBOX_SERVICE" ]]; then
+		capture_command_output "acceptance/systemctl-sub2sing-box.txt" systemctl status sub2sing-box --no-pager
+	fi
+}
+write_acceptance_manual_checklist() {
+	local checklist_file public_https_port
+	[[ -n "$DEBUG_DIR" ]] || return 0
+	public_https_port="$(platform_public_https_port)"
+	checklist_file="$(acceptance_artifact_path "manual-client-checklist.md")"
+	mkdir -p "$(dirname "$checklist_file")"
+	cat > "$checklist_file" <<EOF
+# Чек-лист ручной клиентской приёмки
+
+- Дата генерации: $(timestamp)
+- Профиль: $(platform_selection_summary)
+- Домен панели: ${domain:-<не определён>}
+- REALITY-домен: ${reality_domain:-<не определён>}
+- Публичный HTTPS-порт: ${public_https_port}
+
+## Обязательные шаги
+
+1. Импортировать текущий профиль в \`v2rayN\`.
+2. Подтвердить успешное подключение без ошибки \`PublicKey property is invalid\`.
+3. Проверить открытие обычных сайтов через прокси.
+4. Проверить видео/стриминг и фоновые запросы браузера.
+5. Выполнить ручное переподключение клиента и убедиться, что профиль восстанавливается.
+6. Если возможно, повторить проверку с другой сети или на другом типе устройства.
+7. Зафиксировать, какой профиль тестировался: \`$(platform_selection_summary)\`.
+
+## Полезные URL текущей ноды
+
+- Panel: https://${domain:-<domain>}/${panel_path:-<panel_path>}/
+- Web-sub: https://${domain:-<domain>}/${web_path:-<web_path>}/
+- sub2sing-box UI: https://${domain:-<domain>}/${sub2singbox_path:-<sub2singbox_path>}/
+- Fallback root: https://${reality_domain:-<reality_domain>}/
+EOF
+	append_debug_log "Acceptance manual checklist written to ${checklist_file}"
+}
+acceptance_probe_url() {
+	local label="$1" host="$2" path="$3" artifact_name="$4" public_https_port curl_output
+	public_https_port="$(platform_public_https_port)"
+	if [[ -z "$host" || -z "$path" ]]; then
+		record_acceptance_result "FAIL" "${label}: не удалось определить host/path"
+		return 1
+	fi
+	if curl_output=$(curl -kfsS --resolve "${host}:${public_https_port}:127.0.0.1" "https://${host}${path}" 2>&1); then
+		record_acceptance_result "PASS" "${label}: HTTPS probe passed"
+		if [[ -n "$DEBUG_DIR" ]]; then
+			printf '%s' "$curl_output" > "$(acceptance_artifact_path "${artifact_name}")"
+		fi
+		return 0
+	fi
+	record_acceptance_result "FAIL" "${label}: HTTPS probe failed"
+	append_debug_log "${label} curl output: ${curl_output}"
+	return 1
+}
+run_stealth_acceptance_stage() {
+	local failures=0 iteration=1 total_iterations=0 summary_file public_https_port
+	local panel_passes=0 panel_fails=0 websub_passes=0 websub_fails=0
+	local sub2singbox_passes=0 sub2singbox_fails=0 fallback_passes=0 fallback_fails=0
+
+	KEEP_ARTIFACTS="y"
+	init_debug_session
+	load_existing_runtime_context
+
+	if [[ "$PLATFORM_PROFILE" != "stealth" ]]; then
+		die "Stage=acceptance пока поддерживается только для stealth-профилей. Текущий профиль: $(platform_selection_summary)"
+	fi
+
+	if ! [[ "$ACCEPTANCE_MINUTES" =~ ^[0-9]+$ ]] || ! [[ "$ACCEPTANCE_INTERVAL_SECONDS" =~ ^[0-9]+$ ]]; then
+		die "Параметры acceptance должны быть целыми числами: minutes=${ACCEPTANCE_MINUTES}, interval=${ACCEPTANCE_INTERVAL_SECONDS}"
+	fi
+	if (( ACCEPTANCE_MINUTES < 1 )); then
+		die "ACCEPTANCE_MINUTES должен быть >= 1"
+	fi
+	if (( ACCEPTANCE_INTERVAL_SECONDS < 1 )); then
+		die "ACCEPTANCE_INTERVAL_SECONDS должен быть >= 1"
+	fi
+
+	public_https_port="$(platform_public_https_port)"
+	total_iterations=$(( (ACCEPTANCE_MINUTES * 60 + ACCEPTANCE_INTERVAL_SECONDS - 1) / ACCEPTANCE_INTERVAL_SECONDS ))
+	(( total_iterations < 1 )) && total_iterations=1
+
+	msg_inf "Запускаю acceptance для $(platform_selection_summary)"
+	msg_inf "Интервал: ${ACCEPTANCE_INTERVAL_SECONDS}s, длительность: ${ACCEPTANCE_MINUTES}m, циклов: ${total_iterations}"
+	print_runtime_context
+
+	verify_existing_installation || die "Acceptance остановлен: verify не прошёл."
+	capture_acceptance_snapshot
+	write_acceptance_manual_checklist
+
+	while (( iteration <= total_iterations )); do
+		msg_inf "Acceptance iteration ${iteration}/${total_iterations}"
+
+		if acceptance_probe_url "Panel" "${domain}" "/${panel_path}/" "panel-body-${iteration}.html"; then
+			panel_passes=$((panel_passes + 1))
+		else
+			panel_fails=$((panel_fails + 1))
+			failures=$((failures + 1))
+		fi
+
+		if acceptance_probe_url "Web-sub" "${domain}" "/${web_path}/" "websub-body-${iteration}.html"; then
+			websub_passes=$((websub_passes + 1))
+		else
+			websub_fails=$((websub_fails + 1))
+			failures=$((failures + 1))
+		fi
+
+		if acceptance_probe_url "sub2sing-box" "${domain}" "/${sub2singbox_path}/" "sub2singbox-body-${iteration}.html"; then
+			sub2singbox_passes=$((sub2singbox_passes + 1))
+		else
+			sub2singbox_fails=$((sub2singbox_fails + 1))
+			failures=$((failures + 1))
+		fi
+
+		if acceptance_probe_url "Fallback root" "${reality_domain}" "/" "fallback-root-${iteration}.html"; then
+			fallback_passes=$((fallback_passes + 1))
+		else
+			fallback_fails=$((fallback_fails + 1))
+			failures=$((failures + 1))
+		fi
+
+		if (( iteration < total_iterations )); then
+			sleep "${ACCEPTANCE_INTERVAL_SECONDS}"
+		fi
+		iteration=$((iteration + 1))
+	done
+
+	summary_file="$(acceptance_artifact_path "summary.txt")"
+	mkdir -p "$(dirname "$summary_file")"
+	cat > "$summary_file" <<EOF
+Acceptance summary
+Timestamp: $(timestamp)
+Selection: $(platform_selection_summary)
+Public HTTPS port: ${public_https_port}
+Iterations: ${total_iterations}
+Interval seconds: ${ACCEPTANCE_INTERVAL_SECONDS}
+Minutes: ${ACCEPTANCE_MINUTES}
+Panel: pass=${panel_passes} fail=${panel_fails}
+Web-sub: pass=${websub_passes} fail=${websub_fails}
+sub2sing-box: pass=${sub2singbox_passes} fail=${sub2singbox_fails}
+Fallback root: pass=${fallback_passes} fail=${fallback_fails}
+EOF
+	append_debug_log "Acceptance summary written to ${summary_file}"
+	capture_acceptance_snapshot
+
+	if (( failures > 0 )); then
+		die "Acceptance завершён с ошибками. Подробности: ${summary_file}"
+	fi
+
+	msg_ok "Acceptance завершён успешно. Отчёт: ${summary_file}"
 }
 verify_existing_installation() {
 	local failures=0
@@ -1437,6 +1622,8 @@ parse_args() {
 	SKIP_CLEANUP="n"
 	KEEP_ARTIFACTS="n"
 	CONFIRM_RESET="n"
+	ACCEPTANCE_MINUTES="${ACCEPTANCE_MINUTES:-5}"
+	ACCEPTANCE_INTERVAL_SECONDS="${ACCEPTANCE_INTERVAL_SECONDS:-30}"
 	PLATFORM_PROFILE="${PLATFORM_PROFILE:-classic}"
 	TRANSPORT_PROFILE="${TRANSPORT_PROFILE:-classic-xray}"
 	PANEL_PROVIDER="${PANEL_PROVIDER:-3x-ui}"
@@ -1460,6 +1647,8 @@ parse_args() {
 			-skip_cleanup) SKIP_CLEANUP="$2"; shift 2;;
 			-keep_artifacts) KEEP_ARTIFACTS="$2"; shift 2;;
 			-confirm_reset) CONFIRM_RESET="$2"; shift 2;;
+			-acceptance_minutes) ACCEPTANCE_MINUTES="$2"; shift 2;;
+			-acceptance_interval_seconds) ACCEPTANCE_INTERVAL_SECONDS="$2"; shift 2;;
 			-profile|-platform_profile) PLATFORM_PROFILE="$2"; shift 2;;
 			-transport_profile) TRANSPORT_PROFILE="$2"; shift 2;;
 			-panel_provider) PANEL_PROVIDER="$2"; shift 2;;
@@ -3269,8 +3458,8 @@ main() {
 	append_debug_log "Stage=${STAGE} Debug=${DEBUG_MODE} DryRun=${DRY_RUN} Verify=${VERIFY_MODE} SkipCleanup=${SKIP_CLEANUP} KeepArtifacts=${KEEP_ARTIFACTS} ConfirmReset=${CONFIRM_RESET} Platform=$(platform_selection_summary)"
 
 	case "$STAGE" in
-		all|verify|websub|reset) ;;
-		*) die "Unsupported stage: ${STAGE}. Supported values: all, verify, websub, reset." ;;
+		all|verify|websub|reset|acceptance) ;;
+		*) die "Unsupported stage: ${STAGE}. Supported values: all, verify, websub, reset, acceptance." ;;
 	esac
 
 	if [[ "$STAGE" == "verify" ]]; then
@@ -3281,6 +3470,16 @@ main() {
 		fi
 		verify_existing_installation || die "Проверка текущей установки завершилась с ошибками."
 		msg_ok "Проверка текущей установки завершена успешно."
+		exit 0
+	fi
+
+	if [[ "$STAGE" == "acceptance" ]]; then
+		if is_yes "$DRY_RUN"; then
+			load_existing_runtime_context
+			print_acceptance_plan
+			exit 0
+		fi
+		run_stealth_acceptance_stage
 		exit 0
 	fi
 

@@ -21,6 +21,7 @@
 - [2026-04-08 23:24:11] `stealth-xray` уже является runnable и подтверждён staging-регрессом.
 - [2026-04-08 23:24:11] `stealth-xhttp` открыт как второй runnable stealth transport и подтверждён staging `install + verify`.
 - [2026-04-08 23:24:11] `verify` и восстановление runtime-контекста уже работают profile-aware для `classic` и `stealth`.
+- [2026-04-09 00:30:57] Для текущей ветки уже есть отдельный server-side `stage=acceptance`, подтверждённый на staging для `stealth-xray` и `stealth-xhttp`.
 
 ## Что здесь можно делать
 
