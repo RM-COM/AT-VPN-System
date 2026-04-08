@@ -149,4 +149,5 @@
 - [2026-04-08 06:44:51] `[ПУНКТ 30 / СДЕЛАНО]` Первый ingress-only runtime seam для `stealth` уже выделен: `nginx` слой переключается по `PLATFORM_PROFILE`, а `classic` при этом не меняет своё поведение.
 - [2026-04-08 07:04:32] `[ПУНКТ 31 / СДЕЛАНО]` Transport/runtime seam для `stealth-xray` уже выделен: `update_xui_db()` разрезан на helper-слои, а transport metadata теперь несут отдельный `REALITY`-контракт для `classic` и `stealth`.
 - [2026-04-08 07:11:12] `[ПУНКТ 32 / СДЕЛАНО]` `verify_existing_installation()` и `load_existing_runtime_context()` переведены на безопасный profile-aware слой: `classic` сохранил строгие runtime-проверки, а staged `stealth` перестал наследовать ложные classic-only ожидания.
-- [2026-04-08 07:11:12] `[ПУНКТ 33 / ДАЛЕЕ]` Следующий шаг — открыть первый runnable transport-path для `stealth-xray`, начиная с profile-aware transport activation и без вмешательства в модуль `AWG`.
+- [2026-04-08 21:18:12] `[ПУНКТ 33 / СДЕЛАНО]` Первый runnable transport-path для `stealth-xray` открыт: `stealth/stealth-xray` переведены в `ready`, а strict public-HTTPS verify сознательно оставлен только для `classic`.
+- [2026-04-08 21:18:12] `[ПУНКТ 34 / ДАЛЕЕ]` Следующий шаг — провести отдельный Linux smoke-test и staging-regression для `stealth-xray`, и только потом усиливать verify или переходить к модулю `AWG`.

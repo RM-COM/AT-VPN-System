@@ -60,8 +60,8 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				;;
 			stealth)
 				PLATFORM_PROFILE_LABEL="Stealth"
-				PLATFORM_PROFILE_DESCRIPTION="Prepared anti-DPI profile with Xray on public 443 and local nginx fallback"
-				PLATFORM_IMPLEMENTATION_STATE="planned"
+				PLATFORM_PROFILE_DESCRIPTION="Anti-DPI profile with Xray on public 443 and local nginx fallback"
+				PLATFORM_IMPLEMENTATION_STATE="ready"
 				PLATFORM_INGRESS_OWNER="xray"
 				PLATFORM_RUNTIME_TOKEN_LENGTH=10
 				PLATFORM_CREDENTIAL_LENGTH=10
@@ -93,8 +93,8 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				;;
 			stealth-xray)
 				TRANSPORT_PROFILE_LABEL="Stealth Xray"
-				TRANSPORT_PROFILE_DESCRIPTION="Prepared stealth Xray transport with public 443 and local nginx fallback"
-				TRANSPORT_IMPLEMENTATION_STATE="planned"
+				TRANSPORT_PROFILE_DESCRIPTION="Stealth Xray transport with public 443 and local nginx fallback"
+				TRANSPORT_IMPLEMENTATION_STATE="ready"
 				TRANSPORT_STREAM_MODE="disabled"
 				TRANSPORT_WEB_TLS_PORT=7443
 				TRANSPORT_REALITY_SITE_TLS_PORT=7443
@@ -577,7 +577,7 @@ verify_existing_installation() {
 	load_existing_runtime_context
 	stream_mode="$(platform_transport_stream_mode)"
 	selection_runtime_state="$(platform_selection_runtime_state)"
-	if [[ "$selection_runtime_state" == "ready" ]]; then
+	if [[ "$selection_runtime_state" == "ready" && "$PLATFORM_PROFILE" == "classic" ]]; then
 		https_proxy_checks_enabled="enabled"
 	else
 		https_proxy_checks_enabled="disabled"

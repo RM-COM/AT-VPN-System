@@ -78,6 +78,8 @@
 - [2026-04-08 07:04:32] Для transport metadata теперь явно различаются `REALITY`-инварианты `classic` и `stealth`: `8443/0/acceptProxyProtocol=true/domain` против `443/1/acceptProxyProtocol=false/reality_domain`.
 - [2026-04-08 07:04:32] При этом `stealth` всё ещё сознательно не переведён в `ready`: install-runtime остаётся staged до отдельного шага, в котором `verify_existing_installation()` и `load_existing_runtime_context()` станут profile-aware.
 - [2026-04-08 07:11:12] Этот следующий шаг уже тоже закрыт: `load_existing_runtime_context()` теперь обогащает baseline-контекст значением `reality_domain`, а `verify_existing_installation()` различает строгий runnable `classic` и staged-профили, для которых public-HTTPS пробы пока пропускаются без ложного `FAIL`.
+- [2026-04-08 21:18:12] Следующий safe-slice тоже уже закрыт: `stealth` и `stealth-xray` переведены в `ready`, поэтому selection-layer больше не считает этот профиль purely staged и допускает реальный install-path.
+- [2026-04-08 21:18:12] При этом runtime-граница удержана осознанно: public-HTTPS verify по-прежнему считается strict только для `classic`, а `stealth` остаётся runnable без преждевременного ложного `FAIL` до отдельного Linux staging-regression.
 - [2026-04-08 07:11:12] Это означает, что `platform-v2` уже умеет отделять install/runtime инварианты `classic` от подготовительного состояния `stealth`; следующим отдельным срезом можно открывать runnable transport-path для `stealth`, не трогая пока `AWG`.
 
 ## Где смотреть детали

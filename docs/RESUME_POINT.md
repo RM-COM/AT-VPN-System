@@ -73,6 +73,8 @@
 - [2026-04-07 01:16:59] Проверенный install-контур уже перенесён в `main`, поэтому официальный install-source репозитория и реальная staging-проверка теперь совпадают.
 - [2026-04-08 07:11:12] Следующий profile-aware срез в `codex/platform-v2` уже выполнен: `load_existing_runtime_context()` теперь дополнительно поднимает `reality_domain`, а `verify_existing_installation()` различает runnable baseline `classic` и staged-профили, для которых public-HTTPS проверки пока ещё не обязательны.
 - [2026-04-08 07:11:12] Текущая точка продолжения сместилась на следующий явный runtime-этап: открыть runnable transport-path для `stealth-xray`, не трогая пока `AWG` и не ослабляя проверенный install-контур `classic`.
+- [2026-04-08 21:18:12] Этот runtime-этап уже закрыт: `stealth-xray` больше не staged-only, а открыт как runnable-path в `codex/platform-v2`; для него сознательно сохранён мягкий verify до отдельного Linux smoke-test.
+- [2026-04-08 21:18:12] Следующая точка продолжения теперь уже не про metadata, а про реальный `stealth` runtime: нужен отдельный Linux staging-regression нового профиля, после которого можно будет решать, усиливать ли strict verify и переходить ли к модулю `AWG`.
 
 ## Что ещё НЕ завершено
 

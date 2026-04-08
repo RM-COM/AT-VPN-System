@@ -1,5 +1,8 @@
 ﻿# CHANGELOG
 
+- [2026-04-08 21:18:12] В `codex/platform-v2` открыт первый runnable-path для `stealth-xray`: профиль `stealth` и transport `stealth-xray` переведены из `planned` в `ready` как в repo metadata, так и во встроенном fallback-слое installer'а.
+- [2026-04-08 21:18:12] Для этого safe-slice сохранён мягкий verify-gate: `verify_existing_installation()` по-прежнему включает локальные HTTPS-пробы только для `classic`, поэтому `stealth` не получает ложный `FAIL` до отдельного Linux staging-regression.
+- [2026-04-08 21:18:12] Локально подтверждены `bash -n` для `x-ui-pro-updated.sh`, `x-ui-pro.sh` и `core/platform-lib.sh`, `git diff --check` без содержательных ошибок и metadata self-check `classic=ready/ready`, `stealth=ready/ready`; отдельный Linux runtime smoke-test для `stealth` остаётся следующим шагом.
 - [2026-04-08 07:11:12] В `codex/platform-v2` выполнен следующий безопасный profile-aware срез: `load_existing_runtime_context()` теперь дополнительно восстанавливает `reality_domain` из `x-ui.db`, не ломая baseline-порядок чтения `webPort/webBasePath/subPath/subJsonPath/subURI/subJsonURI`.
 - [2026-04-08 07:11:12] `verify_existing_installation()` переведён на staged-aware ветвление: `classic` сохраняет строгие локальные HTTPS-пробы через публичный ingress, а staged-профили вроде `stealth/stealth-xray` больше не валятся на этих classic-only ожиданиях до открытия runnable transport-path.
 - [2026-04-08 07:11:12] Локально подтверждено, что `bash -n` для `x-ui-pro-updated.sh`, `x-ui-pro.sh` и `core/platform-lib.sh` проходит, `git diff --check` чистый, а metadata self-check по-прежнему различает `classic=ready/ready` и `stealth=planned/planned`.

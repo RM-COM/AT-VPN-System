@@ -46,8 +46,8 @@ platform_apply_builtin_metadata() {
 			;;
 		stealth)
 			PLATFORM_PROFILE_LABEL="Stealth"
-			PLATFORM_PROFILE_DESCRIPTION="Prepared anti-DPI profile with Xray on public 443 and local nginx fallback"
-			PLATFORM_IMPLEMENTATION_STATE="planned"
+			PLATFORM_PROFILE_DESCRIPTION="Anti-DPI profile with Xray on public 443 and local nginx fallback"
+			PLATFORM_IMPLEMENTATION_STATE="ready"
 			PLATFORM_INGRESS_OWNER="xray"
 			PLATFORM_RUNTIME_TOKEN_LENGTH=10
 			PLATFORM_CREDENTIAL_LENGTH=10
@@ -75,8 +75,8 @@ platform_apply_builtin_metadata() {
 			;;
 		stealth-xray)
 			TRANSPORT_PROFILE_LABEL="Stealth Xray"
-			TRANSPORT_PROFILE_DESCRIPTION="Prepared stealth Xray transport with public 443 and local nginx fallback"
-			TRANSPORT_IMPLEMENTATION_STATE="planned"
+			TRANSPORT_PROFILE_DESCRIPTION="Stealth Xray transport with public 443 and local nginx fallback"
+			TRANSPORT_IMPLEMENTATION_STATE="ready"
 			TRANSPORT_STREAM_MODE="disabled"
 			TRANSPORT_WEB_TLS_PORT=7443
 			TRANSPORT_REALITY_SITE_TLS_PORT=7443
