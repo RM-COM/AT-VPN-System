@@ -43,7 +43,8 @@
 - [2026-04-08 07:04:32] Следующий transport/runtime шаг тоже уже закрыт: `stealth-xray` получил собственный helper и metadata-контракт для `REALITY`, при этом baseline `classic` сохранён без изменения install-result.
 - [2026-04-08 07:11:12] Этот profile-aware шаг уже закрыт: `verify_existing_installation()` и `load_existing_runtime_context()` различают strict baseline `classic` и staged `stealth`, не ломая при этом текущий regression-контур.
 - [2026-04-08 21:18:12] Этот runnable-шаг уже закрыт: `stealth-xray` переведён в `ready`, но отдельный Linux staging-regression для него ещё не пройден.
-- [2026-04-08 21:18:12] Новый ближайший шаг — прогнать отдельный Linux smoke-test и staging-regression для `stealth-xray`, и только потом усиливать verify или переходить к модулю `AWG`.
+- [2026-04-08 21:34:41] Этот Linux smoke-test уже закрыт: `stealth-xray` прошёл clean install, отдельный `-stage verify` и ручные HTTPS-пробы через публичный `443` на staging VPS.
+- [2026-04-08 21:34:41] Новый ближайший шаг — решить, усиливаем ли strict verify для `stealth` или фиксируем текущую stealth-базу и переходим к следующему модулю платформы, то есть к `AWG`.
 - [2026-04-05 05:53:47] Свести оставшиеся пользовательские внешние ссылки к управляемому списку: что зеркалим, что оставляем внешним сознательно.
 
 ## Бэклог

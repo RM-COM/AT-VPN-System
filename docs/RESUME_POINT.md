@@ -74,7 +74,8 @@
 - [2026-04-08 07:11:12] Следующий profile-aware срез в `codex/platform-v2` уже выполнен: `load_existing_runtime_context()` теперь дополнительно поднимает `reality_domain`, а `verify_existing_installation()` различает runnable baseline `classic` и staged-профили, для которых public-HTTPS проверки пока ещё не обязательны.
 - [2026-04-08 07:11:12] Текущая точка продолжения сместилась на следующий явный runtime-этап: открыть runnable transport-path для `stealth-xray`, не трогая пока `AWG` и не ослабляя проверенный install-контур `classic`.
 - [2026-04-08 21:18:12] Этот runtime-этап уже закрыт: `stealth-xray` больше не staged-only, а открыт как runnable-path в `codex/platform-v2`; для него сознательно сохранён мягкий verify до отдельного Linux smoke-test.
-- [2026-04-08 21:18:12] Следующая точка продолжения теперь уже не про metadata, а про реальный `stealth` runtime: нужен отдельный Linux staging-regression нового профиля, после которого можно будет решать, усиливать ли strict verify и переходить ли к модулю `AWG`.
+- [2026-04-08 21:34:41] Этот Linux smoke-test уже тоже закрыт: на staging `185.207.64.40` подтверждены clean install, `-stage verify`, отсутствие `stream.conf`, связка `xray:443 -> nginx:7443`, а также реальные `200 OK` для panel/web-sub/sub2sing-box/fallback root через публичный `443`.
+- [2026-04-08 21:34:41] Следующая точка продолжения теперь уже смещается с “сделать stealth runnable” на “усилить или не усиливать verify для stealth и когда открывать AWG-модуль поверх уже подтверждённого stealth-контура”.
 
 ## Что ещё НЕ завершено
 

@@ -80,6 +80,8 @@
 - [2026-04-08 07:11:12] Этот следующий шаг уже тоже закрыт: `load_existing_runtime_context()` теперь обогащает baseline-контекст значением `reality_domain`, а `verify_existing_installation()` различает строгий runnable `classic` и staged-профили, для которых public-HTTPS пробы пока пропускаются без ложного `FAIL`.
 - [2026-04-08 21:18:12] Следующий safe-slice тоже уже закрыт: `stealth` и `stealth-xray` переведены в `ready`, поэтому selection-layer больше не считает этот профиль purely staged и допускает реальный install-path.
 - [2026-04-08 21:18:12] При этом runtime-граница удержана осознанно: public-HTTPS verify по-прежнему считается strict только для `classic`, а `stealth` остаётся runnable без преждевременного ложного `FAIL` до отдельного Linux staging-regression.
+- [2026-04-08 21:34:41] Следующий Linux runtime-этап тоже уже закрыт: после нормализации `LF` для metadata `.env` на staging подтверждён реальный clean install профиля `stealth/stealth-xray`, отдельный `-stage verify` и ручные HTTPS-пробы через публичный `443`.
+- [2026-04-08 21:34:41] Практически подтверждённый stealth-контур сейчас выглядит так: `xray` слушает публичный `443`, `nginx` слушает `7443`, `sub2sing-box` остаётся на `127.0.0.1:8080`, а panel/web-sub/sub2sing-box и fallback root реально отвечают через `443` на домене `185.207.64.40.sslip.io`.
 - [2026-04-08 07:11:12] Это означает, что `platform-v2` уже умеет отделять install/runtime инварианты `classic` от подготовительного состояния `stealth`; следующим отдельным срезом можно открывать runnable transport-path для `stealth`, не трогая пока `AWG`.
 
 ## Где смотреть детали

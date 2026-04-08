@@ -1,5 +1,8 @@
 ﻿# CHANGELOG
 
+- [2026-04-08 21:34:41] В `codex/platform-v2` исправлен новый Linux runtime-баг metadata-слоя: `.env`-файлы профилей и провайдеров могли уходить на staging с `CRLF`, из-за чего `platform_init()` возвращал значения вида `49152\r` и ломал arithmetic/runtime helper'ы во время `stealth` install-path.
+- [2026-04-08 21:34:41] Для устранения бага расширен контроль line endings: в `.gitattributes` добавлены правила `*.env text eol=lf` и `.env.example text eol=lf`, а metadata-файлы и `.env.example` нормализованы в `LF`.
+- [2026-04-08 21:34:41] После этого на staging `185.207.64.40` впервые подтверждён реальный Linux install-path для `stealth/stealth-xray` на доменах `185.207.64.40.sslip.io` и `185-207-64-40.sslip.io`: clean install завершился успешно, `-stage verify` вернул полный `PASS`, а ручные HTTPS-пробы через публичный `443` для panel/web-sub/sub2sing-box и root fallback вернули `200/OK`.
 - [2026-04-08 21:18:12] В `codex/platform-v2` открыт первый runnable-path для `stealth-xray`: профиль `stealth` и transport `stealth-xray` переведены из `planned` в `ready` как в repo metadata, так и во встроенном fallback-слое installer'а.
 - [2026-04-08 21:18:12] Для этого safe-slice сохранён мягкий verify-gate: `verify_existing_installation()` по-прежнему включает локальные HTTPS-пробы только для `classic`, поэтому `stealth` не получает ложный `FAIL` до отдельного Linux staging-regression.
 - [2026-04-08 21:18:12] Локально подтверждены `bash -n` для `x-ui-pro-updated.sh`, `x-ui-pro.sh` и `core/platform-lib.sh`, `git diff --check` без содержательных ошибок и metadata self-check `classic=ready/ready`, `stealth=ready/ready`; отдельный Linux runtime smoke-test для `stealth` остаётся следующим шагом.
