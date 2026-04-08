@@ -151,4 +151,5 @@
 - [2026-04-08 07:11:12] `[ПУНКТ 32 / СДЕЛАНО]` `verify_existing_installation()` и `load_existing_runtime_context()` переведены на безопасный profile-aware слой: `classic` сохранил строгие runtime-проверки, а staged `stealth` перестал наследовать ложные classic-only ожидания.
 - [2026-04-08 21:18:12] `[ПУНКТ 33 / СДЕЛАНО]` Первый runnable transport-path для `stealth-xray` открыт: `stealth/stealth-xray` переведены в `ready`, а strict public-HTTPS verify сознательно оставлен только для `classic`.
 - [2026-04-08 21:34:41] `[ПУНКТ 34 / СДЕЛАНО]` Отдельный Linux smoke-test для `stealth-xray` уже пройден: после фикса `LF` для metadata-файлов clean install, `-stage verify` и ручные HTTPS-пробы через `443` подтвердили runnable stealth-контур на staging.
-- [2026-04-08 21:34:41] `[ПУНКТ 35 / ДАЛЕЕ]` Следующий шаг — решить, усиливаем ли теперь strict verify для `stealth`, или сначала переходим к следующему модулю платформы (`AWG`) на уже подтверждённой stealth-базе.
+- [2026-04-08 21:58:42] `[ПУНКТ 35 / СДЕЛАНО]` Strict verify для `stealth` усилен и подтверждён на staging: `verify` теперь проверяет профильные ingress/runtime-инварианты вместо soft-skip для нового профиля.
+- [2026-04-08 21:58:42] `[ПУНКТ 36 / ДАЛЕЕ]` Следующий шаг — переходить к следующему модулю платформы (`AWG`) уже на полностью подтверждённой stealth-базе.

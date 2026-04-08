@@ -519,7 +519,16 @@ print_reset_plan() {
 	print_runtime_context
 }
 load_existing_runtime_context() {
-	local detected_site
+	local detected_site detected_reality_port
+	if [[ "$PLATFORM_PROFILE" == "classic" && "$TRANSPORT_PROFILE" == "classic-xray" && -f "$XUIDB" ]]; then
+		detected_reality_port=$(sqlite3 -list "$XUIDB" "SELECT port FROM inbounds WHERE port=$(platform_public_https_port) AND instr(stream_settings, 'reality') > 0 LIMIT 1;" 2>/dev/null | tr -d '[:space:]')
+		if [[ "$detected_reality_port" == "$(platform_public_https_port)" ]]; then
+			PLATFORM_PROFILE="stealth"
+			TRANSPORT_PROFILE="stealth-xray"
+			platform_init >/dev/null 2>&1 || true
+			append_debug_log "Autodetected installed selection: ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
+		fi
+	fi
 	if [[ -f "$XUIDB" ]]; then
 		panel_port=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webPort" LIMIT 1;' 2>/dev/null)
 		panel_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webBasePath" LIMIT 1;' 2>/dev/null)")
@@ -528,14 +537,18 @@ load_existing_runtime_context() {
 		sub_uri=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subURI" LIMIT 1;' 2>/dev/null)
 		json_uri=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subJsonURI" LIMIT 1;' 2>/dev/null)
 		if [[ -z "$reality_domain" ]]; then
-			reality_domain=$(sqlite3 -list "$XUIDB" 'SELECT stream_settings FROM inbounds WHERE stream_settings LIKE ''%"security": "reality"%'' LIMIT 1;' 2>/dev/null \
-				| tr -d '\n' \
-				| sed -nE 's#.*"serverNames"[[:space:]]*:[[:space:]]*\[[[:space:]]*"([^"]+)".*#\1#p' \
-				| head -n1)
+			reality_domain=$(sqlite3 -list "$XUIDB" "SELECT json_extract(stream_settings, '$.realitySettings.serverNames[0]') FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null | head -n1)
 		fi
 	fi
 	if [[ -z "$domain" ]]; then
 		domain=$(printf '%s\n%s\n' "$sub_uri" "$json_uri" | sed -nE 's#https?://([^/]+)/.*#\1#p' | head -n1)
+	fi
+	if [[ -z "$reality_domain" ]]; then
+		detected_site=$(ls -1 /etc/nginx/sites-enabled 2>/dev/null \
+			| grep -vx '80.conf' \
+			| grep -vx "${domain}" \
+			| head -n1)
+		[[ -n "$detected_site" ]] && reality_domain="$detected_site"
 	fi
 	if [[ -z "$web_path" ]]; then
 		web_path=$(printf '%s' "$json_uri" | sed -nE 's#https?://[^/]+/([^/?]+)/?.*#\1#p' | head -n1)
@@ -571,19 +584,28 @@ record_verify_result() {
 }
 verify_existing_installation() {
 	local failures=0
-	local sqlite_result="" curl_output="" unexpected_urls=""
-	local stream_mode="" selection_runtime_state="" https_proxy_checks_enabled=""
+	local sqlite_result="" curl_output="" unexpected_urls="" listener_output="" stealth_reality_port=""
+	local stream_mode="" selection_runtime_state="" https_proxy_checks_enabled="" stealth_runtime_checks_enabled=""
+	local public_https_port="" web_tls_port=""
 	init_debug_session
 	load_existing_runtime_context
 	stream_mode="$(platform_transport_stream_mode)"
 	selection_runtime_state="$(platform_selection_runtime_state)"
-	if [[ "$selection_runtime_state" == "ready" && "$PLATFORM_PROFILE" == "classic" ]]; then
+	public_https_port="$(platform_public_https_port)"
+	web_tls_port="$(platform_transport_web_tls_port)"
+	if [[ "$selection_runtime_state" == "ready" && ( "$PLATFORM_PROFILE" == "classic" || "$PLATFORM_PROFILE" == "stealth" ) ]]; then
 		https_proxy_checks_enabled="enabled"
 	else
 		https_proxy_checks_enabled="disabled"
 	fi
+	if [[ "$selection_runtime_state" == "ready" && "$PLATFORM_PROFILE" == "stealth" ]]; then
+		stealth_runtime_checks_enabled="enabled"
+	else
+		stealth_runtime_checks_enabled="disabled"
+	fi
 	append_debug_log "verify stream_mode=${stream_mode}"
 	append_debug_log "verify https_proxy_checks_enabled=${https_proxy_checks_enabled}"
+	append_debug_log "verify stealth_runtime_checks_enabled=${stealth_runtime_checks_enabled}"
 
 	capture_file_if_exists "/etc/nginx/nginx.conf" "files/nginx.conf"
 	capture_file_if_exists "/etc/nginx/snippets/includes.conf" "files/includes.conf"
@@ -680,6 +702,43 @@ verify_existing_installation() {
 		failures=$((failures + 1))
 	fi
 
+	if [[ "$stealth_runtime_checks_enabled" == "enabled" ]]; then
+		if [[ ! -f /etc/nginx/stream-enabled/stream.conf ]]; then
+			record_verify_result "PASS" "Stealth ingress does not use nginx stream.conf"
+		else
+			record_verify_result "FAIL" "Stealth ingress unexpectedly still has nginx stream.conf"
+			failures=$((failures + 1))
+		fi
+
+		listener_output=$(ss -lntp 2>/dev/null || true)
+		append_debug_log "stealth listener snapshot: ${listener_output//$'\n'/ | }"
+		if grep -Eq "[:.]${public_https_port}[[:space:]].*xray" <<<"$listener_output"; then
+			record_verify_result "PASS" "Stealth ingress has Xray listening on public ${public_https_port}"
+		else
+			record_verify_result "FAIL" "Stealth ingress does not show Xray listening on public ${public_https_port}"
+			failures=$((failures + 1))
+		fi
+
+		if grep -Eq "[:.]${web_tls_port}[[:space:]].*nginx" <<<"$listener_output"; then
+			record_verify_result "PASS" "Stealth ingress has nginx listening on local TLS boundary ${web_tls_port}"
+		else
+			record_verify_result "FAIL" "Stealth ingress does not show nginx listening on local TLS boundary ${web_tls_port}"
+			failures=$((failures + 1))
+		fi
+
+		if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
+			stealth_reality_port=$(sqlite3 -list "$XUIDB" "SELECT port FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null)
+			append_debug_log "stealth reality inbound port: ${stealth_reality_port}"
+			stealth_reality_port=$(printf '%s' "$stealth_reality_port" | tr -d '[:space:]')
+			if [[ "$stealth_reality_port" == "${public_https_port}" ]]; then
+				record_verify_result "PASS" "Stealth REALITY inbound is bound to public ${public_https_port}"
+			else
+				record_verify_result "FAIL" "Stealth REALITY inbound is not bound to public ${public_https_port}"
+				failures=$((failures + 1))
+			fi
+		fi
+	fi
+
 	if [[ "$https_proxy_checks_enabled" == "enabled" ]]; then
 		if [[ -n "$domain" && -n "$web_path" ]]; then
 			if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${web_path}/" 2>&1); then
@@ -748,6 +807,41 @@ verify_existing_installation() {
 		fi
 	else
 		record_verify_result "PASS" "Локальная HTTPS-проверка sub2sing-box пропущена для staged-профиля ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
+	fi
+
+	if [[ "$stealth_runtime_checks_enabled" == "enabled" ]]; then
+		if [[ -n "$domain" && -n "$panel_path" ]]; then
+			if curl_output=$(curl -kfsS --resolve "${domain}:${public_https_port}:127.0.0.1" "https://${domain}/${panel_path}/" 2>&1); then
+				record_verify_result "PASS" "Stealth panel responds through public ${public_https_port}"
+				[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/stealth-panel-body.html"
+			else
+				record_verify_result "FAIL" "Stealth panel does not respond through public ${public_https_port}"
+				append_debug_log "stealth panel curl output: ${curl_output}"
+				failures=$((failures + 1))
+			fi
+		else
+			record_verify_result "FAIL" "Не удалось определить domain/panel_path для stealth panel проверки"
+			failures=$((failures + 1))
+		fi
+
+		if [[ -z "$reality_domain" ]]; then
+			reality_domain=$(ls -1 /etc/nginx/sites-enabled 2>/dev/null | grep -vx '80.conf' | grep -vx "${domain}" | head -n1)
+			append_debug_log "stealth fallback reality_domain recovery: ${reality_domain:-<empty>}"
+		fi
+
+		if [[ -n "$reality_domain" ]]; then
+			if curl_output=$(curl -kfsS --resolve "${reality_domain}:${public_https_port}:127.0.0.1" "https://${reality_domain}/" 2>&1); then
+				record_verify_result "PASS" "Stealth fallback root responds through public ${public_https_port}"
+				[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/stealth-fallback-root.html"
+			else
+				record_verify_result "FAIL" "Stealth fallback root does not respond through public ${public_https_port}"
+				append_debug_log "stealth fallback curl output: ${curl_output}"
+				failures=$((failures + 1))
+			fi
+		else
+			record_verify_result "FAIL" "Не удалось определить reality_domain для stealth fallback проверки"
+			failures=$((failures + 1))
+		fi
 	fi
 
 	if (( failures > 0 )); then
@@ -1224,7 +1318,7 @@ verify_reality_inbound_keys() {
 	[[ -f "$XUIDB" ]] || return 1
 	command -v sqlite3 >/dev/null 2>&1 || return 1
 	command -v jq >/dev/null 2>&1 || return 1
-	reality_stream=$(sqlite3 -list "$XUIDB" "SELECT stream_settings FROM inbounds WHERE stream_settings LIKE '%\"security\": \"reality\"%' LIMIT 1;" 2>/dev/null)
+	reality_stream=$(sqlite3 -list "$XUIDB" "SELECT stream_settings FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null)
 	[[ -n "$reality_stream" ]] || return 1
 	reality_private_key=$(printf '%s' "$reality_stream" | jq -r '.realitySettings.privateKey // empty' 2>/dev/null)
 	reality_public_key=$(printf '%s' "$reality_stream" | jq -r '.realitySettings.settings.publicKey // .realitySettings.publicKey // .realitySettings.password // empty' 2>/dev/null)

@@ -1,5 +1,8 @@
 ﻿# CHANGELOG
 
+- [2026-04-08 21:58:42] В `codex/platform-v2` усилен strict verify для `stealth`: `verify_existing_installation()` теперь дополнительно проверяет отсутствие `stream.conf`, связку `xray:443` и `nginx:7443`, привязку `REALITY` inbound к `443`, а также ответы panel и fallback root через публичный `443`.
+- [2026-04-08 21:58:42] Для устойчивости этих проверок парсинг `REALITY` в runtime-контексте и verify переведён с хрупких `LIKE`/regex на `sqlite json_extract(...)`, поэтому `reality_domain` и port `443` теперь читаются из `x-ui.db` надёжно.
+- [2026-04-08 21:58:42] На staging `185.207.64.40` новый strict verify для `stealth/stealth-xray` уже подтверждён: отдельный `-stage verify -debug yes -keep_artifacts yes` завершился полным `PASS` после живой stealth-установки.
 - [2026-04-08 21:34:41] В `codex/platform-v2` исправлен новый Linux runtime-баг metadata-слоя: `.env`-файлы профилей и провайдеров могли уходить на staging с `CRLF`, из-за чего `platform_init()` возвращал значения вида `49152\r` и ломал arithmetic/runtime helper'ы во время `stealth` install-path.
 - [2026-04-08 21:34:41] Для устранения бага расширен контроль line endings: в `.gitattributes` добавлены правила `*.env text eol=lf` и `.env.example text eol=lf`, а metadata-файлы и `.env.example` нормализованы в `LF`.
 - [2026-04-08 21:34:41] После этого на staging `185.207.64.40` впервые подтверждён реальный Linux install-path для `stealth/stealth-xray` на доменах `185.207.64.40.sslip.io` и `185-207-64-40.sslip.io`: clean install завершился успешно, `-stage verify` вернул полный `PASS`, а ручные HTTPS-пробы через публичный `443` для panel/web-sub/sub2sing-box и root fallback вернули `200/OK`.
