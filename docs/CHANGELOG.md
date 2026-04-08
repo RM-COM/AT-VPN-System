@@ -1,5 +1,8 @@
 ﻿# CHANGELOG
 
+- [2026-04-08 07:11:12] В `codex/platform-v2` выполнен следующий безопасный profile-aware срез: `load_existing_runtime_context()` теперь дополнительно восстанавливает `reality_domain` из `x-ui.db`, не ломая baseline-порядок чтения `webPort/webBasePath/subPath/subJsonPath/subURI/subJsonURI`.
+- [2026-04-08 07:11:12] `verify_existing_installation()` переведён на staged-aware ветвление: `classic` сохраняет строгие локальные HTTPS-пробы через публичный ingress, а staged-профили вроде `stealth/stealth-xray` больше не валятся на этих classic-only ожиданиях до открытия runnable transport-path.
+- [2026-04-08 07:11:12] Локально подтверждено, что `bash -n` для `x-ui-pro-updated.sh`, `x-ui-pro.sh` и `core/platform-lib.sh` проходит, `git diff --check` чистый, а metadata self-check по-прежнему различает `classic=ready/ready` и `stealth=planned/planned`.
 - [2026-04-08 07:04:32] В `codex/platform-v2` выполнен следующий transport/runtime срез для `stealth-xray`: `update_xui_db()` разрезан на orchestrator и transport helpers, а giant SQL для baseline больше не является единственной точкой правды.
 - [2026-04-08 07:04:32] Для transport metadata добавлены параметры `REALITY`-контракта: `xver`, `acceptProxyProtocol` и режим выбора публичного `dest`, благодаря чему `classic` и `stealth` теперь различаются не только ingress-портами, но и явной transport-моделью.
 - [2026-04-08 07:04:32] Реализован отдельный helper `write_transport_inbounds_stealth_xray()`: он готовит `REALITY` inbound для режима `Xray:443 -> nginx:7443`, но сам профиль всё ещё остаётся staged до отдельного profile-aware шага для `verify` и восстановления runtime-контекста.

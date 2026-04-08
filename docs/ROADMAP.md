@@ -41,7 +41,8 @@
 - [2026-04-08 06:32:49] Этот шаг уже закрыт в staged-виде: `stealth-xray` существует как профиль selection-layer и уже проходит локальные metadata/check-комбинации.
 - [2026-04-08 06:44:51] Следующий безопасный шаг тоже уже закрыт: `nginx` ingress разделён на `classic` и подготовительный `stealth` seam, при этом `classic` сохранён без изменения результата, а transport-path `stealth` всё ещё защитно закрыт.
 - [2026-04-08 07:04:32] Следующий transport/runtime шаг тоже уже закрыт: `stealth-xray` получил собственный helper и metadata-контракт для `REALITY`, при этом baseline `classic` сохранён без изменения install-result.
-- [2026-04-08 07:04:32] Новый ближайший шаг — сделать profile-aware `verify` и восстановление runtime-контекста, чтобы `stealth` можно было перевести из staged-состояния в runnable-режим.
+- [2026-04-08 07:11:12] Этот profile-aware шаг уже закрыт: `verify_existing_installation()` и `load_existing_runtime_context()` различают strict baseline `classic` и staged `stealth`, не ломая при этом текущий regression-контур.
+- [2026-04-08 07:11:12] Новый ближайший шаг — открыть первый runnable transport-path для `stealth-xray`, а затем уже вести его к отдельному staging regression без вмешательства в модуль `AWG`.
 - [2026-04-05 05:53:47] Свести оставшиеся пользовательские внешние ссылки к управляемому списку: что зеркалим, что оставляем внешним сознательно.
 
 ## Бэклог

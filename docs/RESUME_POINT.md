@@ -71,6 +71,8 @@
 - [2026-04-07 01:12:08] Для основного `amd64`-сценария закрыт следующий крупный кусок автономности: `3x-ui v2.8.11` и `sub2sing-box v0.0.9` уже зеркалированы в `vendor/releases/`, installer использует их локально из клона и проверяет по `SHA256SUMS`.
 - [2026-04-07 01:12:08] На чистом staging VPS это уже подтверждено фактическим install-логом: обе строки `Using local mirrored release archive: ...` появились во время установки, а финальный `stage=verify` после такого install снова завершился полным `PASS`.
 - [2026-04-07 01:16:59] Проверенный install-контур уже перенесён в `main`, поэтому официальный install-source репозитория и реальная staging-проверка теперь совпадают.
+- [2026-04-08 07:11:12] Следующий profile-aware срез в `codex/platform-v2` уже выполнен: `load_existing_runtime_context()` теперь дополнительно поднимает `reality_domain`, а `verify_existing_installation()` различает runnable baseline `classic` и staged-профили, для которых public-HTTPS проверки пока ещё не обязательны.
+- [2026-04-08 07:11:12] Текущая точка продолжения сместилась на следующий явный runtime-этап: открыть runnable transport-path для `stealth-xray`, не трогая пока `AWG` и не ослабляя проверенный install-контур `classic`.
 
 ## Что ещё НЕ завершено
 

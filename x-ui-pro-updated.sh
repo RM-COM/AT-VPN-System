@@ -527,6 +527,12 @@ load_existing_runtime_context() {
 		json_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subJsonPath" LIMIT 1;' 2>/dev/null)")
 		sub_uri=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subURI" LIMIT 1;' 2>/dev/null)
 		json_uri=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subJsonURI" LIMIT 1;' 2>/dev/null)
+		if [[ -z "$reality_domain" ]]; then
+			reality_domain=$(sqlite3 -list "$XUIDB" 'SELECT stream_settings FROM inbounds WHERE stream_settings LIKE ''%"security": "reality"%'' LIMIT 1;' 2>/dev/null \
+				| tr -d '\n' \
+				| sed -nE 's#.*"serverNames"[[:space:]]*:[[:space:]]*\[[[:space:]]*"([^"]+)".*#\1#p' \
+				| head -n1)
+		fi
 	fi
 	if [[ -z "$domain" ]]; then
 		domain=$(printf '%s\n%s\n' "$sub_uri" "$json_uri" | sed -nE 's#https?://([^/]+)/.*#\1#p' | head -n1)
@@ -566,8 +572,18 @@ record_verify_result() {
 verify_existing_installation() {
 	local failures=0
 	local sqlite_result="" curl_output="" unexpected_urls=""
+	local stream_mode="" selection_runtime_state="" https_proxy_checks_enabled=""
 	init_debug_session
 	load_existing_runtime_context
+	stream_mode="$(platform_transport_stream_mode)"
+	selection_runtime_state="$(platform_selection_runtime_state)"
+	if [[ "$selection_runtime_state" == "ready" ]]; then
+		https_proxy_checks_enabled="enabled"
+	else
+		https_proxy_checks_enabled="disabled"
+	fi
+	append_debug_log "verify stream_mode=${stream_mode}"
+	append_debug_log "verify https_proxy_checks_enabled=${https_proxy_checks_enabled}"
 
 	capture_file_if_exists "/etc/nginx/nginx.conf" "files/nginx.conf"
 	capture_file_if_exists "/etc/nginx/snippets/includes.conf" "files/includes.conf"
@@ -664,66 +680,74 @@ verify_existing_installation() {
 		failures=$((failures + 1))
 	fi
 
-	if [[ -n "$domain" && -n "$web_path" ]]; then
-		if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${web_path}/" 2>&1); then
-			record_verify_result "PASS" "Web-sub страница отвечает через локальный HTTPS"
-			[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/websub-index-body.html"
-			if contains_forbidden_external_reference "$curl_output"; then
-				record_verify_result "FAIL" "Web-sub страница содержит устаревшие upstream-ссылки или placeholder URL"
-				failures=$((failures + 1))
+	if [[ "$https_proxy_checks_enabled" == "enabled" ]]; then
+		if [[ -n "$domain" && -n "$web_path" ]]; then
+			if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${web_path}/" 2>&1); then
+				record_verify_result "PASS" "Web-sub страница отвечает через локальный HTTPS"
+				[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/websub-index-body.html"
+				if contains_forbidden_external_reference "$curl_output"; then
+					record_verify_result "FAIL" "Web-sub страница содержит устаревшие upstream-ссылки или placeholder URL"
+					failures=$((failures + 1))
+				else
+					record_verify_result "PASS" "Web-sub страница очищена от устаревших upstream-ссылок и placeholder URL"
+				fi
+				unexpected_urls=$(collect_unexpected_external_urls "$curl_output")
+				if [[ -n "$unexpected_urls" ]]; then
+					record_verify_result "FAIL" "Web-sub страница содержит неожиданные внешние ссылки вне allowlist"
+					append_debug_log "Unexpected web-sub external URLs: ${unexpected_urls//$'\n'/, }"
+					failures=$((failures + 1))
+				else
+					record_verify_result "PASS" "Web-sub страница использует только локальные и allowlist-внешние ссылки"
+				fi
 			else
-				record_verify_result "PASS" "Web-sub страница очищена от устаревших upstream-ссылок и placeholder URL"
-			fi
-			unexpected_urls=$(collect_unexpected_external_urls "$curl_output")
-			if [[ -n "$unexpected_urls" ]]; then
-				record_verify_result "FAIL" "Web-sub страница содержит неожиданные внешние ссылки вне allowlist"
-				append_debug_log "Unexpected web-sub external URLs: ${unexpected_urls//$'\n'/, }"
+				record_verify_result "FAIL" "Web-sub страница не отвечает через локальный HTTPS"
+				append_debug_log "curl output: ${curl_output}"
 				failures=$((failures + 1))
-			else
-				record_verify_result "PASS" "Web-sub страница использует только локальные и allowlist-внешние ссылки"
 			fi
 		else
-			record_verify_result "FAIL" "Web-sub страница не отвечает через локальный HTTPS"
-			append_debug_log "curl output: ${curl_output}"
+			record_verify_result "FAIL" "Не удалось определить domain/web_path для локальной HTTP-проверки"
 			failures=$((failures + 1))
 		fi
 	else
-		record_verify_result "FAIL" "Не удалось определить domain/web_path для локальной HTTP-проверки"
-		failures=$((failures + 1))
+		record_verify_result "PASS" "Локальная HTTPS-проверка web-sub пропущена для staged-профиля ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
 	fi
 
-	if [[ -n "$domain" && -n "$sub2singbox_path" ]]; then
-		if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${sub2singbox_path}/" 2>&1); then
-			record_verify_result "PASS" "sub2sing-box UI responds through local HTTPS"
-			[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/sub2sing-box-ui.html"
-			if grep -Eq 'https://unpkg\.com/|https://fonts\.googleapis\.com/|https://github\.com/legiz-ru/sb-rule-sets/raw/main/\.github/sub2sing-box/' <<<"$curl_output"; then
-				record_verify_result "FAIL" "sub2sing-box UI still contains external runtime asset/template URLs"
-				failures=$((failures + 1))
+	if [[ "$https_proxy_checks_enabled" == "enabled" ]]; then
+		if [[ -n "$domain" && -n "$sub2singbox_path" ]]; then
+			if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${sub2singbox_path}/" 2>&1); then
+				record_verify_result "PASS" "sub2sing-box UI responds through local HTTPS"
+				[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/sub2sing-box-ui.html"
+				if grep -Eq 'https://unpkg\.com/|https://fonts\.googleapis\.com/|https://github\.com/legiz-ru/sb-rule-sets/raw/main/\.github/sub2sing-box/' <<<"$curl_output"; then
+					record_verify_result "FAIL" "sub2sing-box UI still contains external runtime asset/template URLs"
+					failures=$((failures + 1))
+				else
+					record_verify_result "PASS" "sub2sing-box UI uses local runtime assets and local template URLs"
+				fi
+				if contains_forbidden_external_reference "$curl_output"; then
+					record_verify_result "FAIL" "sub2sing-box UI contains forbidden legacy external links"
+					failures=$((failures + 1))
+				else
+					record_verify_result "PASS" "sub2sing-box UI does not contain forbidden legacy external links"
+				fi
+				unexpected_urls=$(collect_unexpected_external_urls "$curl_output")
+				if [[ -n "$unexpected_urls" ]]; then
+					record_verify_result "FAIL" "sub2sing-box UI contains unexpected external links outside allowlist"
+					append_debug_log "Unexpected sub2sing-box external URLs: ${unexpected_urls//$'\n'/, }"
+					failures=$((failures + 1))
+				else
+					record_verify_result "PASS" "sub2sing-box UI uses only allowlist external links"
+				fi
 			else
-				record_verify_result "PASS" "sub2sing-box UI uses local runtime assets and local template URLs"
-			fi
-			if contains_forbidden_external_reference "$curl_output"; then
-				record_verify_result "FAIL" "sub2sing-box UI contains forbidden legacy external links"
+				record_verify_result "FAIL" "sub2sing-box UI does not respond through local HTTPS"
+				append_debug_log "sub2sing-box curl output: ${curl_output}"
 				failures=$((failures + 1))
-			else
-				record_verify_result "PASS" "sub2sing-box UI does not contain forbidden legacy external links"
-			fi
-			unexpected_urls=$(collect_unexpected_external_urls "$curl_output")
-			if [[ -n "$unexpected_urls" ]]; then
-				record_verify_result "FAIL" "sub2sing-box UI contains unexpected external links outside allowlist"
-				append_debug_log "Unexpected sub2sing-box external URLs: ${unexpected_urls//$'\n'/, }"
-				failures=$((failures + 1))
-			else
-				record_verify_result "PASS" "sub2sing-box UI uses only allowlist external links"
 			fi
 		else
-			record_verify_result "FAIL" "sub2sing-box UI does not respond through local HTTPS"
-			append_debug_log "sub2sing-box curl output: ${curl_output}"
+			record_verify_result "FAIL" "Не удалось определить domain/sub2singbox_path для проверки sub2sing-box UI"
 			failures=$((failures + 1))
 		fi
 	else
-		record_verify_result "FAIL" "Не удалось определить domain/sub2singbox_path для проверки sub2sing-box UI"
-		failures=$((failures + 1))
+		record_verify_result "PASS" "Локальная HTTPS-проверка sub2sing-box пропущена для staged-профиля ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
 	fi
 
 	if (( failures > 0 )); then
