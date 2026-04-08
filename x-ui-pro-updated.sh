@@ -44,60 +44,126 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 		: "${TRANSPORT_PROFILE:=classic-xray}"
 		: "${PANEL_PROVIDER:=3x-ui}"
 		: "${ENABLE_AWG:=n}"
-		PLATFORM_PROFILE_LABEL="Classic"
-		TRANSPORT_PROFILE_LABEL="Classic Xray"
-		PANEL_PROVIDER_LABEL="3x-ui"
-		PLATFORM_RUNTIME_TOKEN_LENGTH=10
-		PLATFORM_CREDENTIAL_LENGTH=10
-		PLATFORM_DYNAMIC_PORT_BASE=10000
-		PLATFORM_DYNAMIC_PORT_SPAN=49152
-		PLATFORM_PUBLIC_HTTP_PORT=80
-		PLATFORM_PUBLIC_HTTPS_PORT=443
-		PLATFORM_SUB2SINGBOX_BIND_PORT=8080
-		TRANSPORT_WEB_TLS_PORT=7443
-		TRANSPORT_REALITY_SITE_TLS_PORT=9443
-		TRANSPORT_REALITY_INBOUND_PORT=8443
-		PANEL_PROVIDER_PANEL_TITLE="X-UI Secure Panel"
-		PANEL_PROVIDER_SERVICE_NAME="x-ui"
-		PANEL_PROVIDER_CONTROL_BIN="x-ui"
-		PANEL_PROVIDER_MIN_VERSION="2.3.5"
-		PANEL_PROVIDER_BOOTSTRAP_USERNAME="asdfasdf"
-		PANEL_PROVIDER_BOOTSTRAP_PASSWORD="asdfasdf"
-		PANEL_PROVIDER_BOOTSTRAP_PORT="2096"
-		PANEL_PROVIDER_BOOTSTRAP_BASE_PATH="asdfasdf"
-		PANEL_PROVIDER_WEB_LISTEN=""
-		PANEL_PROVIDER_WEB_DOMAIN=""
-		PANEL_PROVIDER_WEB_CERT_FILE=""
-		PANEL_PROVIDER_WEB_KEY_FILE=""
-		PANEL_PROVIDER_SESSION_MAX_AGE=60
-		PANEL_PROVIDER_PAGE_SIZE=50
-		PANEL_PROVIDER_EXPIRE_DIFF=0
-		PANEL_PROVIDER_TRAFFIC_DIFF=0
-		PANEL_PROVIDER_REMARK_MODEL="-ieo"
-		PANEL_PROVIDER_TG_BOT_ENABLE="false"
-		PANEL_PROVIDER_TG_BOT_TOKEN=""
-		PANEL_PROVIDER_TG_BOT_PROXY=""
-		PANEL_PROVIDER_TG_BOT_API_SERVER=""
-		PANEL_PROVIDER_TG_BOT_CHAT_ID=""
-		PANEL_PROVIDER_TG_RUN_TIME="@daily"
-		PANEL_PROVIDER_TG_BOT_BACKUP="false"
-		PANEL_PROVIDER_TG_BOT_LOGIN_NOTIFY="true"
-		PANEL_PROVIDER_TG_CPU=80
-		PANEL_PROVIDER_TG_LANG="en-US"
-		PANEL_PROVIDER_TIME_LOCATION="Europe/Moscow"
-		PANEL_PROVIDER_SECRET_ENABLE="false"
-		PANEL_PROVIDER_SUB_ENABLE="true"
-		PANEL_PROVIDER_SUB_DOMAIN=""
-		PANEL_PROVIDER_SUB_CERT_FILE=""
-		PANEL_PROVIDER_SUB_KEY_FILE=""
-		PANEL_PROVIDER_SUB_UPDATES=12
-		PANEL_PROVIDER_SUB_ENCRYPT="true"
-		PANEL_PROVIDER_SUB_SHOW_INFO="true"
-		PANEL_PROVIDER_SUB_JSON_FRAGMENT=""
-		PANEL_PROVIDER_SUB_JSON_NOISES=""
-		PANEL_PROVIDER_SUB_JSON_MUX=""
-		PANEL_PROVIDER_SUB_JSON_RULES=""
-		PANEL_PROVIDER_DATEPICKER="gregorian"
+		case "$PLATFORM_PROFILE" in
+			classic)
+				PLATFORM_PROFILE_LABEL="Classic"
+				PLATFORM_PROFILE_DESCRIPTION="Current stable ingress baseline"
+				PLATFORM_IMPLEMENTATION_STATE="ready"
+				PLATFORM_INGRESS_OWNER="nginx-stream"
+				PLATFORM_RUNTIME_TOKEN_LENGTH=10
+				PLATFORM_CREDENTIAL_LENGTH=10
+				PLATFORM_DYNAMIC_PORT_BASE=10000
+				PLATFORM_DYNAMIC_PORT_SPAN=49152
+				PLATFORM_PUBLIC_HTTP_PORT=80
+				PLATFORM_PUBLIC_HTTPS_PORT=443
+				PLATFORM_SUB2SINGBOX_BIND_PORT=8080
+				;;
+			stealth)
+				PLATFORM_PROFILE_LABEL="Stealth"
+				PLATFORM_PROFILE_DESCRIPTION="Prepared anti-DPI profile with Xray on public 443 and local nginx fallback"
+				PLATFORM_IMPLEMENTATION_STATE="planned"
+				PLATFORM_INGRESS_OWNER="xray"
+				PLATFORM_RUNTIME_TOKEN_LENGTH=10
+				PLATFORM_CREDENTIAL_LENGTH=10
+				PLATFORM_DYNAMIC_PORT_BASE=10000
+				PLATFORM_DYNAMIC_PORT_SPAN=49152
+				PLATFORM_PUBLIC_HTTP_PORT=80
+				PLATFORM_PUBLIC_HTTPS_PORT=443
+				PLATFORM_SUB2SINGBOX_BIND_PORT=8080
+				;;
+			*)
+				printf 'Unsupported PLATFORM_PROFILE: %s\n' "$PLATFORM_PROFILE" >&2
+				return 1
+				;;
+		esac
+
+		case "$TRANSPORT_PROFILE" in
+			classic-xray)
+				TRANSPORT_PROFILE_LABEL="Classic Xray"
+				TRANSPORT_PROFILE_DESCRIPTION="Current Xray baseline transport"
+				TRANSPORT_IMPLEMENTATION_STATE="ready"
+				TRANSPORT_STREAM_MODE="enabled"
+				TRANSPORT_WEB_TLS_PORT=7443
+				TRANSPORT_REALITY_SITE_TLS_PORT=9443
+				TRANSPORT_REALITY_INBOUND_PORT=8443
+				TRANSPORT_FALLBACK_TARGET="127.0.0.1:9443"
+				;;
+			stealth-xray)
+				TRANSPORT_PROFILE_LABEL="Stealth Xray"
+				TRANSPORT_PROFILE_DESCRIPTION="Prepared stealth Xray transport with public 443 and local nginx fallback"
+				TRANSPORT_IMPLEMENTATION_STATE="planned"
+				TRANSPORT_STREAM_MODE="disabled"
+				TRANSPORT_WEB_TLS_PORT=7443
+				TRANSPORT_REALITY_SITE_TLS_PORT=7443
+				TRANSPORT_REALITY_INBOUND_PORT=443
+				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
+				;;
+			*)
+				printf 'Unsupported TRANSPORT_PROFILE: %s\n' "$TRANSPORT_PROFILE" >&2
+				return 1
+				;;
+		esac
+
+		case "$PLATFORM_PROFILE:$TRANSPORT_PROFILE" in
+			classic:classic-xray|stealth:stealth-xray) ;;
+			*)
+				printf 'Unsupported PLATFORM_PROFILE/TRANSPORT_PROFILE combination: %s/%s\n' "$PLATFORM_PROFILE" "$TRANSPORT_PROFILE" >&2
+				return 1
+				;;
+		esac
+
+		case "$PANEL_PROVIDER" in
+			3x-ui)
+				PANEL_PROVIDER_LABEL="3x-ui"
+				PANEL_PROVIDER_DESCRIPTION="Current baseline panel provider"
+				PANEL_PROVIDER_PANEL_TITLE="X-UI Secure Panel"
+				PANEL_PROVIDER_SERVICE_NAME="x-ui"
+				PANEL_PROVIDER_CONTROL_BIN="x-ui"
+				PANEL_PROVIDER_MIN_VERSION="2.3.5"
+				PANEL_PROVIDER_BOOTSTRAP_USERNAME="asdfasdf"
+				PANEL_PROVIDER_BOOTSTRAP_PASSWORD="asdfasdf"
+				PANEL_PROVIDER_BOOTSTRAP_PORT="2096"
+				PANEL_PROVIDER_BOOTSTRAP_BASE_PATH="asdfasdf"
+				PANEL_PROVIDER_WEB_LISTEN=""
+				PANEL_PROVIDER_WEB_DOMAIN=""
+				PANEL_PROVIDER_WEB_CERT_FILE=""
+				PANEL_PROVIDER_WEB_KEY_FILE=""
+				PANEL_PROVIDER_SESSION_MAX_AGE="60"
+				PANEL_PROVIDER_PAGE_SIZE="50"
+				PANEL_PROVIDER_EXPIRE_DIFF="0"
+				PANEL_PROVIDER_TRAFFIC_DIFF="0"
+				PANEL_PROVIDER_REMARK_MODEL="-ieo"
+				PANEL_PROVIDER_TG_BOT_ENABLE="false"
+				PANEL_PROVIDER_TG_BOT_TOKEN=""
+				PANEL_PROVIDER_TG_BOT_PROXY=""
+				PANEL_PROVIDER_TG_BOT_API_SERVER=""
+				PANEL_PROVIDER_TG_BOT_CHAT_ID=""
+				PANEL_PROVIDER_TG_RUN_TIME="@daily"
+				PANEL_PROVIDER_TG_BOT_BACKUP="false"
+				PANEL_PROVIDER_TG_BOT_LOGIN_NOTIFY="true"
+				PANEL_PROVIDER_TG_CPU="80"
+				PANEL_PROVIDER_TG_LANG="en-US"
+				PANEL_PROVIDER_TIME_LOCATION="Europe/Moscow"
+				PANEL_PROVIDER_SECRET_ENABLE="false"
+				PANEL_PROVIDER_SUB_ENABLE="true"
+				PANEL_PROVIDER_SUB_DOMAIN=""
+				PANEL_PROVIDER_SUB_CERT_FILE=""
+				PANEL_PROVIDER_SUB_KEY_FILE=""
+				PANEL_PROVIDER_SUB_UPDATES="12"
+				PANEL_PROVIDER_SUB_ENCRYPT="true"
+				PANEL_PROVIDER_SUB_SHOW_INFO="true"
+				PANEL_PROVIDER_SUB_JSON_FRAGMENT=""
+				PANEL_PROVIDER_SUB_JSON_NOISES=""
+				PANEL_PROVIDER_SUB_JSON_MUX=""
+				PANEL_PROVIDER_SUB_JSON_RULES=""
+				PANEL_PROVIDER_DATEPICKER="gregorian"
+				;;
+			*)
+				printf 'Unsupported PANEL_PROVIDER: %s\n' "$PANEL_PROVIDER" >&2
+				return 1
+				;;
+		esac
+
 		PLATFORM_METADATA_SOURCE="built-in"
 		case "${ENABLE_AWG,,}" in
 			n|no|0|false|off) ENABLE_AWG_STATE="disabled" ;;
@@ -121,6 +187,14 @@ platform_panel_service_name() {
 
 platform_panel_control_bin() {
 	printf '%s' "${PANEL_PROVIDER_CONTROL_BIN:-x-ui}"
+}
+
+platform_profile_state() {
+	printf '%s' "${PLATFORM_IMPLEMENTATION_STATE:-ready}"
+}
+
+platform_ingress_owner() {
+	printf '%s' "${PLATFORM_INGRESS_OWNER:-nginx-stream}"
 }
 
 platform_panel_min_version() {
@@ -187,8 +261,37 @@ platform_transport_reality_target() {
 	printf '127.0.0.1:%s' "$(platform_transport_reality_site_tls_port)"
 }
 
+platform_transport_state() {
+	printf '%s' "${TRANSPORT_IMPLEMENTATION_STATE:-ready}"
+}
+
+platform_transport_stream_mode() {
+	printf '%s' "${TRANSPORT_STREAM_MODE:-enabled}"
+}
+
+platform_transport_fallback_target() {
+	printf '%s' "${TRANSPORT_FALLBACK_TARGET:-$(platform_transport_reality_target)}"
+}
+
 platform_sub2singbox_bind_port() {
 	printf '%s' "${PLATFORM_SUB2SINGBOX_BIND_PORT:-8080}"
+}
+
+platform_selection_runtime_state() {
+	if [[ "$(platform_profile_state)" == "ready" && "$(platform_transport_state)" == "ready" ]]; then
+		printf 'ready'
+	else
+		printf 'planned'
+	fi
+}
+
+platform_assert_runtime_selection_ready() {
+	[[ "$(platform_selection_runtime_state)" == "ready" ]] && return 0
+	if is_yes "$DRY_RUN"; then
+		append_debug_log "Selection is staged only; dry-run continues without runtime activation."
+		return 0
+	fi
+	die "Выбранный профиль ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE} уже описан в selection-layer, но runtime-реализация этого профиля ещё не включена. Пока доступен только dry-run."
 }
 
 # Color codes used by install_panel()
@@ -308,6 +411,12 @@ print_runtime_context() {
 	append_debug_log "Runtime context:"
 	append_debug_log "  platform_root=${PLATFORM_ROOT:-<empty>}"
 	append_debug_log "  platform_selection=$(platform_selection_summary)"
+	append_debug_log "  platform_runtime_state=$(platform_selection_runtime_state)"
+	append_debug_log "  platform_profile_state=$(platform_profile_state)"
+	append_debug_log "  transport_profile_state=$(platform_transport_state)"
+	append_debug_log "  ingress_owner=$(platform_ingress_owner)"
+	append_debug_log "  transport_stream_mode=$(platform_transport_stream_mode)"
+	append_debug_log "  transport_fallback_target=$(platform_transport_fallback_target)"
 	append_debug_log "  runtime_token_length=$(platform_runtime_token_length)"
 	append_debug_log "  credential_length=$(platform_credential_length)"
 	append_debug_log "  dynamic_port_base=$(platform_dynamic_port_base)"
@@ -357,6 +466,9 @@ platform_generate_runtime_defaults() {
 }
 print_execution_plan() {
 	msg_inf "Активная сборка: $(platform_selection_summary)"
+	if [[ "$(platform_selection_runtime_state)" != "ready" ]]; then
+		msg_inf "Профиль находится в staged-режиме: dry-run уже показывает новую selection-модель, но реальная runtime-установка будет открыта отдельным следующим срезом."
+	fi
 	msg_inf "DRY-RUN: инсталляция не будет менять систему."
 	msg_inf "План действий:"
 	msg_inf "1. Подготовка окружения и очистка предыдущей установки."
@@ -2293,6 +2405,9 @@ platform_setup_ingress() {
 		classic)
 			setup_nginx
 			;;
+		stealth)
+			die "Stealth ingress runtime is not enabled in this implementation slice yet."
+			;;
 		*)
 			die "Unsupported ingress profile: ${PLATFORM_PROFILE}"
 			;;
@@ -2303,6 +2418,9 @@ platform_enable_ingress() {
 	case "$PLATFORM_PROFILE" in
 		classic)
 			enable_nginx_sites
+			;;
+		stealth)
+			die "Stealth ingress runtime is not enabled in this implementation slice yet."
 			;;
 		*)
 			die "Unsupported ingress profile: ${PLATFORM_PROFILE}"
@@ -2325,6 +2443,9 @@ platform_apply_transport_profile() {
 	case "$TRANSPORT_PROFILE" in
 		classic-xray)
 			update_xui_db
+			;;
+		stealth-xray)
+			die "Stealth transport runtime is not enabled in this implementation slice yet."
 			;;
 		*)
 			die "Unsupported transport profile: ${TRANSPORT_PROFILE}"
@@ -2458,6 +2579,8 @@ main() {
 		print_execution_plan
 		exit 0
 	fi
+
+	platform_assert_runtime_selection_ready
 
 	# 8. NOW do destructive cleanup (after args parsed, uninstall handled)
 	clean_previous_install

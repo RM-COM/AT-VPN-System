@@ -33,7 +33,22 @@ platform_apply_builtin_metadata() {
 	case "$PLATFORM_PROFILE" in
 		classic)
 			PLATFORM_PROFILE_LABEL="Classic"
-			PLATFORM_PROFILE_DESCRIPTION="Текущий стабильный ingress-контур форка"
+			PLATFORM_PROFILE_DESCRIPTION="Current stable ingress baseline"
+			PLATFORM_IMPLEMENTATION_STATE="ready"
+			PLATFORM_INGRESS_OWNER="nginx-stream"
+			PLATFORM_RUNTIME_TOKEN_LENGTH=10
+			PLATFORM_CREDENTIAL_LENGTH=10
+			PLATFORM_DYNAMIC_PORT_BASE=10000
+			PLATFORM_DYNAMIC_PORT_SPAN=49152
+			PLATFORM_PUBLIC_HTTP_PORT=80
+			PLATFORM_PUBLIC_HTTPS_PORT=443
+			PLATFORM_SUB2SINGBOX_BIND_PORT=8080
+			;;
+		stealth)
+			PLATFORM_PROFILE_LABEL="Stealth"
+			PLATFORM_PROFILE_DESCRIPTION="Prepared anti-DPI profile with Xray on public 443 and local nginx fallback"
+			PLATFORM_IMPLEMENTATION_STATE="planned"
+			PLATFORM_INGRESS_OWNER="xray"
 			PLATFORM_RUNTIME_TOKEN_LENGTH=10
 			PLATFORM_CREDENTIAL_LENGTH=10
 			PLATFORM_DYNAMIC_PORT_BASE=10000
@@ -47,17 +62,30 @@ platform_apply_builtin_metadata() {
 	case "$TRANSPORT_PROFILE" in
 		classic-xray)
 			TRANSPORT_PROFILE_LABEL="Classic Xray"
-			TRANSPORT_PROFILE_DESCRIPTION="Текущий профиль Xray с baseline-логикой"
+			TRANSPORT_PROFILE_DESCRIPTION="Current Xray baseline transport"
+			TRANSPORT_IMPLEMENTATION_STATE="ready"
+			TRANSPORT_STREAM_MODE="enabled"
 			TRANSPORT_WEB_TLS_PORT=7443
 			TRANSPORT_REALITY_SITE_TLS_PORT=9443
 			TRANSPORT_REALITY_INBOUND_PORT=8443
+			TRANSPORT_FALLBACK_TARGET="127.0.0.1:9443"
+			;;
+		stealth-xray)
+			TRANSPORT_PROFILE_LABEL="Stealth Xray"
+			TRANSPORT_PROFILE_DESCRIPTION="Prepared stealth Xray transport with public 443 and local nginx fallback"
+			TRANSPORT_IMPLEMENTATION_STATE="planned"
+			TRANSPORT_STREAM_MODE="disabled"
+			TRANSPORT_WEB_TLS_PORT=7443
+			TRANSPORT_REALITY_SITE_TLS_PORT=7443
+			TRANSPORT_REALITY_INBOUND_PORT=443
+			TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
 			;;
 	esac
 
 	case "$PANEL_PROVIDER" in
 		3x-ui)
 			PANEL_PROVIDER_LABEL="3x-ui"
-			PANEL_PROVIDER_DESCRIPTION="Текущий baseline-провайдер панели"
+			PANEL_PROVIDER_DESCRIPTION="Current baseline panel provider"
 			PANEL_PROVIDER_PANEL_TITLE="X-UI Secure Panel"
 			PANEL_PROVIDER_SERVICE_NAME="x-ui"
 			PANEL_PROVIDER_CONTROL_BIN="x-ui"
@@ -124,7 +152,7 @@ platform_load_metadata() {
 
 platform_validate_selection() {
 	case "$PLATFORM_PROFILE" in
-		classic) ;;
+		classic|stealth) ;;
 		*)
 			printf 'Unsupported PLATFORM_PROFILE: %s\n' "$PLATFORM_PROFILE" >&2
 			return 1
@@ -132,9 +160,17 @@ platform_validate_selection() {
 	esac
 
 	case "$TRANSPORT_PROFILE" in
-		classic-xray) ;;
+		classic-xray|stealth-xray) ;;
 		*)
 			printf 'Unsupported TRANSPORT_PROFILE: %s\n' "$TRANSPORT_PROFILE" >&2
+			return 1
+			;;
+	esac
+
+	case "$PLATFORM_PROFILE:$TRANSPORT_PROFILE" in
+		classic:classic-xray|stealth:stealth-xray) ;;
+		*)
+			printf 'Unsupported PLATFORM_PROFILE/TRANSPORT_PROFILE combination: %s/%s\n' "$PLATFORM_PROFILE" "$TRANSPORT_PROFILE" >&2
 			return 1
 			;;
 	esac

@@ -145,4 +145,5 @@
 - [2026-04-08 05:58:05] `[ПУНКТ 26 / СДЕЛАНО]` Runtime-defaults и boundary-конфигурация `classic` переведены на selection-layer: токены, политика генерации динамических портов, публичные порты, внутренние baseline-порты и локальная граница `sub2sing-box`.
 - [2026-04-08 06:09:36] `[ПУНКТ 27 / СДЕЛАНО]` Provider-level defaults `3x-ui` вынесены из `update_xui_db()` в metadata/selection-layer без изменения baseline install-result.
 - [2026-04-08 06:21:05] `[ПУНКТ 28 / СДЕЛАНО]` Panel bootstrap/defaults верхнего уровня вынесены из install-flow в provider metadata: `config_after_install()` и install-constraint панели больше не держат жёсткие baseline-литералы в active-path.
-- [2026-04-08 06:21:05] `[ПУНКТ 29 / ДАЛЕЕ]` Следующий шаг — открыть первый `stealth-xray` implementation-slice как отдельный runtime-профиль, сохраняя `classic` baseline неизменным и не затрагивая ещё `AWG`.
+- [2026-04-08 06:32:49] `[ПУНКТ 29 / СДЕЛАНО]` Первый `stealth-xray` implementation-slice открыт как staged-profile: профиль уже существует в selection-layer, валидируется и доступен для dry-run, но runtime-path пока ещё сознательно закрыт.
+- [2026-04-08 06:32:49] `[ПУНКТ 30 / ДАЛЕЕ]` Следующий шаг — реализовать первый реальный runtime-срез `stealth-xray`: ingress seam и transport seam для нового профиля, всё ещё не затрагивая `AWG`.

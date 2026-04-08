@@ -69,6 +69,8 @@
 - [2026-04-08 06:09:36] При этом transport/runtime часть baseline по-прежнему не менялась: в `codex/platform-v2` пока выносились только orchestration, runtime-defaults, boundary-константы и panel-provider defaults.
 - [2026-04-08 06:21:05] Bootstrap-дефолты панели теперь тоже подняты в provider metadata: минимальная версия `3x-ui` и временные bootstrap-значения для первичной инициализации панели больше не зашиты в install-flow как голые литералы.
 - [2026-04-08 06:21:05] Это означает, что baseline `classic` уже почти полностью подготовлен к открытию первого нового runtime-профиля: transport/runtime и panel/provider слои разделены заметно чище, чем в исходном монолитном installer'е.
+- [2026-04-08 06:32:49] Первый `stealth-xray`-срез уже открыт в коде как staged-profile: metadata, валидация selection-комбинаций, runtime-state и dry-run diagnostics уже существуют, но реальный install-path ещё не активирован.
+- [2026-04-08 06:32:49] Текущее состояние `platform-v2` теперь такое: `classic` остаётся `ready`, а `stealth` уже не гипотеза в docs, а реальный профиль в selection-layer со статусом `planned`.
 
 ## Где смотреть детали
 
