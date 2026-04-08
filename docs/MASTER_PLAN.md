@@ -142,4 +142,5 @@
 - [2026-04-08 04:55:17] `[ПУНКТ 23 / ДАЛЕЕ]` Следующий шаг — начать в `codex/platform-v2` первый кодовый срез: абстракцию профилей и провайдеров без изменения поведения текущего `classic` baseline.
 - [2026-04-08 05:09:48] `[ПУНКТ 24 / СДЕЛАНО]` Первый кодовый срез `platform-v2` внедрён: каркас профилей и провайдеров существует в коде, проходит локальный shell-check и не меняет current-state baseline.
 - [2026-04-08 05:34:52] `[ПУНКТ 25 / СДЕЛАНО]` Безопасные внутренние decision points installer'а переведены на selection-layer через dispatcher-обёртки для ingress, panel provider и transport profile.
-- [2026-04-08 05:34:52] `[ПУНКТ 26 / ДАЛЕЕ]` Следующий шаг — перевести на новый selection-layer runtime-defaults и boundary-конфигурацию `classic`, после чего уже можно готовить отдельные implementation-срезы для `stealth-xray` и `AWG`.
+- [2026-04-08 05:58:05] `[ПУНКТ 26 / СДЕЛАНО]` Runtime-defaults и boundary-конфигурация `classic` переведены на selection-layer: токены, политика генерации динамических портов, публичные порты, внутренние baseline-порты и локальная граница `sub2sing-box`.
+- [2026-04-08 05:58:05] `[ПУНКТ 27 / ДАЛЕЕ]` Следующий безопасный шаг — вынести provider-level defaults `3x-ui` из `update_xui_db()` в metadata/selection-layer, не меняя реальный install-result baseline и не открывая `stealth`/`AWG` раньше времени.

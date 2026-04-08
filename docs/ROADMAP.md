@@ -35,7 +35,8 @@
 - [2026-04-08 04:55:17] Этот шаг уже закрыт: рабочей веткой следующего большого этапа теперь является `codex/platform-v2`, причём она стартует от `main` и уже содержит безопасный подготовительный слой из `legacy-audit` и `stealth-awg-architecture`.
 - [2026-04-08 05:09:48] Первый кодовый срез в `codex/platform-v2` уже закрыт: модульный каркас `core / modules / providers` и selection-layer внедрены без изменения поведения `classic`.
 - [2026-04-08 05:34:52] Следующий шаг внутри `platform-v2` уже тоже закрыт: безопасные orchestration decision points installer'а переведены на selection-layer без открытия `stealth` и `AWG`.
-- [2026-04-08 05:34:52] Новый ближайший шаг — перевести на тот же selection-layer runtime-defaults и конфигурационные boundary-значения `classic`, не меняя install-result baseline.
+- [2026-04-08 05:58:05] Этот шаг уже закрыт: runtime-defaults и конфигурационные boundary-значения `classic` переведены на тот же selection-layer, а baseline-install result сохранён.
+- [2026-04-08 05:58:05] Новый ближайший шаг — вынести provider-level defaults `3x-ui` из `update_xui_db()` в metadata/selection-layer как ещё один безопасный срез до открытия `stealth` и `AWG`.
 - [2026-04-05 05:53:47] Свести оставшиеся пользовательские внешние ссылки к управляемому списку: что зеркалим, что оставляем внешним сознательно.
 
 ## Бэклог

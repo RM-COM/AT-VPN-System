@@ -47,6 +47,16 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 		PLATFORM_PROFILE_LABEL="Classic"
 		TRANSPORT_PROFILE_LABEL="Classic Xray"
 		PANEL_PROVIDER_LABEL="3x-ui"
+		PLATFORM_RUNTIME_TOKEN_LENGTH=10
+		PLATFORM_CREDENTIAL_LENGTH=10
+		PLATFORM_DYNAMIC_PORT_BASE=10000
+		PLATFORM_DYNAMIC_PORT_SPAN=49152
+		PLATFORM_PUBLIC_HTTP_PORT=80
+		PLATFORM_PUBLIC_HTTPS_PORT=443
+		PLATFORM_SUB2SINGBOX_BIND_PORT=8080
+		TRANSPORT_WEB_TLS_PORT=7443
+		TRANSPORT_REALITY_SITE_TLS_PORT=9443
+		TRANSPORT_REALITY_INBOUND_PORT=8443
 		PANEL_PROVIDER_PANEL_TITLE="X-UI Secure Panel"
 		PANEL_PROVIDER_SERVICE_NAME="x-ui"
 		PANEL_PROVIDER_CONTROL_BIN="x-ui"
@@ -73,6 +83,54 @@ platform_panel_service_name() {
 
 platform_panel_control_bin() {
 	printf '%s' "${PANEL_PROVIDER_CONTROL_BIN:-x-ui}"
+}
+
+platform_public_http_port() {
+	printf '%s' "${PLATFORM_PUBLIC_HTTP_PORT:-80}"
+}
+
+platform_public_https_port() {
+	printf '%s' "${PLATFORM_PUBLIC_HTTPS_PORT:-443}"
+}
+
+platform_runtime_token_length() {
+	printf '%s' "${PLATFORM_RUNTIME_TOKEN_LENGTH:-10}"
+}
+
+platform_credential_length() {
+	printf '%s' "${PLATFORM_CREDENTIAL_LENGTH:-10}"
+}
+
+platform_dynamic_port_base() {
+	printf '%s' "${PLATFORM_DYNAMIC_PORT_BASE:-10000}"
+}
+
+platform_dynamic_port_span() {
+	printf '%s' "${PLATFORM_DYNAMIC_PORT_SPAN:-49152}"
+}
+
+platform_transport_web_tls_port() {
+	printf '%s' "${TRANSPORT_WEB_TLS_PORT:-7443}"
+}
+
+platform_transport_reality_site_tls_port() {
+	printf '%s' "${TRANSPORT_REALITY_SITE_TLS_PORT:-9443}"
+}
+
+platform_transport_reality_inbound_port() {
+	printf '%s' "${TRANSPORT_REALITY_INBOUND_PORT:-8443}"
+}
+
+platform_transport_reality_inbound_tag() {
+	printf 'inbound-%s' "$(platform_transport_reality_inbound_port)"
+}
+
+platform_transport_reality_target() {
+	printf '127.0.0.1:%s' "$(platform_transport_reality_site_tls_port)"
+}
+
+platform_sub2singbox_bind_port() {
+	printf '%s' "${PLATFORM_SUB2SINGBOX_BIND_PORT:-8080}"
 }
 
 # Color codes used by install_panel()
@@ -192,6 +250,16 @@ print_runtime_context() {
 	append_debug_log "Runtime context:"
 	append_debug_log "  platform_root=${PLATFORM_ROOT:-<empty>}"
 	append_debug_log "  platform_selection=$(platform_selection_summary)"
+	append_debug_log "  runtime_token_length=$(platform_runtime_token_length)"
+	append_debug_log "  credential_length=$(platform_credential_length)"
+	append_debug_log "  dynamic_port_base=$(platform_dynamic_port_base)"
+	append_debug_log "  dynamic_port_span=$(platform_dynamic_port_span)"
+	append_debug_log "  public_http_port=$(platform_public_http_port)"
+	append_debug_log "  public_https_port=$(platform_public_https_port)"
+	append_debug_log "  sub2singbox_bind_port=$(platform_sub2singbox_bind_port)"
+	append_debug_log "  transport_web_tls_port=$(platform_transport_web_tls_port)"
+	append_debug_log "  transport_reality_site_tls_port=$(platform_transport_reality_site_tls_port)"
+	append_debug_log "  transport_reality_inbound_port=$(platform_transport_reality_inbound_port)"
 	append_debug_log "  domain=${domain:-<empty>}"
 	append_debug_log "  reality_domain=${reality_domain:-<empty>}"
 	append_debug_log "  panel_port=${panel_port:-<empty>}"
@@ -202,6 +270,26 @@ print_runtime_context() {
 	append_debug_log "  sub2singbox_path=${sub2singbox_path:-<empty>}"
 	append_debug_log "  sub_uri=${sub_uri:-<empty>}"
 	append_debug_log "  json_uri=${json_uri:-<empty>}"
+}
+platform_generate_runtime_defaults() {
+	local token_length credential_length
+	token_length="$(platform_runtime_token_length)"
+	credential_length="$(platform_credential_length)"
+
+	sub_port=$(make_port)
+	panel_port=$(make_port)
+	web_path=$(gen_random_string "$token_length")
+	sub2singbox_path=$(gen_random_string "$token_length")
+	sub_path=$(gen_random_string "$token_length")
+	json_path=$(gen_random_string "$token_length")
+	panel_path=$(gen_random_string "$token_length")
+	ws_port=$(make_port)
+	trojan_port=$(make_port)
+	ws_path=$(gen_random_string "$token_length")
+	trojan_path=$(gen_random_string "$token_length")
+	xhttp_path=$(gen_random_string "$token_length")
+	config_username=$(gen_random_string "$credential_length")
+	config_password=$(gen_random_string "$credential_length")
 }
 print_execution_plan() {
 	msg_inf "Активная сборка: $(platform_selection_summary)"
@@ -249,7 +337,7 @@ load_existing_runtime_context() {
 		fi
 	fi
 	if [[ -z "$domain" ]]; then
-		detected_site=$(grep -Rsl "listen 7443 ssl http2 proxy_protocol;" /etc/nginx/sites-enabled 2>/dev/null | head -n1)
+		detected_site=$(grep -Rsl "listen $(platform_transport_web_tls_port) ssl http2 proxy_protocol;" /etc/nginx/sites-enabled 2>/dev/null | head -n1)
 		[[ -n "$detected_site" ]] && domain=$(basename "$detected_site")
 	fi
 	if [[ -z "$sub_uri" && -n "$domain" && -n "$sub_path" ]]; then
@@ -619,20 +707,21 @@ sub2singbox_rule_set_base() {
 }
 ensure_sub2singbox_local_ui_proxy() {
 	local includes="/etc/nginx/snippets/includes.conf"
-	local tmp asset_base rules_base
+	local tmp asset_base rules_base sub2singbox_bind_port
 
 	[[ -f "$includes" ]] || return 0
 
 	asset_base=$(sub2singbox_ui_asset_base)
 	rules_base=$(sub2singbox_rule_set_base)
+	sub2singbox_bind_port=$(platform_sub2singbox_bind_port)
 
 	tmp=$(mktemp)
-	awk -v asset_base="$asset_base" -v rules_base="$rules_base" '
+	awk -v asset_base="$asset_base" -v rules_base="$rules_base" -v bind_port="$sub2singbox_bind_port" '
 		BEGIN { inblock = 0; normalize = 0 }
 		/^[[:space:]]*#sub2sing-box/ { inblock = 1 }
 		{
 			if (inblock && normalize) {
-				if ($0 ~ /proxy_pass http:\/\/127\.0\.0\.1:8080\//) {
+				if ($0 ~ ("proxy_pass http://127\\.0\\.0\\.1:" bind_port "/")) {
 					print
 					normalize = 0
 					next
@@ -821,7 +910,10 @@ resolve_to_ip() {
 
 ##############################Port & String Generators####################################################
 get_random_port() {
-	echo $(( ((RANDOM<<15)|RANDOM) % 49152 + 10000 ))
+	local port_base port_span
+	port_base="$(platform_dynamic_port_base)"
+	port_span="$(platform_dynamic_port_span)"
+	echo $(( ((RANDOM<<15)|RANDOM) % port_span + port_base ))
 }
 
 gen_random_string() {
@@ -1122,6 +1214,14 @@ setup_nginx() {
 	mkdir -p /etc/nginx/modules-enabled /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/snippets /etc/nginx/stream-enabled
 	chmod 700 /root/cert/*
 
+	local public_http_port public_https_port web_tls_port reality_inbound_port reality_site_tls_port sub2singbox_bind_port
+	public_http_port="$(platform_public_http_port)"
+	public_https_port="$(platform_public_https_port)"
+	web_tls_port="$(platform_transport_web_tls_port)"
+	reality_inbound_port="$(platform_transport_reality_inbound_port)"
+	reality_site_tls_port="$(platform_transport_reality_site_tls_port)"
+	sub2singbox_bind_port="$(platform_sub2singbox_bind_port)"
+
 	ln -sf "/etc/letsencrypt/live/${domain}/fullchain.pem" "/root/cert/${domain}/fullchain.pem"
 	ln -sf "/etc/letsencrypt/live/${domain}/privkey.pem" "/root/cert/${domain}/privkey.pem"
 
@@ -1135,17 +1235,17 @@ map \$ssl_preread_server_name \$sni_name {
 }
 
 upstream xray {
-    server 127.0.0.1:8443;
+    server 127.0.0.1:${reality_inbound_port};
 }
 
 upstream www {
-    server 127.0.0.1:7443;
+    server 127.0.0.1:${web_tls_port};
 }
 
 server {
     proxy_protocol on;
     set_real_ip_from unix:;
-    listen          443;
+    listen          ${public_https_port};
     proxy_pass      \$sni_name;
     ssl_preread     on;
 }
@@ -1199,7 +1299,7 @@ EOF
 
 	cat > "/etc/nginx/sites-available/80.conf" << EOF
 server {
-    listen 80;
+    listen ${public_http_port};
     server_name ${domain} ${reality_domain};
     return 301 https://\$host\$request_uri;
 }
@@ -1209,8 +1309,8 @@ EOF
 server {
 	server_tokens off;
 	server_name ${domain};
-	listen 7443 ssl http2 proxy_protocol;
-	listen [::]:7443 ssl http2 proxy_protocol;
+	listen ${web_tls_port} ssl http2 proxy_protocol;
+	listen [::]:${web_tls_port} ssl http2 proxy_protocol;
 	index index.html index.htm index.php index.nginx-debian.html;
 	root /var/www/html/;
 	ssl_protocols TLSv1.2 TLSv1.3;
@@ -1280,7 +1380,7 @@ EOF
 		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle-refilter.json' '$(sub2singbox_rule_set_base)/ru-bundle-refilter.json';
 		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/re-filter.json' '$(sub2singbox_rule_set_base)/re-filter.json';
 		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/secret-sing-box.json' '$(sub2singbox_rule_set_base)/secret-sing-box.json';
-		proxy_pass http://127.0.0.1:8080/;
+		proxy_pass http://127.0.0.1:${sub2singbox_bind_port}/;
 		}
     location = /${web_path} {
         return 302 /${web_path}/\$is_args\$args;
@@ -1390,8 +1490,8 @@ EOF
 server {
 	server_tokens off;
 	server_name ${reality_domain};
-	listen 9443 ssl http2;
-	listen [::]:9443 ssl http2;
+	listen ${reality_site_tls_port} ssl http2;
+	listen [::]:${reality_site_tls_port} ssl http2;
 	index index.html index.htm index.php index.nginx-debian.html;
 	root /var/www/html/;
 	ssl_protocols TLSv1.2 TLSv1.3;
@@ -1466,7 +1566,12 @@ EOF
 ##############################Update XUI DB###############################################################
 update_xui_db() {
 if [[ -f "$XUIDB" ]]; then
-		local xray_bin
+		local xray_bin public_https_port reality_inbound_port reality_target reality_inbound_tag credential_length
+		public_https_port="$(platform_public_https_port)"
+		reality_inbound_port="$(platform_transport_reality_inbound_port)"
+		reality_target="$(platform_transport_reality_target)"
+		reality_inbound_tag="$(platform_transport_reality_inbound_tag)"
+		credential_length="$(platform_credential_length)"
         x-ui stop
 		xray_bin=$(xray_binary_path)
 		[[ -x "$xray_bin" ]] || die "xray helper binary not found or not executable: ${xray_bin}"
@@ -1475,7 +1580,7 @@ if [[ -f "$XUIDB" ]]; then
         client_id=$("$xray_bin" uuid)
         client_id2=$("$xray_bin" uuid)
         client_id3=$("$xray_bin" uuid)
-	trojan_pass=$(gen_random_string 10)
+	trojan_pass=$(gen_random_string "$credential_length")
         emoji_flag=$(LC_ALL=en_US.UTF-8 curl -s https://ipwho.is/ | jq -r '.flag.emoji')
 		[[ -n "$emoji_flag" && "$emoji_flag" != "null" ]] || emoji_flag="VPN"
 
@@ -1536,9 +1641,9 @@ if [[ -f "$XUIDB" ]]; then
 	     '0',
              '${emoji_flag} reality',
 	     '1',
-             '0',
+	     '0',
 	     '',
-             '8443',
+             '${reality_inbound_port}',
 	     'vless',
              '{
 	     "clients": [
@@ -1568,14 +1673,14 @@ if [[ -f "$XUIDB" ]]; then
     {
       "forceTls": "same",
       "dest": "${domain}",
-      "port": 443,
+      "port": ${public_https_port},
       "remark": ""
     }
   ],
   "realitySettings": {
     "show": false,
     "xver": 0,
-    "target": "127.0.0.1:9443",
+    "target": "${reality_target}",
     "serverNames": [
       "$reality_domain"
     ],
@@ -1607,7 +1712,7 @@ if [[ -f "$XUIDB" ]]; then
     }
   }
 }',
-             'inbound-8443',
+             '${reality_inbound_tag}',
 	     '{
   "enabled": false,
   "destOverride": [
@@ -1980,7 +2085,9 @@ tune_system() {
 
 ##############################Install sub2sing-box########################################################
 write_sub2singbox_service() {
-	cat > "$SUB2SINGBOX_SERVICE" <<'EOF'
+	local sub2singbox_bind_port
+	sub2singbox_bind_port="$(platform_sub2singbox_bind_port)"
+	cat > "$SUB2SINGBOX_SERVICE" <<EOF
 [Unit]
 Description=Local sub2sing-box bridge
 After=network-online.target
@@ -1988,7 +2095,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sub2sing-box server --bind 127.0.0.1 --port 8080
+ExecStart=/usr/bin/sub2sing-box server --bind 127.0.0.1 --port ${sub2singbox_bind_port}
 Restart=always
 RestartSec=3
 
@@ -2273,20 +2380,7 @@ main() {
 	read_existing_xui_db
 
 	# 7. Generate random ports and paths
-	sub_port=$(make_port)
-	panel_port=$(make_port)
-	web_path=$(gen_random_string 10)
-	sub2singbox_path=$(gen_random_string 10)
-	sub_path=$(gen_random_string 10)
-	json_path=$(gen_random_string 10)
-	panel_path=$(gen_random_string 10)
-	ws_port=$(make_port)
-	trojan_port=$(make_port)
-	ws_path=$(gen_random_string 10)
-	trojan_path=$(gen_random_string 10)
-	xhttp_path=$(gen_random_string 10)
-	config_username=$(gen_random_string 10)
-	config_password=$(gen_random_string 10)
+	platform_generate_runtime_defaults
 	sub_uri="https://${domain}/${sub_path}/"
 	json_uri="https://${domain}/${web_path}/?name="
 	print_runtime_context
