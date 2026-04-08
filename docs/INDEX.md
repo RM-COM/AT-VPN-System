@@ -1,6 +1,6 @@
 ﻿# Индекс документации
 
-- [2026-04-08 04:30:47] Канонический минимальный набор документов для повседневной работы: `RULES.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `CHANGELOG.md`, `PROJECT_STATE.md`, `OPERATIONS.md`, `REGRESSION_CHECKLIST.md`, `FORK_PASSPORT.md`, `PLATFORM_BLUEPRINT.md`, `BRANCH_MATRIX.md`, `DOCS_MATRIX.md`.
+- [2026-04-08 04:30:47] Канонический минимальный набор документов для повседневной работы: `RULES.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `CHANGELOG.md`, `PROJECT_STATE.md`, `OPERATIONS.md`, `REGRESSION_CHECKLIST.md`, `FORK_PASSPORT.md`, `PLATFORM_BLUEPRINT.md`, `BRANCH_MATRIX.md`, `DOCS_MATRIX.md`, `BRANCH_CONTEXT.md`.
 
 ## Канонические документы
 
@@ -8,6 +8,7 @@
 - [2026-04-05 07:13:07] `MASTER_PLAN.md` — главный поэтапный план проекта со статусами `СДЕЛАНО / В РАБОТЕ / ДАЛЕЕ`.
 - [2026-04-05 05:58:19] `RESUME_POINT.md` — зафиксированная точка продолжения, с которой можно быстро вернуться к работе.
 - [2026-04-05 05:53:47] `CHANGELOG.md` — журнал завершённых этапов по коду, инфраструктуре и документации.
+- [2026-04-08 08:12:16] `BRANCH_CONTEXT.md` — branch-specific статус, допустимые действия и ограничения именно текущей ветки.
 - [2026-04-08 04:30:47] `PROJECT_STATE.md` — единая сводка текущего технического состояния форка без разрозненного чтения нескольких файлов.
 - [2026-04-08 04:30:47] `OPERATIONS.md` — единая сводка эксплуатационных сценариев, диагностики и regression-маршрута.
 - [2026-04-06 04:44:23] `REGRESSION_CHECKLIST.md` — обязательный чек-лист staging-сценариев `reset / install / verify / websub / backup / uninstall / restore`.

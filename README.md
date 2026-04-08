@@ -1,5 +1,14 @@
 ﻿# AT-VPN-System
 
+> Ветка: `codex/platform-v2`
+> Статус: `ACTIVE IMPLEMENTATION`
+> Использование: `dev / staging`
+> Официальный стабильный install-source: `main`
+
+`codex/platform-v2` — это основная implementation-ветка большого платформенного обновления. Здесь идёт модульный рефакторинг installer-контура, подготовка профилей `classic / stealth`, вынос transport/provider-логики в selection-layer и подготовка к будущему модулю `AmneziaWG`.
+
+Если нужна стабильная установка подтверждённого `classic`-контура, использовать нужно ветку `main`. Если нужна разработка следующего архитектурного этапа, работать нужно именно в этой ветке.
+
 `AT-VPN-System` — это рабочий форк install/debug-контура для развёртывания `3x-ui + nginx + REALITY` с локальной web-sub страницей, локальными `Clash`/`sing-box` шаблонами и staging-ориентированным workflow разработки.
 
 Проект ведётся как самостоятельный форк. Исторически он основан на старых upstream-репозиториях, но поддерживаемый контур, документация и GitHub-репозиторий уже принадлежат этому проекту.
@@ -40,6 +49,14 @@
 3. Только после этого текущая версия выгружается на Linux `staging`.
 4. На `staging` выполняются install/debug/regression-проверки.
 
+## Branch-specific контекст
+
+- Эта ветка предназначена для разработки и `staging`, а не для production-baseline.
+- `classic` здесь сохраняется как baseline, но основной фокус ветки — `platform-v2` и staged `stealth-xray`.
+- `stealth-xray` уже существует как staged-profile, но ещё не считается production-ready install-путём.
+- `AmneziaWG` в этой ветке пока не реализован и остаётся следующим большим модулем.
+- Branch-specific статус и ограничения этой ветки зафиксированы в `docs/BRANCH_CONTEXT.md`.
+
 ## Основные скрипты
 
 - `x-ui-pro-updated.sh` — основной поддерживаемый installer и debug-runner.
@@ -50,10 +67,10 @@
 
 ## Установка
 
-Поддерживаемый сценарий установки для этого форка: локальный клон именно нашего репозитория.
+Для этой ветки поддерживаемый сценарий — локальный клон именно `codex/platform-v2` и прогон на `staging`.
 
 ```bash
-git clone https://github.com/RM-COM/AT-VPN-System.git
+git clone -b codex/platform-v2 https://github.com/RM-COM/AT-VPN-System.git
 cd AT-VPN-System
 sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
 ```
@@ -67,6 +84,7 @@ sudo bash ./x-ui-pro-updated.sh -install yes -panel 1 -auto_domain yes -debug ye
 Важно:
 
 - режим `wget | bash` для этого форка не считается основным и поддерживаемым способом установки
+- для стабильной установки использовать нужно `main`
 - основной путь — запуск из локального клона репозитория
 - после выпуска сертификатов не следует менять домен без понимания последствий для `certbot`
 
@@ -198,6 +216,7 @@ sudo bash ./backup.sh
 
 Ключевые документы лежат в `docs/`:
 
+- `docs/BRANCH_CONTEXT.md` — статус, допустимые действия и ограничения именно текущей ветки
 - `docs/MASTER_PLAN.md` — главный поэтапный план проекта
 - `docs/ROADMAP.md` — краткая дорожная карта
 - `docs/RESUME_POINT.md` — текущая точка продолжения
