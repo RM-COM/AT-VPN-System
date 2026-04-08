@@ -1,4 +1,9 @@
 #!/bin/bash
+echo "x-ui-pro-old.sh archived and disabled." >&2
+echo "Use ./x-ui-pro.sh or ./x-ui-pro-updated.sh instead." >&2
+exit 1
+
+# Historical legacy body is preserved below for audit/reference only.
 #################### x-ui-pro v2.4.3 @ github.com/GFW4Fun ##############################################
 [[ $EUID -ne 0 ]] && echo "not root!" && sudo su -
 ##############################INFO######################################################################
