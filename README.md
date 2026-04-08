@@ -5,7 +5,7 @@
 > Использование: `dev / staging`
 > Официальный стабильный install-source: `main`
 
-`codex/platform-v2` — это основная implementation-ветка большого платформенного обновления. Здесь идёт модульный рефакторинг installer-контура, подготовка профилей `classic / stealth`, вынос transport/provider-логики в selection-layer и подготовка к будущему модулю `AmneziaWG`.
+`codex/platform-v2` — это основная implementation-ветка большого платформенного обновления. Здесь идёт модульный рефакторинг installer-контура, развитие профилей `classic / stealth`, вынос transport/provider-логики в selection-layer и подготовка к будущему модулю `AmneziaWG`.
 
 Если нужна стабильная установка подтверждённого `classic`-контура, использовать нужно ветку `main`. Если нужна разработка следующего архитектурного этапа, работать нужно именно в этой ветке.
 
@@ -52,9 +52,10 @@
 ## Branch-specific контекст
 
 - Эта ветка предназначена для разработки и `staging`, а не для production-baseline.
-- `classic` здесь сохраняется как baseline, но основной фокус ветки — `platform-v2` и staged `stealth-xray`.
-- `stealth-xray` уже существует как staged-profile, но ещё не считается production-ready install-путём.
-- `AmneziaWG` в этой ветке пока не реализован и остаётся следующим большим модулем.
+- `classic` здесь сохраняется как baseline.
+- `stealth-xray` уже является runnable-профилем и подтверждён staging-регрессом.
+- `stealth-xhttp` уже является вторым runnable stealth transport и подтверждён staging install/verify.
+- `AmneziaWG` в этой ветке пока не реализован и остаётся следующим большим модулем после завершения текущего `Xray/DPI` этапа.
 - Branch-specific статус и ограничения этой ветки зафиксированы в `docs/BRANCH_CONTEXT.md`.
 
 ## Основные скрипты
@@ -73,6 +74,14 @@
 git clone -b codex/platform-v2 https://github.com/RM-COM/AT-VPN-System.git
 cd AT-VPN-System
 sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+```
+
+Для явного выбора профиля через переменные окружения:
+
+```bash
+PLATFORM_PROFILE=classic TRANSPORT_PROFILE=classic-xray sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xray sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
 ```
 
 Если нужен тестовый сценарий с автодоменами на staging:

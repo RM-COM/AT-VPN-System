@@ -68,6 +68,8 @@
 - [2026-04-08 22:29:01] `[В РАБОТЕ]` Детальный фазовый план вынесен в `XRAY_DPI_PLAN.md`; он становится каноническим рабочим документом текущего подэтапа внутри `platform-v2`.
 - [2026-04-08 23:00:27] `[СДЕЛАНО]` Блок A из `XRAY_DPI_PLAN.md` закрыт: `stealth` доведён до полного operational parity и подтверждён staging-регрессом по маршруту `install/verify/websub/backup/uninstall/restore/reset/reinstall/verify`.
 - [2026-04-08 23:00:27] `[В РАБОТЕ]` Следующий активный подэтап внутри `Xray/DPI` — блок B: открыть второй stealth transport как отдельную selection-комбинацию, не ломая текущий `stealth-xray`.
+- [2026-04-08 23:24:11] `[СДЕЛАНО]` Блок B уже доведён до runnable-состояния: второй stealth transport `stealth-xhttp` открыт, установлен на staging и проходит строгий `verify`, включая autodetect без ручной передачи env.
+- [2026-04-08 23:24:11] `[В РАБОТЕ]` Следующий активный подэтап внутри `Xray/DPI` теперь смещается на блок C: собрать anti-DPI матрицу приёмки, user-facing проверки и критерии выбора между `stealth-xray` и `stealth-xhttp`.
 - [2026-04-05 07:13:07] `[В РАБОТЕ]` Зафиксировать и довести до production-уровня рабочий цикл `Windows -> GitHub -> Linux staging`.
 - [2026-04-05 07:13:07] `[В РАБОТЕ]` Сохранить и проверить сценарии сопровождения сервера: `install`, `verify`, `stage=websub`, `uninstall`, `backup`, `restore`.
 - [2026-04-05 07:35:53] `[СДЕЛАНО]` В коде реализован предсказуемый `stage=reset` поток staging-ноды с защитным подтверждением, debug-артефактами и post-check.
@@ -161,3 +163,5 @@
 - [2026-04-08 22:29:01] `[ПУНКТ 38 / ДАЛЕЕ]` После формального закрытия `Xray/DPI` этапа переходить к `AWG`, а отдельный блок ускорений рассматривать как следующий обзорный этап, не забывая его при планировании.
 - [2026-04-08 23:00:27] `[ПУНКТ 37 / СДЕЛАНО]` `stealth` доведён до полного operational parity: staging подтвердил `install/verify/websub/backup/uninstall/restore/reset/reinstall/verify`, а runtime-правки для cleanup/reset/restore зафиксированы в коде.
 - [2026-04-08 23:00:27] `[ПУНКТ 38 / В РАБОТЕ]` Новый активный шаг внутри `Xray/DPI` этапа — открыть второй stealth transport и затем собрать anti-DPI матрицу приёмки.
+- [2026-04-08 23:24:11] `[ПУНКТ 38 / СДЕЛАНО]` Второй stealth transport открыт: `stealth-xhttp` добавлен в selection-layer, получил отдельный runtime helper, прошёл staging install/verify и transport-aware autodetect.
+- [2026-04-08 23:24:11] `[ПУНКТ 39 / В РАБОТЕ]` Следующий шаг — собрать anti-DPI матрицу приёмки: profile-to-scenario рекомендации, user-facing проверки, reconnect/long-running сценарии и критерии выбора между `stealth-xray` и `stealth-xhttp`.

@@ -104,6 +104,19 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
 				;;
+			stealth-xhttp)
+				TRANSPORT_PROFILE_LABEL="Stealth XHTTP"
+				TRANSPORT_PROFILE_DESCRIPTION="Stealth XHTTP transport routed behind the public REALITY ingress shield"
+				TRANSPORT_IMPLEMENTATION_STATE="ready"
+				TRANSPORT_STREAM_MODE="disabled"
+				TRANSPORT_WEB_TLS_PORT=7443
+				TRANSPORT_REALITY_SITE_TLS_PORT=7443
+				TRANSPORT_REALITY_INBOUND_PORT=443
+				TRANSPORT_REALITY_XVER=1
+				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
+				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
+				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
+				;;
 			*)
 				printf 'Unsupported TRANSPORT_PROFILE: %s\n' "$TRANSPORT_PROFILE" >&2
 				return 1
@@ -111,7 +124,7 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 		esac
 
 		case "$PLATFORM_PROFILE:$TRANSPORT_PROFILE" in
-			classic:classic-xray|stealth:stealth-xray) ;;
+			classic:classic-xray|stealth:stealth-xray|stealth:stealth-xhttp) ;;
 			*)
 				printf 'Unsupported PLATFORM_PROFILE/TRANSPORT_PROFILE combination: %s/%s\n' "$PLATFORM_PROFILE" "$TRANSPORT_PROFILE" >&2
 				return 1
@@ -519,12 +532,17 @@ print_reset_plan() {
 	print_runtime_context
 }
 load_existing_runtime_context() {
-	local detected_site detected_reality_port
+	local detected_site detected_reality_port detected_xhttp_inbound
 	if [[ "$PLATFORM_PROFILE" == "classic" && "$TRANSPORT_PROFILE" == "classic-xray" && -f "$XUIDB" ]]; then
 		detected_reality_port=$(sqlite3 -list "$XUIDB" "SELECT port FROM inbounds WHERE port=$(platform_public_https_port) AND instr(stream_settings, 'reality') > 0 LIMIT 1;" 2>/dev/null | tr -d '[:space:]')
 		if [[ "$detected_reality_port" == "$(platform_public_https_port)" ]]; then
 			PLATFORM_PROFILE="stealth"
-			TRANSPORT_PROFILE="stealth-xray"
+			detected_xhttp_inbound=$(sqlite3 -list "$XUIDB" "SELECT COUNT(*) FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp';" 2>/dev/null | tr -d '[:space:]')
+			if [[ "$detected_xhttp_inbound" =~ ^[1-9][0-9]*$ ]]; then
+				TRANSPORT_PROFILE="stealth-xhttp"
+			else
+				TRANSPORT_PROFILE="stealth-xray"
+			fi
 			platform_init >/dev/null 2>&1 || true
 			append_debug_log "Autodetected installed selection: ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
 		fi
@@ -536,6 +554,9 @@ load_existing_runtime_context() {
 		json_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subJsonPath" LIMIT 1;' 2>/dev/null)")
 		sub_uri=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subURI" LIMIT 1;' 2>/dev/null)
 		json_uri=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subJsonURI" LIMIT 1;' 2>/dev/null)
+		if [[ -z "$xhttp_path" ]]; then
+			xhttp_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" "SELECT json_extract(stream_settings, '$.xhttpSettings.path') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null)")
+		fi
 		if [[ -z "$reality_domain" ]]; then
 			reality_domain=$(sqlite3 -list "$XUIDB" "SELECT json_extract(stream_settings, '$.realitySettings.serverNames[0]') FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null | head -n1)
 		fi
@@ -585,6 +606,7 @@ record_verify_result() {
 verify_existing_installation() {
 	local failures=0
 	local sqlite_result="" curl_output="" unexpected_urls="" listener_output="" stealth_reality_port=""
+	local stealth_xhttp_inbound_count="" stealth_xhttp_path=""
 	local stream_mode="" selection_runtime_state="" https_proxy_checks_enabled="" stealth_runtime_checks_enabled=""
 	local public_https_port="" web_tls_port=""
 	init_debug_session
@@ -734,6 +756,33 @@ verify_existing_installation() {
 				record_verify_result "PASS" "Stealth REALITY inbound is bound to public ${public_https_port}"
 			else
 				record_verify_result "FAIL" "Stealth REALITY inbound is not bound to public ${public_https_port}"
+				failures=$((failures + 1))
+			fi
+		fi
+
+		if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]] && command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
+			stealth_xhttp_inbound_count=$(sqlite3 -list "$XUIDB" "SELECT COUNT(*) FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp';" 2>/dev/null | tr -d '[:space:]')
+			append_debug_log "stealth xhttp inbound count: ${stealth_xhttp_inbound_count}"
+			if [[ "$stealth_xhttp_inbound_count" =~ ^[1-9][0-9]*$ ]]; then
+				record_verify_result "PASS" "Stealth XHTTP inbound is present in x-ui.db"
+			else
+				record_verify_result "FAIL" "Stealth XHTTP inbound is missing in x-ui.db"
+				failures=$((failures + 1))
+			fi
+
+			stealth_xhttp_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" "SELECT json_extract(stream_settings, '$.xhttpSettings.path') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null)")
+			append_debug_log "stealth xhttp path: ${stealth_xhttp_path:-<empty>}"
+			if [[ -n "$stealth_xhttp_path" ]] && grep -Rqs "location /${stealth_xhttp_path} {" /etc/nginx/sites-enabled /etc/nginx/sites-available /etc/nginx/snippets 2>/dev/null; then
+				record_verify_result "PASS" "Stealth XHTTP path is published by nginx fallback"
+			else
+				record_verify_result "FAIL" "Stealth XHTTP path is not published by nginx fallback"
+				failures=$((failures + 1))
+			fi
+
+			if [[ -S /dev/shm/uds2023.sock ]]; then
+				record_verify_result "PASS" "Stealth XHTTP unix socket exists"
+			else
+				record_verify_result "FAIL" "Stealth XHTTP unix socket is missing"
 				failures=$((failures + 1))
 			fi
 		fi
@@ -2628,6 +2677,192 @@ write_transport_inbounds_stealth_xray() {
 EOF
 }
 
+write_transport_inbounds_stealth_xhttp() {
+	local reality_external_proxy_dest reality_accept_proxy_protocol reality_xver
+	reality_external_proxy_dest="$(platform_transport_reality_external_proxy_dest)"
+	reality_accept_proxy_protocol="$(platform_transport_reality_accept_proxy_protocol)"
+	reality_xver="$(platform_transport_reality_xver)"
+
+	sqlite3 "$XUIDB" <<EOF
+             INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('1','1','first','0','0','0','0','0');
+             INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('2','1','firstX','0','0','0','0','0');
+             INSERT INTO "inbounds" ("user_id","up","down","total","remark","enable","expiry_time","listen","port","protocol","settings","stream_settings","tag","sniffing") VALUES (
+             '1',
+	     '0',
+             '0',
+	     '0',
+             '${emoji_flag} reality-shield',
+	     '1',
+	     '0',
+	     '',
+             '${reality_inbound_port}',
+	     'vless',
+             '{
+	     "clients": [
+    {
+      "id": "${client_id}",
+      "flow": "xtls-rprx-vision",
+      "email": "first",
+      "limitIp": 0,
+      "totalGB": 0,
+      "expiryTime": 0,
+      "enable": true,
+      "tgId": "",
+      "subId": "first",
+      "reset": 0,
+      "created_at": 1756726925000,
+      "updated_at": 1756726925000
+
+    }
+  ],
+  "decryption": "none",
+  "fallbacks": []
+}',
+	     '{
+  "network": "tcp",
+  "security": "reality",
+  "externalProxy": [
+    {
+      "forceTls": "same",
+      "dest": "${reality_external_proxy_dest}",
+      "port": ${public_https_port},
+      "remark": ""
+    }
+  ],
+  "realitySettings": {
+    "show": false,
+    "xver": ${reality_xver},
+    "target": "${reality_target}",
+    "serverNames": [
+      "${reality_domain}"
+    ],
+    "privateKey": "${private_key}",
+    "minClient": "",
+    "maxClient": "",
+    "maxTimediff": 0,
+    "shortIds": [
+      "${shor[0]}",
+      "${shor[1]}",
+      "${shor[2]}",
+      "${shor[3]}",
+      "${shor[4]}",
+      "${shor[5]}",
+      "${shor[6]}",
+      "${shor[7]}"
+    ],
+    "settings": {
+      "publicKey": "${public_key}",
+      "fingerprint": "random",
+      "serverName": "",
+      "spiderX": "/"
+    }
+  },
+  "tcpSettings": {
+    "acceptProxyProtocol": ${reality_accept_proxy_protocol},
+    "header": {
+      "type": "none"
+    }
+  }
+}',
+             '${reality_inbound_tag}',
+	     '{
+  "enabled": false,
+  "destOverride": [
+    "http",
+    "tls",
+    "quic",
+    "fakedns"
+  ],
+  "metadataOnly": false,
+  "routeOnly": false
+}'
+	     );
+      INSERT INTO "inbounds" ("user_id","up","down","total","remark","enable","expiry_time","listen","port","protocol","settings","stream_settings","tag","sniffing") VALUES (
+             '1',
+	     '0',
+             '0',
+	     '0',
+             '${emoji_flag} xhttp',
+	     '1',
+             '0',
+	     '/dev/shm/uds2023.sock,0666',
+             '0',
+	     'vless',
+             '{
+  "clients": [
+    {
+      "id": "${client_id3}",
+      "flow": "",
+      "email": "firstX",
+      "limitIp": 0,
+      "totalGB": 0,
+      "expiryTime": 0,
+      "enable": true,
+      "tgId": "",
+      "subId": "first",
+      "reset": 0,
+      "created_at": 1756726925000,
+      "updated_at": 1756726925000
+    }
+  ],
+  "decryption": "none",
+  "fallbacks": []
+}','{
+  "network": "xhttp",
+  "security": "none",
+  "externalProxy": [
+    {
+      "forceTls": "tls",
+      "dest": "${domain}",
+      "port": ${public_https_port},
+      "remark": ""
+    }
+  ],
+  "xhttpSettings": {
+    "path": "/${xhttp_path}",
+    "host": "",
+    "headers": {},
+    "scMaxBufferedPosts": 30,
+    "scMaxEachPostBytes": "1000000",
+    "noSSEHeader": false,
+    "xPaddingBytes": "100-1000",
+    "mode": "packet-up"
+  },
+  "sockopt": {
+    "acceptProxyProtocol": false,
+    "tcpFastOpen": true,
+    "mark": 0,
+    "tproxy": "off",
+    "tcpMptcp": true,
+    "tcpNoDelay": true,
+    "domainStrategy": "UseIP",
+    "tcpMaxSeg": 1440,
+    "dialerProxy": "",
+    "tcpKeepAliveInterval": 0,
+    "tcpKeepAliveIdle": 300,
+    "tcpUserTimeout": 10000,
+    "tcpcongestion": "bbr",
+    "V6Only": false,
+    "tcpWindowClamp": 600,
+    "interface": ""
+  }
+}',
+             'inbound-/dev/shm/uds2023.sock,0666:0|',
+	     '{
+  "enabled": true,
+  "destOverride": [
+    "http",
+    "tls",
+    "quic",
+    "fakedns"
+  ],
+  "metadataOnly": false,
+  "routeOnly": false
+}'
+	     );
+EOF
+}
+
 update_xui_db() {
 if [[ -f "$XUIDB" ]]; then
 		local xray_bin public_https_port reality_inbound_port reality_target reality_inbound_tag credential_length
@@ -2662,6 +2897,9 @@ if [[ -f "$XUIDB" ]]; then
 				;;
 			stealth-xray)
 				write_transport_inbounds_stealth_xray
+				;;
+			stealth-xhttp)
+				write_transport_inbounds_stealth_xhttp
 				;;
 			*)
 				die "Unsupported transport profile in update_xui_db: ${TRANSPORT_PROFILE}"
@@ -3001,7 +3239,7 @@ platform_install_panel_provider() {
 
 platform_apply_transport_profile() {
 	case "$TRANSPORT_PROFILE" in
-		classic-xray|stealth-xray)
+		classic-xray|stealth-xray|stealth-xhttp)
 			update_xui_db
 			;;
 		*)

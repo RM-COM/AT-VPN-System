@@ -92,6 +92,10 @@
 - [2026-04-08 23:00:27] На staging `185.207.64.40` `stealth/stealth-xray` теперь подтверждён не только как runnable install-path, но и как полноценный эксплуатационный baseline: пройдены `install`, `verify`, `websub`, `backup`, `uninstall`, `restore`, `reset`, повторный `install` и финальный `verify`.
 - [2026-04-08 23:00:27] Для этого были внесены минимальные точечные правки в profile-aware cleanup/reset/restore: managed stack ports, корректная очистка `stream-enabled/stream.conf` и stealth-aware restore diagnostics.
 - [2026-04-08 23:00:27] Следующий активный продуктовый шаг внутри `Xray/DPI` этапа теперь смещается с доведения baseline на открытие второго stealth transport.
+- [2026-04-08 23:24:11] Этот шаг уже частично закрыт: в `codex/platform-v2` открыт второй runnable stealth transport `stealth-xhttp` с тем же ingress-контуром `xray:443 -> nginx:7443`, но с отдельным `xhttp` inbound на `unix:/dev/shm/uds2023.sock,0666`.
+- [2026-04-08 23:24:11] На staging `185.207.64.40` новый профиль подтверждён реальной установкой и строгим `-stage verify`, включая transport-specific проверки `xhttp` inbound, публикации `xhttp` path в nginx fallback и наличия unix socket.
+- [2026-04-08 23:24:11] Autodetect runtime-контекста тоже уже работает для этого профиля: повторный `-stage verify` без явной передачи `PLATFORM_PROFILE/TRANSPORT_PROFILE` сам восстанавливает `stealth-xhttp` из `x-ui.db`.
+- [2026-04-08 23:24:11] Это означает, что у `platform-v2` теперь уже есть два runnable stealth transport-пути: `stealth-xray` и `stealth-xhttp`; следующий шаг смещается с открытия transport-а на сбор anti-DPI матрицы приёмки и user-facing проверок.
 
 ## Где смотреть детали
 

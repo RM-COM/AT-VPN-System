@@ -86,6 +86,19 @@ platform_apply_builtin_metadata() {
 			TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 			TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
 			;;
+		stealth-xhttp)
+			TRANSPORT_PROFILE_LABEL="Stealth XHTTP"
+			TRANSPORT_PROFILE_DESCRIPTION="Stealth XHTTP transport routed behind the public REALITY ingress shield"
+			TRANSPORT_IMPLEMENTATION_STATE="ready"
+			TRANSPORT_STREAM_MODE="disabled"
+			TRANSPORT_WEB_TLS_PORT=7443
+			TRANSPORT_REALITY_SITE_TLS_PORT=7443
+			TRANSPORT_REALITY_INBOUND_PORT=443
+			TRANSPORT_REALITY_XVER=1
+			TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
+			TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
+			TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
+			;;
 	esac
 
 	case "$PANEL_PROVIDER" in
@@ -166,7 +179,7 @@ platform_validate_selection() {
 	esac
 
 	case "$TRANSPORT_PROFILE" in
-		classic-xray|stealth-xray) ;;
+		classic-xray|stealth-xray|stealth-xhttp) ;;
 		*)
 			printf 'Unsupported TRANSPORT_PROFILE: %s\n' "$TRANSPORT_PROFILE" >&2
 			return 1
@@ -174,7 +187,7 @@ platform_validate_selection() {
 	esac
 
 	case "$PLATFORM_PROFILE:$TRANSPORT_PROFILE" in
-		classic:classic-xray|stealth:stealth-xray) ;;
+		classic:classic-xray|stealth:stealth-xray|stealth:stealth-xhttp) ;;
 		*)
 			printf 'Unsupported PLATFORM_PROFILE/TRANSPORT_PROFILE combination: %s/%s\n' "$PLATFORM_PROFILE" "$TRANSPORT_PROFILE" >&2
 			return 1
