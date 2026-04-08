@@ -1,5 +1,7 @@
 ﻿# CHANGELOG
 
+- [2026-04-08 22:29:01] В `codex/platform-v2` введён отдельный фазовый документ `docs/XRAY_DPI_PLAN.md`: текущий этап теперь формально разделён на завершение `Xray/DPI` слоя, последующий `AWG` и отдельный будущий блок ускорений.
+- [2026-04-08 22:29:01] Канонические документы `INDEX.md`, `MASTER_PLAN.md`, `ROADMAP.md`, `RESUME_POINT.md` и `PROJECT_STATE.md` синхронизированы с новым фокусом: `AWG` больше не считается немедленным следующим шагом до закрытия `Xray/DPI` этапа.
 - [2026-04-08 21:58:42] В `codex/platform-v2` усилен strict verify для `stealth`: `verify_existing_installation()` теперь дополнительно проверяет отсутствие `stream.conf`, связку `xray:443` и `nginx:7443`, привязку `REALITY` inbound к `443`, а также ответы panel и fallback root через публичный `443`.
 - [2026-04-08 21:58:42] Для устойчивости этих проверок парсинг `REALITY` в runtime-контексте и verify переведён с хрупких `LIKE`/regex на `sqlite json_extract(...)`, поэтому `reality_domain` и port `443` теперь читаются из `x-ui.db` надёжно.
 - [2026-04-08 21:58:42] На staging `185.207.64.40` новый strict verify для `stealth/stealth-xray` уже подтверждён: отдельный `-stage verify -debug yes -keep_artifacts yes` завершился полным `PASS` после живой stealth-установки.

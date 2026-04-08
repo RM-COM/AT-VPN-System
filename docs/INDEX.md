@@ -1,6 +1,6 @@
 ﻿# Индекс документации
 
-- [2026-04-08 04:30:47] Канонический минимальный набор документов для повседневной работы: `RULES.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `CHANGELOG.md`, `PROJECT_STATE.md`, `OPERATIONS.md`, `REGRESSION_CHECKLIST.md`, `FORK_PASSPORT.md`, `PLATFORM_BLUEPRINT.md`, `BRANCH_MATRIX.md`, `DOCS_MATRIX.md`, `BRANCH_CONTEXT.md`.
+- [2026-04-08 04:30:47] Канонический минимальный набор документов для повседневной работы: `RULES.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `CHANGELOG.md`, `PROJECT_STATE.md`, `OPERATIONS.md`, `REGRESSION_CHECKLIST.md`, `FORK_PASSPORT.md`, `PLATFORM_BLUEPRINT.md`, `XRAY_DPI_PLAN.md`, `BRANCH_MATRIX.md`, `DOCS_MATRIX.md`, `BRANCH_CONTEXT.md`.
 
 ## Канонические документы
 
@@ -14,6 +14,7 @@
 - [2026-04-06 04:44:23] `REGRESSION_CHECKLIST.md` — обязательный чек-лист staging-сценариев `reset / install / verify / websub / backup / uninstall / restore`.
 - [2026-04-06 08:17:42] `FORK_PASSPORT.md` — полный технический паспорт форка и история отличий от upstream.
 - [2026-04-07 04:23:02] `PLATFORM_BLUEPRINT.md` — каноническое верхнеуровневое ТЗ следующей платформенной архитектуры.
+- [2026-04-08 22:29:01] `XRAY_DPI_PLAN.md` — отдельный фазовый план закрытия текущего `Xray/DPI` этапа до перехода к `AWG` и следующему блоку ускорений.
 - [2026-04-08 04:30:47] `BRANCH_MATRIX.md` — каноническая матрица веток, их ролей и статусов.
 - [2026-04-08 04:30:47] `DOCS_MATRIX.md` — каноническая матрица документации и ролей файлов.
 
