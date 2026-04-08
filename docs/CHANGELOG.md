@@ -1,5 +1,10 @@
 ﻿# CHANGELOG
 
+- [2026-04-08 07:04:32] В `codex/platform-v2` выполнен следующий transport/runtime срез для `stealth-xray`: `update_xui_db()` разрезан на orchestrator и transport helpers, а giant SQL для baseline больше не является единственной точкой правды.
+- [2026-04-08 07:04:32] Для transport metadata добавлены параметры `REALITY`-контракта: `xver`, `acceptProxyProtocol` и режим выбора публичного `dest`, благодаря чему `classic` и `stealth` теперь различаются не только ingress-портами, но и явной transport-моделью.
+- [2026-04-08 07:04:32] Реализован отдельный helper `write_transport_inbounds_stealth_xray()`: он готовит `REALITY` inbound для режима `Xray:443 -> nginx:7443`, но сам профиль всё ещё остаётся staged до отдельного profile-aware шага для `verify` и восстановления runtime-контекста.
+- [2026-04-08 07:04:32] Локально подтверждено, что `bash -n` для `x-ui-pro-updated.sh`, `x-ui-pro.sh` и `core/platform-lib.sh` проходит, `git diff --check` чистый, а metadata self-check уже различает `classic: 8443/0/true/domain` и `stealth: 443/1/false/reality_domain`.
+
 - [2026-04-08 06:44:51] В `codex/platform-v2` выполнен первый реальный ingress-only срез для `stealth`: `setup_nginx()` и `enable_nginx_sites()` разделены на `classic` и `stealth` реализации, а dispatcher-слой начал переключать ingress по `PLATFORM_PROFILE`.
 - [2026-04-08 06:44:51] `classic` ingress оставлен без функционального изменения, а `stealth` ingress пока ограничен только подготовкой `nginx`-границы: без `stream.conf`, без включения transport runtime и без изменения `update_xui_db()`.
 - [2026-04-08 06:44:51] Локально подтверждено, что `bash -n` для `x-ui-pro-updated.sh`, `x-ui-pro.sh` и `core/platform-lib.sh` проходит, `git diff --check` чистый, а metadata self-check по-прежнему отдаёт `classic=ready` и `stealth=planned`.

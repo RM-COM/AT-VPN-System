@@ -86,6 +86,9 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_WEB_TLS_PORT=7443
 				TRANSPORT_REALITY_SITE_TLS_PORT=9443
 				TRANSPORT_REALITY_INBOUND_PORT=8443
+				TRANSPORT_REALITY_XVER=0
+				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="true"
+				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:9443"
 				;;
 			stealth-xray)
@@ -96,6 +99,9 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_WEB_TLS_PORT=7443
 				TRANSPORT_REALITY_SITE_TLS_PORT=7443
 				TRANSPORT_REALITY_INBOUND_PORT=443
+				TRANSPORT_REALITY_XVER=1
+				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
+				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
 				;;
 			*)
@@ -259,6 +265,28 @@ platform_transport_reality_inbound_tag() {
 
 platform_transport_reality_target() {
 	printf '127.0.0.1:%s' "$(platform_transport_reality_site_tls_port)"
+}
+
+platform_transport_reality_xver() {
+	printf '%s' "${TRANSPORT_REALITY_XVER:-0}"
+}
+
+platform_transport_reality_accept_proxy_protocol() {
+	printf '%s' "${TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL:-true}"
+}
+
+platform_transport_reality_external_proxy_dest() {
+	case "${TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE:-domain}" in
+		domain)
+			printf '%s' "${domain}"
+			;;
+		reality_domain)
+			printf '%s' "${reality_domain}"
+			;;
+		*)
+			printf '%s' "${domain}"
+			;;
+	esac
 }
 
 platform_transport_state() {
@@ -433,6 +461,8 @@ print_runtime_context() {
 	append_debug_log "  transport_web_tls_port=$(platform_transport_web_tls_port)"
 	append_debug_log "  transport_reality_site_tls_port=$(platform_transport_reality_site_tls_port)"
 	append_debug_log "  transport_reality_inbound_port=$(platform_transport_reality_inbound_port)"
+	append_debug_log "  transport_reality_xver=$(platform_transport_reality_xver)"
+	append_debug_log "  transport_reality_accept_proxy_protocol=$(platform_transport_reality_accept_proxy_protocol)"
 	append_debug_log "  domain=${domain:-<empty>}"
 	append_debug_log "  reality_domain=${reality_domain:-<empty>}"
 	append_debug_log "  panel_port=${panel_port:-<empty>}"
@@ -2008,34 +2038,8 @@ EOF
 }
 
 ##############################Update XUI DB###############################################################
-update_xui_db() {
-if [[ -f "$XUIDB" ]]; then
-		local xray_bin public_https_port reality_inbound_port reality_target reality_inbound_tag credential_length
-		public_https_port="$(platform_public_https_port)"
-		reality_inbound_port="$(platform_transport_reality_inbound_port)"
-		reality_target="$(platform_transport_reality_target)"
-		reality_inbound_tag="$(platform_transport_reality_inbound_tag)"
-		credential_length="$(platform_credential_length)"
-        x-ui stop
-		xray_bin=$(xray_binary_path)
-		[[ -x "$xray_bin" ]] || die "xray helper binary not found or not executable: ${xray_bin}"
-		generate_reality_x25519_pair "$xray_bin"
-
-        client_id=$("$xray_bin" uuid)
-        client_id2=$("$xray_bin" uuid)
-        client_id3=$("$xray_bin" uuid)
-	trojan_pass=$(gen_random_string "$credential_length")
-        emoji_flag=$(LC_ALL=en_US.UTF-8 curl -s https://ipwho.is/ | jq -r '.flag.emoji')
-		[[ -n "$emoji_flag" && "$emoji_flag" != "null" ]] || emoji_flag="VPN"
-
-	# Generate shortIds via loop
-	local shor=()
-	local i
-	for i in {1..8}; do
-		shor+=("$(openssl rand -hex 8)")
-	done
-
-       	sqlite3 "$XUIDB" <<EOF
+write_panel_provider_settings_3xui() {
+	sqlite3 "$XUIDB" <<EOF
              INSERT INTO "settings" ("key", "value") VALUES ("subPort",  '${sub_port}');
 	     INSERT INTO "settings" ("key", "value") VALUES ("subPath",  '/${sub_path}/');
 	     INSERT INTO "settings" ("key", "value") VALUES ("subURI",  '${sub_uri}');
@@ -2074,6 +2078,11 @@ if [[ -f "$XUIDB" ]]; then
 	     INSERT INTO "settings" ("key", "value") VALUES ("subJsonMux",  '${PANEL_PROVIDER_SUB_JSON_MUX:-}');
              INSERT INTO "settings" ("key", "value") VALUES ("subJsonRules",  '${PANEL_PROVIDER_SUB_JSON_RULES:-}');
 	     INSERT INTO "settings" ("key", "value") VALUES ("datepicker",  '${PANEL_PROVIDER_DATEPICKER:-gregorian}');
+EOF
+}
+
+write_transport_inbounds_classic_xray() {
+	sqlite3 "$XUIDB" <<EOF
              INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('1','1','first','0','0','0','0','0');
 	     INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('2','1','first_1','0','0','0','0','0');
 		   INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('3','1','firstX','0','0','0','0','0');
@@ -2375,6 +2384,149 @@ if [[ -f "$XUIDB" ]]; then
 }'
 	);
 EOF
+}
+
+write_transport_inbounds_stealth_xray() {
+	local reality_external_proxy_dest reality_accept_proxy_protocol reality_xver
+	reality_external_proxy_dest="$(platform_transport_reality_external_proxy_dest)"
+	reality_accept_proxy_protocol="$(platform_transport_reality_accept_proxy_protocol)"
+	reality_xver="$(platform_transport_reality_xver)"
+
+	sqlite3 "$XUIDB" <<EOF
+             INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('1','1','first','0','0','0','0','0');
+             INSERT INTO "inbounds" ("user_id","up","down","total","remark","enable","expiry_time","listen","port","protocol","settings","stream_settings","tag","sniffing") VALUES (
+             '1',
+	     '0',
+             '0',
+	     '0',
+             '${emoji_flag} reality',
+	     '1',
+	     '0',
+	     '',
+             '${reality_inbound_port}',
+	     'vless',
+             '{
+	     "clients": [
+    {
+      "id": "${client_id}",
+      "flow": "xtls-rprx-vision",
+      "email": "first",
+      "limitIp": 0,
+      "totalGB": 0,
+      "expiryTime": 0,
+      "enable": true,
+      "tgId": "",
+      "subId": "first",
+      "reset": 0,
+      "created_at": 1756726925000,
+      "updated_at": 1756726925000
+
+    }
+  ],
+  "decryption": "none",
+  "fallbacks": []
+}',
+	     '{
+  "network": "tcp",
+  "security": "reality",
+  "externalProxy": [
+    {
+      "forceTls": "same",
+      "dest": "${reality_external_proxy_dest}",
+      "port": ${public_https_port},
+      "remark": ""
+    }
+  ],
+  "realitySettings": {
+    "show": false,
+    "xver": ${reality_xver},
+    "target": "${reality_target}",
+    "serverNames": [
+      "${reality_domain}"
+    ],
+    "privateKey": "${private_key}",
+    "minClient": "",
+    "maxClient": "",
+    "maxTimediff": 0,
+    "shortIds": [
+      "${shor[0]}",
+      "${shor[1]}",
+      "${shor[2]}",
+      "${shor[3]}",
+      "${shor[4]}",
+      "${shor[5]}",
+      "${shor[6]}",
+      "${shor[7]}"
+    ],
+    "settings": {
+      "publicKey": "${public_key}",
+      "fingerprint": "random",
+      "serverName": "",
+      "spiderX": "/"
+    }
+  },
+  "tcpSettings": {
+    "acceptProxyProtocol": ${reality_accept_proxy_protocol},
+    "header": {
+      "type": "none"
+    }
+  }
+}',
+             '${reality_inbound_tag}',
+	     '{
+  "enabled": false,
+  "destOverride": [
+    "http",
+    "tls",
+    "quic",
+    "fakedns"
+  ],
+  "metadataOnly": false,
+  "routeOnly": false
+}'
+	     );
+EOF
+}
+
+update_xui_db() {
+if [[ -f "$XUIDB" ]]; then
+		local xray_bin public_https_port reality_inbound_port reality_target reality_inbound_tag credential_length
+		public_https_port="$(platform_public_https_port)"
+		reality_inbound_port="$(platform_transport_reality_inbound_port)"
+		reality_target="$(platform_transport_reality_target)"
+		reality_inbound_tag="$(platform_transport_reality_inbound_tag)"
+		credential_length="$(platform_credential_length)"
+        x-ui stop
+		xray_bin=$(xray_binary_path)
+		[[ -x "$xray_bin" ]] || die "xray helper binary not found or not executable: ${xray_bin}"
+		generate_reality_x25519_pair "$xray_bin"
+
+        client_id=$("$xray_bin" uuid)
+        client_id2=$("$xray_bin" uuid)
+        client_id3=$("$xray_bin" uuid)
+	trojan_pass=$(gen_random_string "$credential_length")
+        emoji_flag=$(LC_ALL=en_US.UTF-8 curl -s https://ipwho.is/ | jq -r '.flag.emoji')
+		[[ -n "$emoji_flag" && "$emoji_flag" != "null" ]] || emoji_flag="VPN"
+
+	# Generate shortIds via loop
+	local shor=()
+	local i
+	for i in {1..8}; do
+		shor+=("$(openssl rand -hex 8)")
+	done
+
+		write_panel_provider_settings_3xui
+		case "$TRANSPORT_PROFILE" in
+			classic-xray)
+				write_transport_inbounds_classic_xray
+				;;
+			stealth-xray)
+				write_transport_inbounds_stealth_xray
+				;;
+			*)
+				die "Unsupported transport profile in update_xui_db: ${TRANSPORT_PROFILE}"
+				;;
+		esac
 /usr/local/x-ui/x-ui setting -username "${config_username}" -password "${config_password}" -port "${panel_port}" -webBasePath "${panel_path}"
 /usr/local/x-ui/x-ui cert -webCert "/root/cert/${domain}/fullchain.pem" -webCertKey "/root/cert/${domain}/privkey.pem"
 x-ui start
@@ -2709,11 +2861,8 @@ platform_install_panel_provider() {
 
 platform_apply_transport_profile() {
 	case "$TRANSPORT_PROFILE" in
-		classic-xray)
+		classic-xray|stealth-xray)
 			update_xui_db
-			;;
-		stealth-xray)
-			die "Stealth transport runtime is not enabled in this implementation slice yet."
 			;;
 		*)
 			die "Unsupported transport profile: ${TRANSPORT_PROFILE}"

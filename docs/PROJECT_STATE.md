@@ -74,6 +74,9 @@
 - [2026-04-08 06:44:51] Следующий безопасный срез тоже уже выполнен: `nginx` ingress разделён на `classic` и `stealth` seam через отдельные функции `setup_nginx_classic/setup_nginx_stealth` и `enable_nginx_sites_classic/enable_nginx_sites_stealth`.
 - [2026-04-08 06:44:51] При этом граница изменений удержана жёстко: `update_xui_db()`, `verify_existing_installation()` и runtime-контракт `stealth-xray` не менялись; transport для `stealth` всё ещё блокируется как `not enabled`.
 - [2026-04-08 06:44:51] Это означает, что `platform-v2` теперь уже умеет маршрутизировать ingress по profile-layer, но реальный runnable-режим `stealth` пока ещё не открыт и остаётся следующим отдельным срезом.
+- [2026-04-08 07:04:32] Следующий transport/runtime seam тоже уже реализован: `update_xui_db()` разделён на provider settings helper и два transport helper'а, а `stealth-xray` получил собственный `REALITY`-контракт вместо необходимости параметризовать giant SQL прямо в orchestrator.
+- [2026-04-08 07:04:32] Для transport metadata теперь явно различаются `REALITY`-инварианты `classic` и `stealth`: `8443/0/acceptProxyProtocol=true/domain` против `443/1/acceptProxyProtocol=false/reality_domain`.
+- [2026-04-08 07:04:32] При этом `stealth` всё ещё сознательно не переведён в `ready`: install-runtime остаётся staged до отдельного шага, в котором `verify_existing_installation()` и `load_existing_runtime_context()` станут profile-aware.
 
 ## Где смотреть детали
 

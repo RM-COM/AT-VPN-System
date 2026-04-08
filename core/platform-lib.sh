@@ -68,6 +68,9 @@ platform_apply_builtin_metadata() {
 			TRANSPORT_WEB_TLS_PORT=7443
 			TRANSPORT_REALITY_SITE_TLS_PORT=9443
 			TRANSPORT_REALITY_INBOUND_PORT=8443
+			TRANSPORT_REALITY_XVER=0
+			TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="true"
+			TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="domain"
 			TRANSPORT_FALLBACK_TARGET="127.0.0.1:9443"
 			;;
 		stealth-xray)
@@ -78,6 +81,9 @@ platform_apply_builtin_metadata() {
 			TRANSPORT_WEB_TLS_PORT=7443
 			TRANSPORT_REALITY_SITE_TLS_PORT=7443
 			TRANSPORT_REALITY_INBOUND_PORT=443
+			TRANSPORT_REALITY_XVER=1
+			TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
+			TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 			TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
 			;;
 	esac
@@ -215,4 +221,26 @@ platform_init() {
 	platform_validate_selection || return 1
 	platform_load_metadata
 	return 0
+}
+
+platform_transport_reality_xver() {
+	printf '%s' "${TRANSPORT_REALITY_XVER:-0}"
+}
+
+platform_transport_reality_accept_proxy_protocol() {
+	printf '%s' "${TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL:-true}"
+}
+
+platform_transport_reality_external_proxy_dest() {
+	case "${TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE:-domain}" in
+		domain)
+			printf '%s' "${domain}"
+			;;
+		reality_domain)
+			printf '%s' "${reality_domain}"
+			;;
+		*)
+			printf '%s' "${domain}"
+			;;
+	esac
 }
