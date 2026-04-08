@@ -98,5 +98,6 @@
 - [2026-04-08 06:09:36] Этот шаг уже закрыт: дефолты `3x-ui` для блока `settings` теперь берутся из provider metadata, а SQL больше не хранит их как единственный источник правды.
 - [2026-04-08 06:21:05] Этот шаг тоже уже закрыт: bootstrap-дефолты панели и минимальная поддерживаемая версия `3x-ui` теперь идут через provider metadata/helper-layer, а не через жёсткий install-flow.
 - [2026-04-08 06:32:49] Этот шаг уже начат в коде: `stealth-xray` добавлен как staged-profile в selection-layer, имеет metadata, runtime-state и dry-run visibility, но ещё не имеет открытого install-path.
-- [2026-04-08 06:32:49] Текущая точка продолжения: следующим срезом нужно открыть уже первый реальный runtime-path `stealth-xray` для ingress/transport seam, при этом `classic` должен остаться неизменным, а `AWG` пока не трогаем.
+- [2026-04-08 06:44:51] Этот шаг уже частично закрыт: ingress-layer `nginx` разделён на `classic` и `stealth` через отдельные функции и dispatcher-слой `platform_setup_ingress/platform_enable_ingress`.
+- [2026-04-08 06:44:51] Текущая точка продолжения: следующим срезом нужно открыть transport/runtime seam для `stealth-xray`, при этом `classic` должен остаться неизменным, `update_xui_db()` и `verify_existing_installation()` нужно делать profile-aware отдельным шагом, а `AWG` пока не трогаем.
 - [2026-04-07 01:16:59] Отдельно нужно решить судьбу оставшихся product-facing внешних ссылок, которые сознательно ещё не зеркалированы.

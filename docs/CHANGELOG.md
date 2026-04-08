@@ -1,5 +1,9 @@
 ﻿# CHANGELOG
 
+- [2026-04-08 06:44:51] В `codex/platform-v2` выполнен первый реальный ingress-only срез для `stealth`: `setup_nginx()` и `enable_nginx_sites()` разделены на `classic` и `stealth` реализации, а dispatcher-слой начал переключать ingress по `PLATFORM_PROFILE`.
+- [2026-04-08 06:44:51] `classic` ingress оставлен без функционального изменения, а `stealth` ingress пока ограничен только подготовкой `nginx`-границы: без `stream.conf`, без включения transport runtime и без изменения `update_xui_db()`.
+- [2026-04-08 06:44:51] Локально подтверждено, что `bash -n` для `x-ui-pro-updated.sh`, `x-ui-pro.sh` и `core/platform-lib.sh` проходит, `git diff --check` чистый, а metadata self-check по-прежнему отдаёт `classic=ready` и `stealth=planned`.
+
 - [2026-04-05 05:53:47] Инициализирована директория `docs/` и создан базовый комплект проектной документации.
 - [2026-04-05 05:53:47] Полностью переведён `README.md` на русский язык и обновлён под текущий режим работы форка через локальный клон репозитория.
 - [2026-04-05 05:53:47] Обновлены `x-ui-pro.sh` и `x-ui-pro-updated.sh`: установщик теперь копирует локальный каталог `vendor/`, подставляет web-placeholder'ы и раздаёт web-sub страницу из локального bundle-набора.

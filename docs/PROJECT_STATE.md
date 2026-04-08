@@ -71,6 +71,9 @@
 - [2026-04-08 06:21:05] Это означает, что baseline `classic` уже почти полностью подготовлен к открытию первого нового runtime-профиля: transport/runtime и panel/provider слои разделены заметно чище, чем в исходном монолитном installer'е.
 - [2026-04-08 06:32:49] Первый `stealth-xray`-срез уже открыт в коде как staged-profile: metadata, валидация selection-комбинаций, runtime-state и dry-run diagnostics уже существуют, но реальный install-path ещё не активирован.
 - [2026-04-08 06:32:49] Текущее состояние `platform-v2` теперь такое: `classic` остаётся `ready`, а `stealth` уже не гипотеза в docs, а реальный профиль в selection-layer со статусом `planned`.
+- [2026-04-08 06:44:51] Следующий безопасный срез тоже уже выполнен: `nginx` ingress разделён на `classic` и `stealth` seam через отдельные функции `setup_nginx_classic/setup_nginx_stealth` и `enable_nginx_sites_classic/enable_nginx_sites_stealth`.
+- [2026-04-08 06:44:51] При этом граница изменений удержана жёстко: `update_xui_db()`, `verify_existing_installation()` и runtime-контракт `stealth-xray` не менялись; transport для `stealth` всё ещё блокируется как `not enabled`.
+- [2026-04-08 06:44:51] Это означает, что `platform-v2` теперь уже умеет маршрутизировать ingress по profile-layer, но реальный runnable-режим `stealth` пока ещё не открыт и остаётся следующим отдельным срезом.
 
 ## Где смотреть детали
 

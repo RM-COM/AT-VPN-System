@@ -1385,7 +1385,7 @@ obtain_ssl() {
 }
 
 ##############################Nginx Config################################################################
-setup_nginx() {
+setup_nginx_classic() {
 	mkdir -p "/root/cert/${domain}"
 	mkdir -p /etc/nginx/modules-enabled /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/snippets /etc/nginx/stream-enabled
 	chmod 700 /root/cert/*
@@ -1470,6 +1470,255 @@ EOF
 		warn "ngx_stream_geoip2_module.so not found; geoip2 filtering will not work"
 	fi
 
+	grep -qF "worker_rlimit_nofile 16384;" /etc/nginx/nginx.conf || echo "worker_rlimit_nofile 16384;" >> /etc/nginx/nginx.conf
+	sed -i "/worker_connections/c\worker_connections 4096;" /etc/nginx/nginx.conf
+
+	cat > "/etc/nginx/sites-available/80.conf" << EOF
+server {
+    listen ${public_http_port};
+    server_name ${domain} ${reality_domain};
+    return 301 https://\$host\$request_uri;
+}
+EOF
+
+	cat > "/etc/nginx/sites-available/${domain}" << EOF
+server {
+	server_tokens off;
+	server_name ${domain};
+	listen ${web_tls_port} ssl http2 proxy_protocol;
+	listen [::]:${web_tls_port} ssl http2 proxy_protocol;
+	index index.html index.htm index.php index.nginx-debian.html;
+	root /var/www/html/;
+	ssl_protocols TLSv1.2 TLSv1.3;
+	ssl_ciphers HIGH:!aNULL:!eNULL:!MD5:!DES:!RC4:!ADH:!SSLv3:!EXP:!PSK:!DSS;
+	ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;
+	if (\$host !~* ^(.+\.)?$domain\$ ){return 444;}
+	if (\$scheme ~* https) {set \$safe 1;}
+	if (\$ssl_server_name !~* ^(.+\.)?$domain\$ ) {set \$safe "\${safe}0"; }
+	if (\$safe = 10){return 444;}
+	if (\$request_uri ~ "(\"|'|\`|~|,|:|--|;|%|\\$|&&|\?\?|0x00|0X00|\||\\|\{|\}|\[|\]|<|>|\.\.\.|\.\.\/|\/\/\/)"){set \$hack 1;}
+	error_page 400 401 402 403 500 501 502 503 504 =404 /404;
+	proxy_intercept_errors on;
+	#X-UI Admin Panel
+	location /${panel_path}/ {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host \$host;
+		proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        proxy_pass https://127.0.0.1:${panel_port};
+		break;
+	}
+        location /${panel_path} {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host \$host;
+		proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        proxy_pass https://127.0.0.1:${panel_port};
+		break;
+	}
+	include /etc/nginx/snippets/includes.conf;
+
+}
+EOF
+
+	cat > "/etc/nginx/snippets/includes.conf" << EOF
+	#sub2sing-box
+	location /${sub2singbox_path}/ {
+		proxy_redirect off;
+		proxy_set_header Host \$host;
+		proxy_set_header X-Real-IP \$remote_addr;
+		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+		proxy_set_header Accept-Encoding "";
+		sub_filter_once off;
+		sub_filter 'https://unpkg.com/mdui@2/mdui.css' '$(sub2singbox_ui_asset_base)/mdui.css';
+		sub_filter 'https://unpkg.com/mdui@2/mdui.global.js' '$(sub2singbox_ui_asset_base)/mdui.global.js';
+		sub_filter 'https://fonts.googleapis.com/css?family=Roboto|Noto+Sans+SC&display=swap' '$(sub2singbox_ui_asset_base)/sub2sing-box-fonts.css';
+		sub_filter 'https://fonts.googleapis.com/icon?family=Material+Icons+Outlined' '$(sub2singbox_ui_asset_base)/material-icons-outlined.css';
+		sub_filter 'https://fonts.googleapis.com/icon?family=Material+Icons' '$(sub2singbox_ui_asset_base)/material-icons.css';
+		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle.json' '$(sub2singbox_rule_set_base)/ru-bundle.json';
+		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/ru-bundle-refilter.json' '$(sub2singbox_rule_set_base)/ru-bundle-refilter.json';
+		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/re-filter.json' '$(sub2singbox_rule_set_base)/re-filter.json';
+		sub_filter 'https://github.com/legiz-ru/sb-rule-sets/raw/main/.github/sub2sing-box/secret-sing-box.json' '$(sub2singbox_rule_set_base)/secret-sing-box.json';
+		proxy_pass http://127.0.0.1:${sub2singbox_bind_port}/;
+		}
+    location = /${web_path} {
+        return 302 /${web_path}/\$is_args\$args;
+    }
+    # Path to open clash.yaml and generate YAML
+    location ~ ^/${web_path}/clashmeta/(.+)$ {
+        default_type text/plain;
+        ssi on;
+        ssi_types text/plain;
+        set \$subid \$1;
+        root /var/www/subpage;
+        try_files /clash.yaml =404;
+    }
+    # web
+    location /${web_path}/ {
+        alias /var/www/subpage/;
+        index index.html;
+    }
+	#Subscription Path (simple/encode)
+        location /${sub_path} {
+                if (\$hack = 1) {return 404;}
+                proxy_redirect off;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_pass https://127.0.0.1:${sub_port};
+                break;
+        }
+	location /${sub_path}/ {
+                if (\$hack = 1) {return 404;}
+                proxy_redirect off;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_pass https://127.0.0.1:${sub_port};
+                break;
+        }
+	#Subscription Path (json/fragment)
+        location /${json_path} {
+                if (\$hack = 1) {return 404;}
+                proxy_redirect off;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_pass https://127.0.0.1:${sub_port};
+                break;
+        }
+	location /${json_path}/ {
+                if (\$hack = 1) {return 404;}
+                proxy_redirect off;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_pass https://127.0.0.1:${sub_port};
+                break;
+        }
+        #XHTTP
+        location /${xhttp_path} {
+          grpc_pass grpc://unix:/dev/shm/uds2023.sock;
+          grpc_buffer_size         16k;
+          grpc_socket_keepalive    on;
+          grpc_read_timeout        1h;
+          grpc_send_timeout        1h;
+          grpc_set_header Connection         "";
+          grpc_set_header X-Forwarded-For    \$proxy_add_x_forwarded_for;
+          grpc_set_header X-Forwarded-Proto  \$scheme;
+          grpc_set_header X-Forwarded-Port   \$server_port;
+          grpc_set_header Host               \$host;
+          grpc_set_header X-Forwarded-Host   \$host;
+          }
+	#Xray Config Path
+	location ~ ^/(?<fwdport>\d+)/(?<fwdpath>.*)\$ {
+		if (\$hack = 1) {return 404;}
+		client_max_body_size 0;
+		client_body_timeout 1d;
+		grpc_read_timeout 1d;
+		grpc_socket_keepalive on;
+		proxy_read_timeout 1d;
+		proxy_http_version 1.1;
+		proxy_buffering off;
+		proxy_request_buffering off;
+		proxy_socket_keepalive on;
+		proxy_set_header Upgrade \$http_upgrade;
+		proxy_set_header Connection "upgrade";
+		proxy_set_header Host \$host;
+		proxy_set_header X-Real-IP \$remote_addr;
+		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+		#proxy_set_header CF-IPCountry \$http_cf_ipcountry;
+		#proxy_set_header CF-IP \$realip_remote_addr;
+		if (\$content_type ~* "GRPC") {
+			grpc_pass grpc://127.0.0.1:\$fwdport\$is_args\$args;
+			break;
+		}
+		if (\$http_upgrade ~* "(WEBSOCKET|WS)") {
+			proxy_pass http://127.0.0.1:\$fwdport\$is_args\$args;
+			break;
+	        }
+		if (\$request_method ~* ^(PUT|POST|GET)\$) {
+			proxy_pass http://127.0.0.1:\$fwdport\$is_args\$args;
+			break;
+		}
+	}
+	location / { try_files \$uri \$uri/ =404; }
+EOF
+
+	cat > "/etc/nginx/sites-available/${reality_domain}" << EOF
+server {
+	server_tokens off;
+	server_name ${reality_domain};
+	listen ${reality_site_tls_port} ssl http2;
+	listen [::]:${reality_site_tls_port} ssl http2;
+	index index.html index.htm index.php index.nginx-debian.html;
+	root /var/www/html/;
+	ssl_protocols TLSv1.2 TLSv1.3;
+	ssl_ciphers HIGH:!aNULL:!eNULL:!MD5:!DES:!RC4:!ADH:!SSLv3:!EXP:!PSK:!DSS;
+	ssl_certificate /etc/letsencrypt/live/$reality_domain/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/$reality_domain/privkey.pem;
+	if (\$host !~* ^(.+\.)?${reality_domain}\$ ){return 444;}
+	if (\$scheme ~* https) {set \$safe 1;}
+	if (\$ssl_server_name !~* ^(.+\.)?${reality_domain}\$ ) {set \$safe "\${safe}0"; }
+	if (\$safe = 10){return 444;}
+	if (\$request_uri ~ "(\"|'|\`|~|,|:|--|;|%|\\$|&&|\?\?|0x00|0X00|\||\\|\{|\}|\[|\]|<|>|\.\.\.|\.\.\/|\/\/\/)"){set \$hack 1;}
+	error_page 400 401 402 403 500 501 502 503 504 =404 /404;
+	proxy_intercept_errors on;
+	#X-UI Admin Panel
+	location /${panel_path}/ {
+		proxy_redirect off;
+		proxy_set_header Host \$host;
+		proxy_set_header X-Real-IP \$remote_addr;
+		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+		proxy_pass http://127.0.0.1:${panel_port};
+		break;
+	}
+        location /$panel_path {
+		proxy_redirect off;
+		proxy_set_header Host \$host;
+		proxy_set_header X-Real-IP \$remote_addr;
+		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+		proxy_pass http://127.0.0.1:${panel_port};
+		break;
+	}
+include /etc/nginx/snippets/includes.conf;
+}
+EOF
+}
+
+setup_nginx_stealth() {
+	mkdir -p "/root/cert/${domain}"
+	mkdir -p /etc/nginx/modules-enabled /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/snippets /etc/nginx/stream-enabled
+	chmod 700 /root/cert/*
+
+	local public_http_port web_tls_port reality_site_tls_port sub2singbox_bind_port
+	public_http_port="$(platform_public_http_port)"
+	web_tls_port="$(platform_transport_web_tls_port)"
+	reality_site_tls_port="$(platform_transport_reality_site_tls_port)"
+	sub2singbox_bind_port="$(platform_sub2singbox_bind_port)"
+
+	ln -sf "/etc/letsencrypt/live/${domain}/fullchain.pem" "/root/cert/${domain}/fullchain.pem"
+	ln -sf "/etc/letsencrypt/live/${domain}/privkey.pem" "/root/cert/${domain}/privkey.pem"
+
+	rm -f /etc/nginx/stream-enabled/stream.conf /etc/nginx/modules-enabled/50-mod-stream.conf /etc/nginx/modules-enabled/70-mod-stream-geoip2.conf
+	sed -i '/stream { include \/etc\/nginx\/stream-enabled\/\*\.conf; }/d;/ngx_stream_module\.so/d;/ngx_stream_geoip2_module\.so/d' /etc/nginx/nginx.conf
 	grep -qF "worker_rlimit_nofile 16384;" /etc/nginx/nginx.conf || echo "worker_rlimit_nofile 16384;" >> /etc/nginx/nginx.conf
 	sed -i "/worker_connections/c\worker_connections 4096;" /etc/nginx/nginx.conf
 
@@ -1666,8 +1915,8 @@ EOF
 server {
 	server_tokens off;
 	server_name ${reality_domain};
-	listen ${reality_site_tls_port} ssl http2;
-	listen [::]:${reality_site_tls_port} ssl http2;
+	listen ${reality_site_tls_port} ssl http2 proxy_protocol;
+	listen [::]:${reality_site_tls_port} ssl http2 proxy_protocol;
 	index index.html index.htm index.php index.nginx-debian.html;
 	root /var/www/html/;
 	ssl_protocols TLSv1.2 TLSv1.3;
@@ -1704,10 +1953,29 @@ EOF
 }
 
 ##############################Enable Nginx Sites##########################################################
-enable_nginx_sites() {
+enable_nginx_sites_classic() {
 	if [[ -f "/etc/nginx/sites-available/${domain}" ]]; then
 		unlink "/etc/nginx/sites-enabled/default" >/dev/null 2>&1
 		rm -f "/etc/nginx/sites-enabled/default" "/etc/nginx/sites-available/default"
+		ln -sf "/etc/nginx/sites-available/${domain}" "/etc/nginx/sites-enabled/"
+		ln -sf "/etc/nginx/sites-available/${reality_domain}" "/etc/nginx/sites-enabled/"
+		ln -sf "/etc/nginx/sites-available/80.conf" "/etc/nginx/sites-enabled/"
+	else
+		die "${domain} nginx config not exist!"
+	fi
+
+	if [[ $(nginx -t 2>&1 | grep -o 'successful') != "successful" ]]; then
+		die "nginx config is not ok!"
+	else
+		systemctl start nginx
+	fi
+}
+
+enable_nginx_sites_stealth() {
+	if [[ -f "/etc/nginx/sites-available/${domain}" ]]; then
+		unlink "/etc/nginx/sites-enabled/default" >/dev/null 2>&1
+		rm -f "/etc/nginx/sites-enabled/default" "/etc/nginx/sites-available/default"
+		rm -f "/etc/nginx/sites-enabled/stream.conf"
 		ln -sf "/etc/nginx/sites-available/${domain}" "/etc/nginx/sites-enabled/"
 		ln -sf "/etc/nginx/sites-available/${reality_domain}" "/etc/nginx/sites-enabled/"
 		ln -sf "/etc/nginx/sites-available/80.conf" "/etc/nginx/sites-enabled/"
@@ -2403,10 +2671,10 @@ show_details() {
 platform_setup_ingress() {
 	case "$PLATFORM_PROFILE" in
 		classic)
-			setup_nginx
+			setup_nginx_classic
 			;;
 		stealth)
-			die "Stealth ingress runtime is not enabled in this implementation slice yet."
+			setup_nginx_stealth
 			;;
 		*)
 			die "Unsupported ingress profile: ${PLATFORM_PROFILE}"
@@ -2417,10 +2685,10 @@ platform_setup_ingress() {
 platform_enable_ingress() {
 	case "$PLATFORM_PROFILE" in
 		classic)
-			enable_nginx_sites
+			enable_nginx_sites_classic
 			;;
 		stealth)
-			die "Stealth ingress runtime is not enabled in this implementation slice yet."
+			enable_nginx_sites_stealth
 			;;
 		*)
 			die "Unsupported ingress profile: ${PLATFORM_PROFILE}"
