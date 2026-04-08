@@ -25,6 +25,44 @@ SUB2SINGBOX_ARCH="${SUB2SINGBOX_ARCH:-amd64}"
 PROJECT_REPO_URL="${PROJECT_REPO_URL:-https://github.com/RM-COM/AT-VPN-System}"
 PROJECT_SUPPORT_URL="${PROJECT_SUPPORT_URL:-${PROJECT_REPO_URL}}"
 PROJECT_DONATE_URL="${PROJECT_DONATE_URL:-${PROJECT_REPO_URL}}"
+PLATFORM_PROFILE="${PLATFORM_PROFILE:-classic}"
+TRANSPORT_PROFILE="${TRANSPORT_PROFILE:-classic-xray}"
+PANEL_PROVIDER="${PANEL_PROVIDER:-3x-ui}"
+ENABLE_AWG="${ENABLE_AWG:-n}"
+PLATFORM_ROOT=""
+PLATFORM_METADATA_SOURCE="built-in"
+
+if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/core/platform-lib.sh" ]]; then
+	# shellcheck disable=SC1091
+	. "$SCRIPT_DIR/core/platform-lib.sh"
+fi
+
+if ! declare -F platform_init >/dev/null 2>&1; then
+	platform_init() {
+		PLATFORM_ROOT="${SCRIPT_DIR:-$PWD}"
+		: "${PLATFORM_PROFILE:=classic}"
+		: "${TRANSPORT_PROFILE:=classic-xray}"
+		: "${PANEL_PROVIDER:=3x-ui}"
+		: "${ENABLE_AWG:=n}"
+		PLATFORM_PROFILE_LABEL="Classic"
+		TRANSPORT_PROFILE_LABEL="Classic Xray"
+		PANEL_PROVIDER_LABEL="3x-ui"
+		PLATFORM_METADATA_SOURCE="built-in"
+		case "${ENABLE_AWG,,}" in
+			n|no|0|false|off) ENABLE_AWG_STATE="disabled" ;;
+			*) printf 'ENABLE_AWG is reserved for a future module and is not implemented yet.\n' >&2; return 1 ;;
+		esac
+		return 0
+	}
+	platform_selection_summary() {
+		printf 'profile=%s transport=%s panel=%s awg=%s source=%s' \
+			"$PLATFORM_PROFILE" \
+			"$TRANSPORT_PROFILE" \
+			"$PANEL_PROVIDER" \
+			"${ENABLE_AWG_STATE:-disabled}" \
+			"${PLATFORM_METADATA_SOURCE:-built-in}"
+	}
+fi
 
 # Color codes used by install_panel()
 green='\033[0;32m'
@@ -141,6 +179,8 @@ init_debug_session() {
 }
 print_runtime_context() {
 	append_debug_log "Runtime context:"
+	append_debug_log "  platform_root=${PLATFORM_ROOT:-<empty>}"
+	append_debug_log "  platform_selection=$(platform_selection_summary)"
 	append_debug_log "  domain=${domain:-<empty>}"
 	append_debug_log "  reality_domain=${reality_domain:-<empty>}"
 	append_debug_log "  panel_port=${panel_port:-<empty>}"
@@ -153,6 +193,7 @@ print_runtime_context() {
 	append_debug_log "  json_uri=${json_uri:-<empty>}"
 }
 print_execution_plan() {
+	msg_inf "Активная сборка: $(platform_selection_summary)"
 	msg_inf "DRY-RUN: инсталляция не будет менять систему."
 	msg_inf "План действий:"
 	msg_inf "1. Подготовка окружения и очистка предыдущей установки."
@@ -909,6 +950,10 @@ parse_args() {
 	SKIP_CLEANUP="n"
 	KEEP_ARTIFACTS="n"
 	CONFIRM_RESET="n"
+	PLATFORM_PROFILE="${PLATFORM_PROFILE:-classic}"
+	TRANSPORT_PROFILE="${TRANSPORT_PROFILE:-classic-xray}"
+	PANEL_PROVIDER="${PANEL_PROVIDER:-3x-ui}"
+	ENABLE_AWG="${ENABLE_AWG:-n}"
 
 	while [[ "$#" -gt 0 ]]; do
 		case "$1" in
@@ -928,6 +973,10 @@ parse_args() {
 			-skip_cleanup) SKIP_CLEANUP="$2"; shift 2;;
 			-keep_artifacts) KEEP_ARTIFACTS="$2"; shift 2;;
 			-confirm_reset) CONFIRM_RESET="$2"; shift 2;;
+			-profile|-platform_profile) PLATFORM_PROFILE="$2"; shift 2;;
+			-transport_profile) TRANSPORT_PROFILE="$2"; shift 2;;
+			-panel_provider) PANEL_PROVIDER="$2"; shift 2;;
+			-enable_awg) ENABLE_AWG="$2"; shift 2;;
 			*) shift 1;;
 		esac
 	done
@@ -2056,8 +2105,9 @@ show_details() {
 main() {
 	# 1. Parse arguments BEFORE any destructive action
 	parse_args "$@"
+	platform_init || die "Unsupported platform selection. Current values: $(platform_selection_summary)"
 	init_debug_session
-	append_debug_log "Stage=${STAGE} Debug=${DEBUG_MODE} DryRun=${DRY_RUN} Verify=${VERIFY_MODE} SkipCleanup=${SKIP_CLEANUP} KeepArtifacts=${KEEP_ARTIFACTS} ConfirmReset=${CONFIRM_RESET}"
+	append_debug_log "Stage=${STAGE} Debug=${DEBUG_MODE} DryRun=${DRY_RUN} Verify=${VERIFY_MODE} SkipCleanup=${SKIP_CLEANUP} KeepArtifacts=${KEEP_ARTIFACTS} ConfirmReset=${CONFIRM_RESET} Platform=$(platform_selection_summary)"
 
 	case "$STAGE" in
 		all|verify|websub|reset) ;;
