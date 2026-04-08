@@ -1,5 +1,12 @@
 ﻿# AT-VPN-System
 
+> Ветка: `codex/legacy-audit`
+> Статус: `FROZEN / HISTORICAL`
+> Использование: `read-only / audit`
+> Официальный install-source: `main`
+
+`codex/legacy-audit` — это историческая ветка, в которой был зафиксирован аудит legacy-контура и блокировка `x-ui-pro-old.sh`. Она сохраняется как источник решений по старому installer-слою, но не должна использоваться как основной install-source.
+
 `AT-VPN-System` — это рабочий форк install/debug-контура для развёртывания `3x-ui + nginx + REALITY` с локальной web-sub страницей, локальными `Clash`/`sing-box` шаблонами и staging-ориентированным workflow разработки.
 
 Проект ведётся как самостоятельный форк. Исторически он основан на старых upstream-репозиториях, но поддерживаемый контур, документация и GitHub-репозиторий уже принадлежат этому проекту.
@@ -40,6 +47,15 @@
 3. Только после этого текущая версия выгружается на Linux `staging`.
 4. На `staging` выполняются install/debug/regression-проверки.
 
+## Branch-specific контекст
+
+- Эта ветка сохранена ради legacy-аудита и архивирования старого installer-контура.
+- Здесь нельзя вести новую основную разработку.
+- Здесь нельзя объявлять install-команды этой ветки поддерживаемым production-путём.
+- Для стабильной установки использовать нужно `main`.
+- Для текущей платформенной разработки использовать нужно `codex/platform-v2`.
+- Branch-specific статус этой ветки зафиксирован в `docs/BRANCH_CONTEXT.md`.
+
 ## Основные скрипты
 
 - `x-ui-pro-updated.sh` — основной поддерживаемый installer и debug-runner.
@@ -50,22 +66,26 @@
 
 ## Установка
 
-Поддерживаемый сценарий установки для этого форка: локальный клон именно нашего репозитория.
+Эта ветка не является поддерживаемым install-source. Использовать её для новой установки не нужно.
 
 ```bash
 git clone https://github.com/RM-COM/AT-VPN-System.git
 cd AT-VPN-System
+git switch main
 sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
 ```
 
-Если нужен тестовый сценарий с автодоменами на staging:
+Если нужен следующий платформенный этап, переходить нужно так:
 
 ```bash
-sudo bash ./x-ui-pro-updated.sh -install yes -panel 1 -auto_domain yes -debug yes -keep_artifacts yes -verify yes
+git switch codex/platform-v2
 ```
 
 Важно:
 
+- эта ветка предназначена для чтения и аудита, а не для новой установки
+- стабильный install-source проекта — `main`
+- активная implementation-ветка следующего этапа — `codex/platform-v2`
 - режим `wget | bash` для этого форка не считается основным и поддерживаемым способом установки
 - основной путь — запуск из локального клона репозитория
 - после выпуска сертификатов не следует менять домен без понимания последствий для `certbot`
@@ -198,6 +218,7 @@ sudo bash ./backup.sh
 
 Ключевые документы лежат в `docs/`:
 
+- `docs/BRANCH_CONTEXT.md` — статус, допустимые действия и ограничения именно ветки `codex/legacy-audit`
 - `docs/MASTER_PLAN.md` — главный поэтапный план проекта
 - `docs/ROADMAP.md` — краткая дорожная карта
 - `docs/RESUME_POINT.md` — текущая точка продолжения
