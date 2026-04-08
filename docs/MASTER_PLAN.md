@@ -144,4 +144,5 @@
 - [2026-04-08 05:34:52] `[ПУНКТ 25 / СДЕЛАНО]` Безопасные внутренние decision points installer'а переведены на selection-layer через dispatcher-обёртки для ingress, panel provider и transport profile.
 - [2026-04-08 05:58:05] `[ПУНКТ 26 / СДЕЛАНО]` Runtime-defaults и boundary-конфигурация `classic` переведены на selection-layer: токены, политика генерации динамических портов, публичные порты, внутренние baseline-порты и локальная граница `sub2sing-box`.
 - [2026-04-08 06:09:36] `[ПУНКТ 27 / СДЕЛАНО]` Provider-level defaults `3x-ui` вынесены из `update_xui_db()` в metadata/selection-layer без изменения baseline install-result.
-- [2026-04-08 06:09:36] `[ПУНКТ 28 / ДАЛЕЕ]` Следующий безопасный шаг — определить и вынести panel bootstrap/defaults верхнего уровня, которые ещё остаются в install-flow (`config_after_install()`, bootstrap path/port placeholders), не открывая `stealth` и `AWG` раньше времени.
+- [2026-04-08 06:21:05] `[ПУНКТ 28 / СДЕЛАНО]` Panel bootstrap/defaults верхнего уровня вынесены из install-flow в provider metadata: `config_after_install()` и install-constraint панели больше не держат жёсткие baseline-литералы в active-path.
+- [2026-04-08 06:21:05] `[ПУНКТ 29 / ДАЛЕЕ]` Следующий шаг — открыть первый `stealth-xray` implementation-slice как отдельный runtime-профиль, сохраняя `classic` baseline неизменным и не затрагивая ещё `AWG`.

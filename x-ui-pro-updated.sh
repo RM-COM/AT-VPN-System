@@ -60,6 +60,11 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 		PANEL_PROVIDER_PANEL_TITLE="X-UI Secure Panel"
 		PANEL_PROVIDER_SERVICE_NAME="x-ui"
 		PANEL_PROVIDER_CONTROL_BIN="x-ui"
+		PANEL_PROVIDER_MIN_VERSION="2.3.5"
+		PANEL_PROVIDER_BOOTSTRAP_USERNAME="asdfasdf"
+		PANEL_PROVIDER_BOOTSTRAP_PASSWORD="asdfasdf"
+		PANEL_PROVIDER_BOOTSTRAP_PORT="2096"
+		PANEL_PROVIDER_BOOTSTRAP_BASE_PATH="asdfasdf"
 		PANEL_PROVIDER_WEB_LISTEN=""
 		PANEL_PROVIDER_WEB_DOMAIN=""
 		PANEL_PROVIDER_WEB_CERT_FILE=""
@@ -116,6 +121,26 @@ platform_panel_service_name() {
 
 platform_panel_control_bin() {
 	printf '%s' "${PANEL_PROVIDER_CONTROL_BIN:-x-ui}"
+}
+
+platform_panel_min_version() {
+	printf '%s' "${PANEL_PROVIDER_MIN_VERSION:-2.3.5}"
+}
+
+platform_panel_bootstrap_username() {
+	printf '%s' "${PANEL_PROVIDER_BOOTSTRAP_USERNAME:-asdfasdf}"
+}
+
+platform_panel_bootstrap_password() {
+	printf '%s' "${PANEL_PROVIDER_BOOTSTRAP_PASSWORD:-asdfasdf}"
+}
+
+platform_panel_bootstrap_port() {
+	printf '%s' "${PANEL_PROVIDER_BOOTSTRAP_PORT:-2096}"
+}
+
+platform_panel_bootstrap_base_path() {
+	printf '%s' "${PANEL_PROVIDER_BOOTSTRAP_BASE_PATH:-asdfasdf}"
 }
 
 platform_public_http_port() {
@@ -290,6 +315,9 @@ print_runtime_context() {
 	append_debug_log "  public_http_port=$(platform_public_http_port)"
 	append_debug_log "  public_https_port=$(platform_public_https_port)"
 	append_debug_log "  sub2singbox_bind_port=$(platform_sub2singbox_bind_port)"
+	append_debug_log "  panel_min_version=$(platform_panel_min_version)"
+	append_debug_log "  panel_bootstrap_port=$(platform_panel_bootstrap_port)"
+	append_debug_log "  panel_bootstrap_base_path=$(platform_panel_bootstrap_base_path)"
 	append_debug_log "  panel_provider_time_location=${PANEL_PROVIDER_TIME_LOCATION:-Europe/Moscow}"
 	append_debug_log "  panel_provider_tg_lang=${PANEL_PROVIDER_TG_LANG:-en-US}"
 	append_debug_log "  panel_provider_sub_updates=${PANEL_PROVIDER_SUB_UPDATES:-12}"
@@ -1977,7 +2005,11 @@ fi
 
 ##############################Config After Install########################################################
 config_after_install() {
-	/usr/local/x-ui/x-ui setting -username "asdfasdf" -password "asdfasdf" -port "2096" -webBasePath "asdfasdf"
+	/usr/local/x-ui/x-ui setting \
+		-username "$(platform_panel_bootstrap_username)" \
+		-password "$(platform_panel_bootstrap_password)" \
+		-port "$(platform_panel_bootstrap_port)" \
+		-webBasePath "$(platform_panel_bootstrap_base_path)"
 	/usr/local/x-ui/x-ui migrate
 }
 
@@ -1987,8 +2019,9 @@ apt-get update && apt-get install -y -q wget curl tar tzdata
     cd /usr/local/
 
     local requested_tag="${1:-$XUI_VERSION}"
-    local tag_version="" tag_version_numeric="" min_version="2.3.5" url=""
+    local tag_version="" tag_version_numeric="" min_version="" url=""
 	local xui_archive_name="" xui_archive_path="" xui_release_rel_path=""
+	min_version="$(platform_panel_min_version)"
 
     if [[ -n "$requested_tag" ]]; then
         tag_version=$(ensure_version_tag "$requested_tag")

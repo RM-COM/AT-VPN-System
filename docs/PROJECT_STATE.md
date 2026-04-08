@@ -67,6 +67,8 @@
 - [2026-04-08 05:58:05] При этом install-result baseline по-прежнему не менялся: те же значения используются механически через helper-функции, а не через новые transport/provider-ветви выполнения.
 - [2026-04-08 06:09:36] Provider metadata `3x-ui` теперь покрывает не только service/control-идентичность, но и panel-defaults из блока `settings`: baseline-дефолты панели больше не размазаны между provider-файлом и SQL-литералами.
 - [2026-04-08 06:09:36] При этом transport/runtime часть baseline по-прежнему не менялась: в `codex/platform-v2` пока выносились только orchestration, runtime-defaults, boundary-константы и panel-provider defaults.
+- [2026-04-08 06:21:05] Bootstrap-дефолты панели теперь тоже подняты в provider metadata: минимальная версия `3x-ui` и временные bootstrap-значения для первичной инициализации панели больше не зашиты в install-flow как голые литералы.
+- [2026-04-08 06:21:05] Это означает, что baseline `classic` уже почти полностью подготовлен к открытию первого нового runtime-профиля: transport/runtime и panel/provider слои разделены заметно чище, чем в исходном монолитном installer'е.
 
 ## Где смотреть детали
 
