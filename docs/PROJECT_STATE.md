@@ -61,6 +61,8 @@
 - [2026-04-08 05:09:48] `x-ui-pro-updated.sh` уже знает о platform-v2 selection-переменных `PLATFORM_PROFILE`, `TRANSPORT_PROFILE`, `PANEL_PROVIDER`, `ENABLE_AWG`, но пока принимает только baseline-комбинацию.
 - [2026-04-08 05:09:48] Новый слой не делает проект зависимым от локальной структуры репозитория: при отсутствии metadata-файлов installer использует встроенные дефолты и остаётся совместим с одиночным запуском.
 - [2026-04-08 05:09:48] Реального переключения логики `classic -> stealth` или `classic -> AWG` ещё нет; текущий срез является именно безопасной подготовкой к дальнейшей модульной реализации.
+- [2026-04-08 05:34:52] Внутренние orchestration-решения installer уже частично переведены на selection-layer: ingress, panel provider и transport profile вызываются через dispatcher-обёртки, а не напрямую из `main()`.
+- [2026-04-08 05:34:52] Provider metadata теперь уже влияет на runtime-output и service/control слой `classic`, но при этом сама функциональная логика `classic` не изменена.
 
 ## Где смотреть детали
 

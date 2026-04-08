@@ -48,6 +48,9 @@ platform_apply_builtin_metadata() {
 		3x-ui)
 			PANEL_PROVIDER_LABEL="3x-ui"
 			PANEL_PROVIDER_DESCRIPTION="Текущий baseline-провайдер панели"
+			PANEL_PROVIDER_PANEL_TITLE="X-UI Secure Panel"
+			PANEL_PROVIDER_SERVICE_NAME="x-ui"
+			PANEL_PROVIDER_CONTROL_BIN="x-ui"
 			;;
 	esac
 

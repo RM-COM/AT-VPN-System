@@ -47,6 +47,9 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 		PLATFORM_PROFILE_LABEL="Classic"
 		TRANSPORT_PROFILE_LABEL="Classic Xray"
 		PANEL_PROVIDER_LABEL="3x-ui"
+		PANEL_PROVIDER_PANEL_TITLE="X-UI Secure Panel"
+		PANEL_PROVIDER_SERVICE_NAME="x-ui"
+		PANEL_PROVIDER_CONTROL_BIN="x-ui"
 		PLATFORM_METADATA_SOURCE="built-in"
 		case "${ENABLE_AWG,,}" in
 			n|no|0|false|off) ENABLE_AWG_STATE="disabled" ;;
@@ -63,6 +66,14 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 			"${PLATFORM_METADATA_SOURCE:-built-in}"
 	}
 fi
+
+platform_panel_service_name() {
+	printf '%s' "${PANEL_PROVIDER_SERVICE_NAME:-x-ui}"
+}
+
+platform_panel_control_bin() {
+	printf '%s' "${PANEL_PROVIDER_CONTROL_BIN:-x-ui}"
+}
 
 # Color codes used by install_panel()
 green='\033[0;32m'
@@ -2076,15 +2087,15 @@ setup_ufw() {
 
 ##############################Show Details#################################################################
 show_details() {
-	if systemctl is-active --quiet x-ui; then
+	if systemctl is-active --quiet "$(platform_panel_service_name)"; then
 		clear
-		printf '0\n' | x-ui | grep --color=never -i ':'
+		printf '0\n' | "$(platform_panel_control_bin)" | grep --color=never -i ':'
 		msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 		nginx -T | grep -i 'ssl_certificate\|ssl_certificate_key'
 		msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 		certbot certificates | grep -i 'Path:\|Domains:\|Expiry Date:'
 		msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-		msg_inf "X-UI Secure Panel: https://${domain}/${panel_path}/"
+		msg_inf "${PANEL_PROVIDER_PANEL_TITLE:-X-UI Secure Panel}: https://${domain}/${panel_path}/"
 		printf '\n'
 		printf 'Username:  %s\n\n' "${config_username}"
 		printf 'Password:  %s\n\n' "${config_password}"
@@ -2096,8 +2107,64 @@ show_details() {
 		msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 		msg_inf "Please Save this Screen!!"
 	else
-		nginx -t && printf '0\n' | x-ui | grep --color=never -i ':'
+		nginx -t && printf '0\n' | "$(platform_panel_control_bin)" | grep --color=never -i ':'
 		msg_err "sqlite and x-ui to be checked, try on a new clean linux! "
+	fi
+}
+
+platform_setup_ingress() {
+	case "$PLATFORM_PROFILE" in
+		classic)
+			setup_nginx
+			;;
+		*)
+			die "Unsupported ingress profile: ${PLATFORM_PROFILE}"
+			;;
+	esac
+}
+
+platform_enable_ingress() {
+	case "$PLATFORM_PROFILE" in
+		classic)
+			enable_nginx_sites
+			;;
+		*)
+			die "Unsupported ingress profile: ${PLATFORM_PROFILE}"
+			;;
+	esac
+}
+
+platform_install_panel_provider() {
+	case "$PANEL_PROVIDER" in
+		3x-ui)
+			install_panel
+			;;
+		*)
+			die "Unsupported panel provider: ${PANEL_PROVIDER}"
+			;;
+	esac
+}
+
+platform_apply_transport_profile() {
+	case "$TRANSPORT_PROFILE" in
+		classic-xray)
+			update_xui_db
+			;;
+		*)
+			die "Unsupported transport profile: ${TRANSPORT_PROFILE}"
+			;;
+	esac
+}
+
+platform_restart_panel() {
+	"$(platform_panel_control_bin)" restart
+}
+
+platform_enable_panel_service() {
+	local service_name
+	service_name="$(platform_panel_service_name)"
+	if ! systemctl is-enabled --quiet "${service_name}"; then
+		systemctl daemon-reload && systemctl enable "${service_name}.service"
 	fi
 }
 
@@ -2251,19 +2318,17 @@ main() {
 	obtain_ssl "$reality_domain"
 
 	# 12. Setup nginx configs
-	setup_nginx
-	enable_nginx_sites
+	platform_setup_ingress
+	platform_enable_ingress
 
 	# 13. Install or restart X-UI panel
-	if systemctl is-active --quiet x-ui; then
-		x-ui restart
+	if systemctl is-active --quiet "$(platform_panel_service_name)"; then
+		platform_restart_panel
 	else
-		install_panel
-		update_xui_db
-		if ! systemctl is-enabled --quiet x-ui; then
-			systemctl daemon-reload && systemctl enable x-ui.service
-		fi
-		x-ui restart
+		platform_install_panel_provider
+		platform_apply_transport_profile
+		platform_enable_panel_service
+		platform_restart_panel
 	fi
 
 	# 14. Tune system (idempotent sysctl)
