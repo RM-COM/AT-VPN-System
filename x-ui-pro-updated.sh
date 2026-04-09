@@ -641,11 +641,28 @@ capture_acceptance_snapshot() {
 	fi
 }
 write_acceptance_manual_checklist() {
-	local checklist_file public_https_port
+	local checklist_file public_https_port client_target_hint client_log_hint transport_extra_url
 	[[ -n "$DEBUG_DIR" ]] || return 0
 	public_https_port="$(platform_public_https_port)"
 	checklist_file="$(acceptance_artifact_path "manual-client-checklist.md")"
 	mkdir -p "$(dirname "$checklist_file")"
+	case "$TRANSPORT_PROFILE" in
+		stealth-xhttp)
+			client_target_hint="Для client-load проверки выбирайте узел remark \`🇷🇺 xhttp\`, а не \`🇷🇺 reality-shield\`."
+			client_log_hint="Если в логе \`v2rayN\` видны строки \`REALITY ... DialTLSContext\`, значит выбран shield-профиль, а не \`xhttp\`."
+			transport_extra_url="- XHTTP path: https://${domain:-<domain>}/${xhttp_path:-<xhttp_path>}"
+			;;
+		stealth-xray)
+			client_target_hint="Для client-load проверки выбирайте узел remark \`🇷🇺 reality-shield\` / обычный \`VLESS REALITY TCP\`."
+			client_log_hint="Для этого профиля строки \`REALITY ... DialTLSContext\` в логе \`v2rayN\` ожидаемы."
+			transport_extra_url=""
+			;;
+		*)
+			client_target_hint="Выбирайте узел, соответствующий текущему transport profile."
+			client_log_hint="Если лог клиента не соответствует выбранному transport profile, проверьте, какой именно узел импортирован."
+			transport_extra_url=""
+			;;
+	esac
 	cat > "$checklist_file" <<EOF
 # Чек-лист ручной клиентской приёмки
 
@@ -671,6 +688,12 @@ write_acceptance_manual_checklist() {
 - Web-sub: https://${domain:-<domain>}/${web_path:-<web_path>}/
 - sub2sing-box UI: https://${domain:-<domain>}/${sub2singbox_path:-<sub2singbox_path>}/
 - Fallback root: https://${reality_domain:-<reality_domain>}/
+- Subscription path: https://${domain:-<domain>}/${sub_path:-<sub_path>}
+- Subscription JSON path: https://${domain:-<domain>}/${json_path:-<json_path>}
+${transport_extra_url}
+
+- Client target hint: ${client_target_hint}
+- Client log hint: ${client_log_hint}
 EOF
 	append_debug_log "Acceptance manual checklist written to ${checklist_file}"
 }

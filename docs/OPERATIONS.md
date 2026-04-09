@@ -38,6 +38,7 @@
 - [2026-04-08 04:30:47] Там сохраняются `run.log`, конфиги `nginx`, снимки `x-ui.db`, результаты `nginx -t`, `nginx -T`, статусы сервисов и ответы локальных HTTPS-проверок.
 - [2026-04-08 04:30:47] Для `stage=reset` дополнительно сохраняются pre-reset снимки и post-check чистого состояния.
 - [2026-04-09 00:30:57] Для `stage=acceptance` дополнительно сохраняются `acceptance/summary.txt`, повторные HTML-ответы probes и `acceptance/manual-client-checklist.md`.
+- [2026-04-09 01:32:44] `acceptance/manual-client-checklist.md` теперь должен рассматриваться как основной handoff-файл для ручного теста: он фиксирует актуальные URL ноды после reinstall и transport-specific подсказку, какой узел выбирать в клиенте.
 
 ## Границы использования
 
