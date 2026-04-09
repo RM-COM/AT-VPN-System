@@ -90,6 +90,23 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="true"
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:9443"
+				TRANSPORT_XHTTP_TUNING_PROFILE="default"
+				TRANSPORT_XHTTP_MODE="packet-up"
+				TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=30
+				TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="1000000"
+				TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+				TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+				TRANSPORT_XHTTP_TCP_FAST_OPEN="true"
+				TRANSPORT_XHTTP_TCP_MPTCP="true"
+				TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+				TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+				TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+				TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=0
+				TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=300
+				TRANSPORT_XHTTP_TCP_USER_TIMEOUT=10000
+				TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+				TRANSPORT_XHTTP_V6_ONLY="false"
+				TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=600
 				;;
 			stealth-xray)
 				TRANSPORT_PROFILE_LABEL="Stealth Xray"
@@ -116,6 +133,23 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
+				TRANSPORT_XHTTP_TUNING_PROFILE="default"
+				TRANSPORT_XHTTP_MODE="packet-up"
+				TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=30
+				TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="1000000"
+				TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+				TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+				TRANSPORT_XHTTP_TCP_FAST_OPEN="true"
+				TRANSPORT_XHTTP_TCP_MPTCP="true"
+				TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+				TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+				TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+				TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=0
+				TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=300
+				TRANSPORT_XHTTP_TCP_USER_TIMEOUT=10000
+				TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+				TRANSPORT_XHTTP_V6_ONLY="false"
+				TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=600
 				;;
 			*)
 				printf 'Unsupported TRANSPORT_PROFILE: %s\n' "$TRANSPORT_PROFILE" >&2
@@ -478,6 +512,16 @@ print_runtime_context() {
 	append_debug_log "  transport_reality_inbound_port=$(platform_transport_reality_inbound_port)"
 	append_debug_log "  transport_reality_xver=$(platform_transport_reality_xver)"
 	append_debug_log "  transport_reality_accept_proxy_protocol=$(platform_transport_reality_accept_proxy_protocol)"
+	if [[ -n "${TRANSPORT_XHTTP_MODE:-}" ]]; then
+		append_debug_log "  transport_xhttp_tuning_profile=${TRANSPORT_XHTTP_TUNING_PROFILE:-default}"
+		append_debug_log "  transport_xhttp_mode=${TRANSPORT_XHTTP_MODE:-packet-up}"
+		append_debug_log "  transport_xhttp_sc_max_buffered_posts=${TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS:-30}"
+		append_debug_log "  transport_xhttp_sc_max_each_post_bytes=${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-1000000}"
+		append_debug_log "  transport_xhttp_x_padding_bytes=${TRANSPORT_XHTTP_X_PADDING_BYTES:-100-1000}"
+		append_debug_log "  transport_xhttp_tcp_mptcp=${TRANSPORT_XHTTP_TCP_MPTCP:-true}"
+		append_debug_log "  transport_xhttp_tcp_user_timeout=${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-10000}"
+		append_debug_log "  transport_xhttp_tcp_window_clamp=${TRANSPORT_XHTTP_TCP_WINDOW_CLAMP:-600}"
+	fi
 	append_debug_log "  domain=${domain:-<empty>}"
 	append_debug_log "  reality_domain=${reality_domain:-<empty>}"
 	append_debug_log "  panel_port=${panel_port:-<empty>}"
@@ -2686,28 +2730,28 @@ write_transport_inbounds_classic_xray() {
     "path": "/${xhttp_path}",
     "host": "",
     "headers": {},
-    "scMaxBufferedPosts": 30,
-    "scMaxEachPostBytes": "1000000",
-    "noSSEHeader": false,
-    "xPaddingBytes": "100-1000",
-    "mode": "packet-up"
+    "scMaxBufferedPosts": ${TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS:-30},
+    "scMaxEachPostBytes": "${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-1000000}",
+    "noSSEHeader": ${TRANSPORT_XHTTP_NO_SSE_HEADER:-false},
+    "xPaddingBytes": "${TRANSPORT_XHTTP_X_PADDING_BYTES:-100-1000}",
+    "mode": "${TRANSPORT_XHTTP_MODE:-packet-up}"
   },
   "sockopt": {
     "acceptProxyProtocol": false,
-    "tcpFastOpen": true,
+    "tcpFastOpen": ${TRANSPORT_XHTTP_TCP_FAST_OPEN:-true},
     "mark": 0,
     "tproxy": "off",
-    "tcpMptcp": true,
-    "tcpNoDelay": true,
-    "domainStrategy": "UseIP",
-    "tcpMaxSeg": 1440,
+    "tcpMptcp": ${TRANSPORT_XHTTP_TCP_MPTCP:-true},
+    "tcpNoDelay": ${TRANSPORT_XHTTP_TCP_NO_DELAY:-true},
+    "domainStrategy": "${TRANSPORT_XHTTP_DOMAIN_STRATEGY:-UseIP}",
+    "tcpMaxSeg": ${TRANSPORT_XHTTP_TCP_MAX_SEG:-1440},
     "dialerProxy": "",
-    "tcpKeepAliveInterval": 0,
-    "tcpKeepAliveIdle": 300,
-    "tcpUserTimeout": 10000,
-    "tcpcongestion": "bbr",
-    "V6Only": false,
-    "tcpWindowClamp": 600,
+    "tcpKeepAliveInterval": ${TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL:-0},
+    "tcpKeepAliveIdle": ${TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE:-300},
+    "tcpUserTimeout": ${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-10000},
+    "tcpcongestion": "${TRANSPORT_XHTTP_TCP_CONGESTION:-bbr}",
+    "V6Only": ${TRANSPORT_XHTTP_V6_ONLY:-false},
+    "tcpWindowClamp": ${TRANSPORT_XHTTP_TCP_WINDOW_CLAMP:-600},
     "interface": ""
   }
 }',
@@ -3034,28 +3078,28 @@ write_transport_inbounds_stealth_xhttp() {
     "path": "/${xhttp_path}",
     "host": "",
     "headers": {},
-    "scMaxBufferedPosts": 30,
-    "scMaxEachPostBytes": "1000000",
-    "noSSEHeader": false,
-    "xPaddingBytes": "100-1000",
-    "mode": "packet-up"
+    "scMaxBufferedPosts": ${TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS:-30},
+    "scMaxEachPostBytes": "${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-1000000}",
+    "noSSEHeader": ${TRANSPORT_XHTTP_NO_SSE_HEADER:-false},
+    "xPaddingBytes": "${TRANSPORT_XHTTP_X_PADDING_BYTES:-100-1000}",
+    "mode": "${TRANSPORT_XHTTP_MODE:-packet-up}"
   },
   "sockopt": {
     "acceptProxyProtocol": false,
-    "tcpFastOpen": true,
+    "tcpFastOpen": ${TRANSPORT_XHTTP_TCP_FAST_OPEN:-true},
     "mark": 0,
     "tproxy": "off",
-    "tcpMptcp": true,
-    "tcpNoDelay": true,
-    "domainStrategy": "UseIP",
-    "tcpMaxSeg": 1440,
+    "tcpMptcp": ${TRANSPORT_XHTTP_TCP_MPTCP:-true},
+    "tcpNoDelay": ${TRANSPORT_XHTTP_TCP_NO_DELAY:-true},
+    "domainStrategy": "${TRANSPORT_XHTTP_DOMAIN_STRATEGY:-UseIP}",
+    "tcpMaxSeg": ${TRANSPORT_XHTTP_TCP_MAX_SEG:-1440},
     "dialerProxy": "",
-    "tcpKeepAliveInterval": 0,
-    "tcpKeepAliveIdle": 300,
-    "tcpUserTimeout": 10000,
-    "tcpcongestion": "bbr",
-    "V6Only": false,
-    "tcpWindowClamp": 600,
+    "tcpKeepAliveInterval": ${TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL:-0},
+    "tcpKeepAliveIdle": ${TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE:-300},
+    "tcpUserTimeout": ${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-10000},
+    "tcpcongestion": "${TRANSPORT_XHTTP_TCP_CONGESTION:-bbr}",
+    "V6Only": ${TRANSPORT_XHTTP_V6_ONLY:-false},
+    "tcpWindowClamp": ${TRANSPORT_XHTTP_TCP_WINDOW_CLAMP:-600},
     "interface": ""
   }
 }',
