@@ -101,6 +101,8 @@
 - [2026-04-10 08:10:51] Первый controlled runtime-шаг блока C уже подготовлен: для `stealth-xhttp` включён `mobile-safe` preset без смены архитектуры профиля.
 - [2026-04-10 08:10:51] Текущий `mobile-safe` preset `stealth-xhttp` отличается от прежнего `default` так: меньше buffered posts и post bytes, мягче padding, отключён `tcpMptcp`, отключён `tcpFastOpen`, keepalive сделан явным, `tcpUserTimeout` увеличен до `30000`, а `tcpWindowClamp` сброшен в `0`.
 - [2026-04-10 08:14:46] Этот `mobile-safe stealth-xhttp` уже применён на staging `185.207.64.40`: repeated install завершился успешно, strict `verify` снова дал полный `PASS`, а `x-ui.db` подтверждает фактические значения пресета.
+- [2026-04-10 19:41:17] Из-за провайдерного инцидента старый staging-контур признан нерепрезентативным для triage; рабочая проверка перенесена на новый сервер `217.199.253.102`, где `stealth/stealth-xhttp` снова подтверждён через install, strict `verify` и `acceptance` (`5m/30s`).
+- [2026-04-10 19:41:17] Для симметричного шага блока C уже внесён controlled `mobile-safe` preset и в `REALITY`-слой stealth-профилей: `stealth-xray` и `stealth-xhttp` переведены на стабильный fingerprint `chrome` с `TRANSPORT_REALITY_TUNING_PROFILE=mobile-safe`.
 
 ### Блок D. Закрыть Xray/DPI этап формально
 
@@ -119,3 +121,4 @@
 - [2026-04-08 23:24:11] На текущий момент `codex/platform-v2` уже имеет два runnable stealth transport-пути: `stealth-xray` и `stealth-xhttp`.
 - [2026-04-09 01:32:44] Ближайшая активная задача — всё ещё блок C, но уже в следующем подшаге: после первых успешных client-load тестов `stealth-xray` и `stealth-xhttp` нужно прогнать длинные сессии `30-60` минут и reconnect-проверки, а затем собрать итоговую рекомендацию выбора профиля.
 - [2026-04-09 20:50:25] Текущая реальная точка исполнения уточнена: блок C переведён в режим расследования деградации на мобильной сети. До воспроизведения long-running/mobile-data нестабильности и явного выбора основного stealth-профиля этап `Xray/DPI` не считается закрытым.
+- [2026-04-10 19:41:17] Текущая точка исполнения обновлена: после аварии прошлой ноды активный staging — `217.199.253.102`; server-side baseline `stealth-xhttp` подтверждён, поэтому следующий шаг снова чисто прикладной — длинные mobile-data тесты и reconnect-сравнение `stealth-xray` vs `stealth-xhttp` на новой ноде.

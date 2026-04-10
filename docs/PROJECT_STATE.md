@@ -112,6 +112,8 @@
 - [2026-04-10 08:06:43] Это означает, что текущий блок C уже имеет не только profile-selection и server-side soak, но и управляемый слой transport tuning/observability для обоих stealth-путей.
 - [2026-04-10 08:10:51] Первый реальный tuning-шаг тоже уже сделан: `stealth-xhttp` переведён на `mobile-safe` preset, который уменьшает burstiness и убирает наиболее агрессивные socket-настройки, сохраняя тот же ingress/runtime-контур.
 - [2026-04-10 08:14:46] Этот preset уже не только в коде, но и на staging runtime: repeated install подтверждён, strict `verify` проходит, а `x-ui.db` содержит обновлённые `xhttpSettings/sockopt` значения.
+- [2026-04-10 19:41:17] После провайдерного инцидента старый staging заменён на новый сервер `217.199.253.102`; на нём заново подтверждён runnable-контур `stealth/stealth-xhttp` через install, strict `verify` и `acceptance` (`5m/30s`) с полным `PASS`.
+- [2026-04-10 19:41:17] В `codex/platform-v2` включён controlled `mobile-safe` preset для `REALITY` слоя stealth-контуров: `stealth-xray` и `stealth-xhttp` теперь используют `TRANSPORT_REALITY_TUNING_PROFILE=mobile-safe` и стабильный fingerprint `chrome`.
 
 ## Текущие риски блока C
 

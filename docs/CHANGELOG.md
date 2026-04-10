@@ -1,5 +1,8 @@
 ﻿# CHANGELOG
 
+- [2026-04-10 19:41:17] На новом staging-сервере `217.199.253.102` повторно подтверждён runnable-контур `stealth/stealth-xhttp`: выполнены install, strict `-stage verify` и `-stage acceptance` (`5m/30s`) с полным `PASS`.
+- [2026-04-10 19:41:17] Зафиксирован operational-нюанс деплоя: для выбора профиля через `sudo` нужно передавать env как `sudo env PLATFORM_PROFILE=... TRANSPORT_PROFILE=...`, иначе сервер поднимается с `classic` defaults.
+- [2026-04-10 19:41:17] В `codex/platform-v2` включён controlled `mobile-safe` preset для `REALITY`-слоя stealth-контуров: `stealth-xray` и `stealth-xhttp` теперь используют `TRANSPORT_REALITY_TUNING_PROFILE=mobile-safe` и стабильный fingerprint `chrome` вместо `random`.
 - [2026-04-09 00:30:57] В `codex/platform-v2` добавлен новый stage `acceptance` в `x-ui-pro-updated.sh`: для текущего stealth-профиля он выполняет строгий `verify`, затем гоняет повторяемые HTTPS-пробы `panel/web-sub/sub2sing-box/fallback`, сохраняет `acceptance/summary.txt` и пишет `manual-client-checklist.md` в debug artifacts.
 - [2026-04-09 00:30:57] На staging `185.207.64.40` этот новый server-side helper уже подтверждён для `stealth-xhttp` и `stealth-xray`; оба режима прошли короткий soak `1 minute / 10 seconds` без ошибок по всем четырём probe-точкам.
 - [2026-04-09 00:30:57] Документация блока C синхронизирована под новый контур: `README.md`, `OPERATIONS.md`, `ANTI_DPI_MATRIX.md`, `XRAY_DPI_PLAN.md`, `PROJECT_STATE.md`, `MASTER_PLAN.md`, `RESUME_POINT.md` и `ROADMAP.md` теперь отделяют server-side acceptance от ещё не закрытой живой клиентской приёмки.
@@ -200,3 +203,4 @@
 - [2026-04-10 08:06:43] `platform-v2`: metadata-driven tuning расширен и на `REALITY` для stealth-профилей, а `stage=acceptance` получил расширенный mobile-triage bundle (`ss -tinp`, `ss -s`, `journalctl`, transport-aware checklist) без изменения текущих runtime-дефолтов.
 - [2026-04-10 08:10:51] `platform-v2`: для `stealth-xhttp` включён первый controlled `mobile-safe` preset. Профиль теперь использует более мягкие `xhttp`/`sockopt` параметры для mobile-data теста, не меняя общую stealth-архитектуру.
 - [2026-04-10 08:14:46] `staging`: новый `mobile-safe stealth-xhttp` уже применён на `185.207.64.40`, repeated install завершился успешно, strict `verify` подтвердил `PASS`, а `x-ui.db` показывает новые `xhttpSettings/sockopt` значения пресета.
+
