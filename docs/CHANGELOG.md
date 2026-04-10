@@ -1,5 +1,7 @@
 ﻿# CHANGELOG
 
+- [2026-04-10 22:48:10] Добавлен канонический технологический документ `docs/PROTOCOL_HARDENING_PLAN.md`: зафиксированы варианты усиления `REALITY/XHTTP/AWG`, модель защиты от `RST`/drop, auth hardening, controlled tuning и phased rollout.
+- [2026-04-10 22:48:10] Канонический docs-слой синхронизирован под новый protocol hardening план: обновлены `INDEX.md`, `DOCS_MATRIX.md`, `PROJECT_STATE.md`, `RESUME_POINT.md`, `XRAY_DPI_PLAN.md`, `MASTER_PLAN.md`.
 - [2026-04-10 20:19:11] В `RULES.md` добавлено обязательное project-safe правило публикации: в GitHub-документации и branch HTML/README допускается только технический контент о проекте без личного контекста.
 - [2026-04-10 20:19:11] Добавлен visual-layer `docs/branch-html/`: общий `index.html`, единый стиль `assets/branch-report.css` и по 2 branch-specific страницы (`overview` + `progress`) для всех веток из `BRANCH_MATRIX.md`.
 - [2026-04-10 20:07:20] Зафиксирован новый канонический документ `docs/PROJECT_CONNECTIVITY_REQUIREMENTS.md`: в нём собраны продуктовые выводы по устойчивой связи и рабочим сценариям, ограничениям по инфраструктуре, anti-RST подходу, staged-интеграции `AWG` и требованиям к операционной фиксации контекста.
