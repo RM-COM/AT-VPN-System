@@ -34,6 +34,7 @@
         <ul>
           <li>Block C1: невидимость для DPI + long-running/reconnect устойчивость + приемлемая скорость</li>
           <li>Новый triage-риск: single-IP co-tenancy для смешанного Xray+AWG на одном IP</li>
+          <li>Новый triage-риск: mobile whitelist / IP-level drop при рабочем Wi-Fi и нерабочем LTE</li>
           <li>Для implementation-веток: regression-цикл и mobile/field проверки по матрице этапа.</li>
           <li>Для historical/read-only веток: изменений не планируется.</li>
         </ul>
@@ -43,7 +44,7 @@
         <h2>Следующие шаги</h2>
         <ul>
           <li>Закрыть Block C1 по PROTOCOL_HARDENING_PLAN: mobile-data/reconnect сравнение stealth-xray и stealth-xhttp</li>
-          <li>Собрать production-рекомендацию: основной stealth-профиль + fallback-профиль</li>
+          <li>Собрать production-рекомендацию: основной stealth-профиль + DPI fallback + mobile whitelist fallback</li>
           <li>После закрытия C1: stealth-multi и затем hardened-awg на резервном контуре</li>
           <li>Перед merge в main: только проверенные изменения с подтверждёнными тестами.</li>
           <li>Публикуемый контент остаётся project-safe и нейтральным.</li>
@@ -51,7 +52,7 @@
       </article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 23:00:59 (MSK) • Repo: AT-VPN-System • Branch: codex/platform-v2</p>
+    <p class="footer">Generated: 2026-04-10 23:05:05 (MSK) • Repo: AT-VPN-System • Branch: codex/platform-v2</p>
   </main>
 </body>
 </html>

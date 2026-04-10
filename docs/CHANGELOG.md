@@ -1,5 +1,7 @@
 ﻿# CHANGELOG
 
+- [2026-04-10 23:05:05] Зафиксирован новый полевой сценарий `mobile whitelist / IP-level drop`: `Reality First` работает на Wi‑Fi, но на мобильной сети может давать `I/O read/write on closed pipe` при живом сервере; это не считается автоматическим доказательством runtime-сбоя `Xray`.
+- [2026-04-10 23:05:05] `PROTOCOL_HARDENING_PLAN.md`, `XRAY_DPI_PLAN.md`, `PROJECT_CONNECTIVITY_REQUIREMENTS.md`, `RESUME_POINT.md`, `MASTER_PLAN.md` и `PROJECT_STATE.md` обновлены под будущий whitelist-resilient fallback-класс.
 - [2026-04-10 23:00:59] Уточнена стратегия по `AWG`: дефолтный контейнерный запуск не считается production-safe соседом `Xray`, но hardened `AWG` остаётся будущим кандидатом после генерации уникальных параметров, закрытия UI, state/verify/backup и co-tenancy acceptance.
 - [2026-04-10 23:00:59] `PROTOCOL_HARDENING_PLAN.md`, `PROJECT_CONNECTIVITY_REQUIREMENTS.md`, `MASTER_PLAN.md` и `RESUME_POINT.md` обновлены под отдельный будущий профиль `hardened-awg`.
 - [2026-04-10 22:53:58] Зафиксирован новый triage-риск `single-IP co-tenancy`: совместная работа дефолтного `AmneziaWG` и `Xray` на одном IP может формировать общий fingerprint и провоцировать IP-level `RST`/drop деградацию.
