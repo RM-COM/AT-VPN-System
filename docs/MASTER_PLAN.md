@@ -203,4 +203,5 @@
 - [2026-04-10 22:10:47] `[ПУНКТ 53 / СДЕЛАНО]` Проведена структурная нормализация docs-слоя: добавлен `DOCS_WORKFLOW.md`, синхронизированы `INDEX/DOCS_MATRIX/BRANCH_MATRIX`, а `branch-html` для `codex/platform-v2` обновлён под активный `Block C1`.
 - [2026-04-10 22:48:10] `[ПУНКТ 54 / СДЕЛАНО]` Технологический план усиления протоколов оформлен в `PROTOCOL_HARDENING_PLAN.md`: зафиксированы `REALITY/XHTTP/AWG`, `RST`/drop threat model, auth hardening, controlled tuning и phased rollout.
 - [2026-04-10 22:48:10] `[ПУНКТ 55 / В РАБОТЕ]` Следующий шаг — закрыть `Block C1` по этому технологическому плану: сравнительные mobile-data/reconnect проверки `stealth-xray` и `stealth-xhttp`, затем production-рекомендация основного и fallback-профиля.
+- [2026-04-10 22:53:58] `[ПУНКТ 56 / В РАБОТЕ]` В `Block C1` добавлен отдельный риск `single-IP co-tenancy`: проверить и учесть сценарий, где дефолтный `AWG` и `Xray` на одном IP вместе провоцируют массовые `RST`/drop-симптомы.
 
