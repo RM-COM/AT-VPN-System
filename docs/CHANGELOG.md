@@ -1,5 +1,7 @@
 ﻿# CHANGELOG
 
+- [2026-04-10 23:09:41] Добавлен `docs/PLATFORM_VISION_PLAN.md`: итоговая рабочая карта идеи форка, целевой архитектуры, технологий, threat model, staged-плана и критериев успеха.
+- [2026-04-10 23:09:41] Добавлена HTML-страница `docs/branch-html/codex-platform-v2-strategy.html`, а канонические docs и branch HTML синхронизированы под новую стратегическую карту.
 - [2026-04-10 23:05:05] Зафиксирован новый полевой сценарий `mobile whitelist / IP-level drop`: `Reality First` работает на Wi‑Fi, но на мобильной сети может давать `I/O read/write on closed pipe` при живом сервере; это не считается автоматическим доказательством runtime-сбоя `Xray`.
 - [2026-04-10 23:05:05] `PROTOCOL_HARDENING_PLAN.md`, `XRAY_DPI_PLAN.md`, `PROJECT_CONNECTIVITY_REQUIREMENTS.md`, `RESUME_POINT.md`, `MASTER_PLAN.md` и `PROJECT_STATE.md` обновлены под будущий whitelist-resilient fallback-класс.
 - [2026-04-10 23:00:59] Уточнена стратегия по `AWG`: дефолтный контейнерный запуск не считается production-safe соседом `Xray`, но hardened `AWG` остаётся будущим кандидатом после генерации уникальных параметров, закрытия UI, state/verify/backup и co-tenancy acceptance.

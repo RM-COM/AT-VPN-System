@@ -206,4 +206,6 @@
 - [2026-04-10 22:53:58] `[ПУНКТ 56 / В РАБОТЕ]` В `Block C1` добавлен отдельный риск `single-IP co-tenancy`: проверить и учесть сценарий, где дефолтный `AWG` и `Xray` на одном IP вместе провоцируют массовые `RST`/drop-симптомы.
 - [2026-04-10 23:00:59] `[ПУНКТ 57 / ДАЛЕЕ]` После закрытия `C1` подготовить `hardened-awg` как отдельный opt-in профиль: уникальные параметры обфускации, закрытый UI, state/verify/backup и co-tenancy acceptance перед совместным размещением с `Xray`.
 - [2026-04-10 23:05:05] `[ПУНКТ 58 / В РАБОТЕ]` В `Block C1` добавлен отдельный сценарий `mobile whitelist / IP-level drop`: если direct VPS недоступен на мобильной сети при рабочем Wi‑Fi, нужен whitelist-resilient fallback, а не только усиление одного `REALITY`.
+- [2026-04-10 23:09:41] `[ПУНКТ 59 / СДЕЛАНО]` Итоговая идея доработанного форка оформлена в `PLATFORM_VISION_PLAN.md` и отдельной HTML-странице `branch-html/codex-platform-v2-strategy.html`.
+- [2026-04-10 23:09:41] `[ПУНКТ 60 / В РАБОТЕ]` Следующий рабочий порядок: закрыть `Block C1`, затем перейти к `stealth-multi`, admin hardening, `hardened-awg`, future mobile whitelist research и отдельному performance-блоку.
 

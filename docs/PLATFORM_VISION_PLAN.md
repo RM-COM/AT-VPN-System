@@ -1,0 +1,125 @@
+# PLATFORM_VISION_PLAN
+
+## Назначение
+
+- [2026-04-10 23:09:41] Этот документ фиксирует итоговую идею доработанного форка `AT-VPN-System`: что строим, зачем, какими технологиями, в каком порядке и по каким критериям считаем этапы готовыми.
+- [2026-04-10 23:09:41] Документ является верхнеуровневой рабочей картой поверх `PLATFORM_BLUEPRINT.md`, `PROTOCOL_HARDENING_PLAN.md`, `XRAY_DPI_PLAN.md` и `PROJECT_CONNECTIVITY_REQUIREMENTS.md`.
+- [2026-04-10 23:09:41] Публикуемый контент project-safe: без личных данных, секретов, приватных доменов, логинов, паролей и непубличных полевых логов.
+
+## Главная идея форка
+
+- [2026-04-10 23:09:41] Превратить форк из набора install-скриптов в управляемую `local-first` платформу для устойчивого доступа и критичной связи в сетях с DPI, drop/RST, mobile whitelist и нестабильными политиками операторов.
+- [2026-04-10 23:09:41] Проект должен давать не один "магический" протокол, а несколько проверенных профилей с понятным выбором: основной маршрут, DPI fallback, mobile whitelist fallback и резервный контур.
+- [2026-04-10 23:09:41] Основной технический принцип: снижать сигнатурность до детекта, сохранять скорость где возможно, быстро восстанавливаться при деградации и иметь заранее подготовленный fallback.
+- [2026-04-10 23:09:41] Основной организационный принцип: каждый крупный шаг проходит `design -> implementation -> staging verify -> field acceptance -> docs -> commit + push`.
+
+## Что уже построено
+
+- [2026-04-10 23:09:41] `classic` baseline существует как стабильный install-source и сохраняет regression-ценность.
+- [2026-04-10 23:09:41] `codex/platform-v2` уже имеет selection-layer для `PLATFORM_PROFILE`, `TRANSPORT_PROFILE`, `PANEL_PROVIDER`, будущего `ENABLE_AWG`.
+- [2026-04-10 23:09:41] `stealth-xray` открыт как runnable профиль с ingress-моделью `xray:443 -> nginx:7443`.
+- [2026-04-10 23:09:41] `stealth-xhttp` открыт как второй stealth transport с отдельным `XHTTP` path.
+- [2026-04-10 23:09:41] Для `stealth` уже есть strict `verify`, `stage=acceptance`, mobile-safe tuning и расширенные diagnostic artifacts.
+- [2026-04-10 23:09:41] Документация приведена к каноническому процессу через `DOCS_WORKFLOW.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `PROJECT_STATE.md`, `CHANGELOG.md`.
+
+## Целевая архитектура
+
+### Core
+
+- [2026-04-10 23:09:41] `Core` остаётся bare-metal-first: install, reset, verify, acceptance, web-sub, backup, restore, uninstall.
+- [2026-04-10 23:09:41] Core не должен зависеть от чужих repo-owned raw ресурсов; внешние бинарники должны быть pinned/mirrored там, где это практично.
+- [2026-04-10 23:09:41] Любой новый модуль обязан поддерживать диагностику, восстановление и rollback, а не только install.
+
+### Profiles
+
+- [2026-04-10 23:09:41] `classic` — стабильный baseline и compatibility mode.
+- [2026-04-10 23:09:41] `stealth-xray` — быстрый low-latency профиль на `REALITY/Vision`.
+- [2026-04-10 23:09:41] `stealth-xhttp` — более агрессивный anti-DPI профиль на `REALITY/XHTTP`.
+- [2026-04-10 23:09:41] `stealth-multi` — будущий профиль, где несколько проверенных transport-путей живут в одном install-контуре.
+- [2026-04-10 23:09:41] `hardened-awg` — будущий opt-in модуль `AmneziaWG` с уникальными параметрами, закрытым UI и отдельной co-tenancy приёмкой.
+
+### Edge и fallback
+
+- [2026-04-10 23:09:41] Публичный ingress должен быть единым и управляемым; нельзя хаотично делить `443` между несколькими edge-сервисами.
+- [2026-04-10 23:09:41] `nginx` остаётся локальным fallback/web-слоем для текущего `stealth`-профиля.
+- [2026-04-10 23:09:41] `Caddy` не запрещён навсегда, но до стабилизации core ingress не становится вторым публичным владельцем `443`.
+- [2026-04-10 23:09:41] Fallback-сайт должен быть реальным, аккуратным и правдоподобным, чтобы active probing не видел пустую или странную поверхность.
+
+## Технологии и зачем они нужны
+
+- [2026-04-10 23:09:41] `REALITY/Vision`: скорость, низкая задержка, простой stealth transport, хороший кандидат для Wi-Fi и сетей без агрессивного whitelist.
+- [2026-04-10 23:09:41] `REALITY/XHTTP`: другой behavioral profile, header padding, split up/down model, XMUX и варианты `packet-up/stream-up/stream-one`.
+- [2026-04-10 23:09:41] `Controlled tuning`: пресеты `mobile-safe`, затем `low-latency` и `aggressive-stealth`; никакой хаотичной случайной правки SQL.
+- [2026-04-10 23:09:41] `Hardened AWG`: не дефолтный WireGuard-like запуск, а генерируемые `Jc/Jmin/Jmax/S1-S4/H1-H4/I1-I5`, state, verify, backup/restore и закрытая админка.
+- [2026-04-10 23:09:41] `Auth hardening`: SSH keys, ротация учётных данных, длинные random paths, rate-limit/fail2ban/allowlist там, где это не ломает emergency-доступ.
+- [2026-04-10 23:09:41] `Observability`: acceptance artifacts, клиентские симптомы, `ss`, `journalctl`, profile/preset snapshot, operator/network tags.
+- [2026-04-10 23:09:41] `Whitelist fallback`: отдельный будущий класс маршрута для мобильных режимов, где direct VPS IP не проходит из-за внешней политики сети.
+
+## Threat model
+
+- [2026-04-10 23:09:41] `ordinary DPI`: классификация по TLS/SNI/ALPN/HTTP-поведению, burst/reconnect, fingerprint transport-а.
+- [2026-04-10 23:09:41] `active probing`: сканирование публичного `443` и проверка, что находится за неправильным handshake.
+- [2026-04-10 23:09:41] `RST/drop`: следствие детекта, residual blocking или IP/flow policy.
+- [2026-04-10 23:09:41] `single-IP co-tenancy`: несколько VPN/anti-DPI стеков на одном IP создают общий подозрительный fingerprint.
+- [2026-04-10 23:09:41] `mobile whitelist window`: временный или региональный режим мобильной сети, где direct VPS IP не проходит независимо от настройки transport-а.
+- [2026-04-10 23:09:41] `IP/ASN block`: грубая блокировка адреса или подсети, которую нельзя решить только настройками `Xray`.
+
+## Отложенная идея: white IP / cloud allowlist
+
+- [2026-04-10 23:09:41] Для mobile whitelist window отдельно зафиксирована будущая исследовательская задача: изучить, какие IP/ASN/подсети реально проходят в таких режимах, включая возможные облачные варианты.
+- [2026-04-10 23:09:41] Возможные направления будущего анализа: разрешённые cloud-провайдеры, специальные подсети, Yandex Cloud, VK Cloud, региональные маршруты, отдельный резервный IP-класс.
+- [2026-04-10 23:09:41] Этот пункт не является активной реализацией сейчас. Он будет открыт позже отдельным research-документом и проверкой актуальных источников.
+
+## План работ
+
+### Этап 1. Закрыть текущий Xray/DPI Block C1
+
+- [2026-04-10 23:09:41] Сравнить `stealth-xray` и `stealth-xhttp` на Wi-Fi и LTE.
+- [2026-04-10 23:09:41] Проверить reconnect, 30-60 минут, браузерный трафик, видео, мессенджеры, рабочие ресурсы.
+- [2026-04-10 23:09:41] Разделять результаты по причинам: ordinary DPI, co-tenancy, mobile whitelist, IP/ASN issue.
+- [2026-04-10 23:09:41] Сформировать production-рекомендацию: основной stealth-профиль, DPI fallback, mobile whitelist fallback.
+
+### Этап 2. Расширить protocol hardening
+
+- [2026-04-10 23:09:41] Довести metadata/preset слой для `REALITY`, `XHTTP`, `XMUX`, `sockopt`.
+- [2026-04-10 23:09:41] Добавить controlled presets `low-latency` и `aggressive-stealth`.
+- [2026-04-10 23:09:41] Усилить `stage=acceptance`, чтобы он явно сохранял profile/preset/runtime snapshot.
+
+### Этап 3. Ввести stealth-multi
+
+- [2026-04-10 23:09:41] Поднять несколько проверенных transport-путей в одном install-контуре.
+- [2026-04-10 23:09:41] Не добавлять все протоколы сразу; включать только прошедшие acceptance.
+- [2026-04-10 23:09:41] Сделать понятный user handoff: какой профиль основной, какой резервный, когда переключаться.
+
+### Этап 4. Усилить админский слой
+
+- [2026-04-10 23:09:41] Добавить hardening checklist для SSH, panel, web-sub, future AWG UI.
+- [2026-04-10 23:09:41] Реализовать безопасные defaults: длинные random paths, rotation, optional allowlist, rate-limit.
+- [2026-04-10 23:09:41] Проверить, что hardening не ломает emergency recovery.
+
+### Этап 5. Ввести hardened-awg
+
+- [2026-04-10 23:09:41] Сначала design/state/verify/backup модель, затем код.
+- [2026-04-10 23:09:41] Первый rollout — резервный сервер или отдельный IP.
+- [2026-04-10 23:09:41] После этого co-tenancy acceptance рядом с `Xray`.
+- [2026-04-10 23:09:41] Только после успешной проверки рассматривать размещение `hardened-awg` на основном IP.
+
+### Этап 6. Исследовать mobile whitelist fallback
+
+- [2026-04-10 23:09:41] Отдельно, не сейчас, проверить white IP / cloud allowlist варианты.
+- [2026-04-10 23:09:41] Сравнить доступность IP/ASN в mobile whitelist windows.
+- [2026-04-10 23:09:41] Подготовить отдельную production-рекомендацию для LTE whitelist-сценариев.
+
+### Этап 7. Performance tuning
+
+- [2026-04-10 23:09:41] После стабилизации transport/security открыть отдельный блок ускорений.
+- [2026-04-10 23:09:41] Не смешивать speed tuning с anti-DPI tuning без метрик.
+- [2026-04-10 23:09:41] Мерить latency, throughput, reconnect time, CPU/RAM, stability over time.
+
+## Критерии успеха
+
+- [2026-04-10 23:09:41] У проекта есть подтверждённый основной профиль и fallback-профиль для ordinary DPI.
+- [2026-04-10 23:09:41] У проекта есть отдельная стратегия для mobile whitelist/IP-level drop.
+- [2026-04-10 23:09:41] Ни один новый модуль не добавляется без verify/acceptance/backup/restore.
+- [2026-04-10 23:09:41] `AWG` вводится только как hardened module, а не как дефолтный контейнер без контроля.
+- [2026-04-10 23:09:41] Документация, HTML-страницы и GitHub-ветка всегда отражают текущую точку работ.

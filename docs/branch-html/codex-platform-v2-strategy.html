@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Platform Strategy — codex/platform-v2</title>
+  <link rel="stylesheet" href="assets/branch-report.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="header">
+      <h1>Стратегия platform-v2</h1>
+      <div class="muted">Идея доработанного форка: multi-transport платформа с anti-DPI hardening, fallback и управляемым rollout.</div>
+      <div class="links">
+        <span class="tag active">ACTIVE STRATEGY</span>
+        <a class="pill" href="index.html">К индексу веток</a>
+        <a class="pill" href="codex-platform-v2-overview.html">Overview</a>
+        <a class="pill" href="codex-platform-v2-progress.html">Progress</a>
+      </div>
+    </section>
+
+    <section class="grid section">
+      <article class="card">
+        <h2>Идея</h2>
+        <ul>
+          <li>Не один магический протокол, а управляемая local-first платформа.</li>
+          <li>Цель: невидимость до детекта, устойчивость после деградации, быстрый fallback.</li>
+          <li>Каждый этап проходит design, staging, field acceptance, docs, commit and push.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>Технологии</h2>
+        <ul>
+          <li>REALITY/Vision как быстрый low-latency профиль.</li>
+          <li>REALITY/XHTTP как более агрессивный anti-DPI профиль.</li>
+          <li>Controlled tuning: mobile-safe, low-latency, aggressive-stealth.</li>
+          <li>Hardened AWG как будущий opt-in модуль, не дефолтный контейнер.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>Threat Model</h2>
+        <ul>
+          <li>ordinary DPI: TLS/SNI/ALPN/HTTP fingerprint.</li>
+          <li>active probing: публичный 443 должен давать правдоподобный fallback.</li>
+          <li>single-IP co-tenancy: Xray и AWG на одном IP требуют отдельной приёмки.</li>
+          <li>mobile whitelist: LTE может требовать отдельный fallback-класс.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid section">
+      <article class="card">
+        <h2>Ближайший фокус</h2>
+        <ul>
+          <li>Закрыть Block C1: stealth-xray vs stealth-xhttp.</li>
+          <li>Разделять причины сбоев: DPI, co-tenancy, whitelist, IP/ASN.</li>
+          <li>Собрать production-рекомендацию: main profile, DPI fallback, mobile whitelist fallback.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>После C1</h2>
+        <ul>
+          <li>Ввести stealth-multi только из проверенных transport-путей.</li>
+          <li>Усилить admin/subscription контур.</li>
+          <li>Подготовить hardened-awg на резервном контуре.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>Отложено</h2>
+        <ul>
+          <li>White IP / cloud allowlist research для mobile whitelist windows.</li>
+          <li>Yandex Cloud / VK Cloud / специальные подсети проверять позже по актуальным источникам.</li>
+          <li>Performance tuning открыть отдельным этапом после transport/security.</li>
+        </ul>
+      </article>
+    </section>
+
+    <p class="footer">Generated: 2026-04-10 23:09:41 (MSK) • Source: docs/PLATFORM_VISION_PLAN.md • Branch: codex/platform-v2</p>
+  </main>
+</body>
+</html>
