@@ -1,10 +1,12 @@
 ﻿# Индекс документации
 
-- [2026-04-10 20:07:20] Канонический минимальный набор документов для повседневной работы: `RULES.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `CHANGELOG.md`, `PROJECT_STATE.md`, `OPERATIONS.md`, `REGRESSION_CHECKLIST.md`, `FORK_PASSPORT.md`, `PLATFORM_BLUEPRINT.md`, `XRAY_DPI_PLAN.md`, `ANTI_DPI_MATRIX.md`, `PROJECT_CONNECTIVITY_REQUIREMENTS.md`, `BRANCH_MATRIX.md`, `DOCS_MATRIX.md`, `BRANCH_CONTEXT.md`.
+- [2026-04-10 22:10:47] Ежедневный обязательный набор: `INDEX.md`, `RULES.md`, `PROJECT_STATE.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `OPERATIONS.md`, `CHANGELOG.md`.
+- [2026-04-10 22:10:47] Единый порядок обновления контекста и слои документации фиксируются в `DOCS_WORKFLOW.md`.
 
 ## Канонические документы
 
 - [2026-04-05 05:53:47] `RULES.md` — живой свод правил взаимодействия, языка, Git-процесса и обновления документации.
+- [2026-04-10 22:10:47] `DOCS_WORKFLOW.md` — единый рабочий процесс по документации: слои, минимальный набор, порядок фиксации контекста.
 - [2026-04-05 07:13:07] `MASTER_PLAN.md` — главный поэтапный план проекта со статусами `СДЕЛАНО / В РАБОТЕ / ДАЛЕЕ`.
 - [2026-04-05 05:58:19] `RESUME_POINT.md` — зафиксированная точка продолжения, с которой можно быстро вернуться к работе.
 - [2026-04-05 05:53:47] `CHANGELOG.md` — журнал завершённых этапов по коду, инфраструктуре и документации.
