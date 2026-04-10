@@ -19,6 +19,8 @@
 - [2026-04-10 22:48:10] Официальная страница Xray `XHTTP: Beyond REALITY` ведёт на актуальное обсуждение Xray-core по `XHTTP`, где описаны `packet-up`, `stream-up`, header padding, `XMUX`, H2/H3 и split up/down model: https://xtls.github.io/en/config/transports/xhttp.html и https://github.com/XTLS/Xray-core/discussions/4113
 - [2026-04-10 22:48:10] Документация Xray по `fallbacks` подтверждает важное ограничение: `fallbacks` применимы к `TCP+TLS`, поэтому для `REALITY` нельзя слепо переносить TLS fallback-паттерны; в нашем `stealth`-профиле source of truth остаётся профильный `REALITY target/xver` и fallback-контур через `nginx`: https://xtls.github.io/en/config/features/fallback.html
 - [2026-04-10 22:48:10] Документация `wg-easy` по `AmneziaWG` подтверждает, что `AWG` добавляет транспортную обфускацию, требует совместимого host/module слоя и имеет параметры `Jc/Jmin/Jmax/S/H/I`, часть которых должна совпадать между сервером и клиентом: https://wg-easy.github.io/wg-easy/Pre-release/advanced/config/amnezia/
+- [2026-04-10 23:00:59] Документация AmneziaWG 2.0 подтверждает дополнительные anti-DPI возможности поверх старого набора: опциональную маскировку первого байта под популярные UDP-протоколы через `H1-H4`, независимые `S3/S4`, обфускацию сессии через `I1-I5` и режим CPS. Это делает hardened `AWG` отдельным кандидатом, а не только "дефолтным WG в контейнере": https://docs.amnezia.org/documentation/amnezia-wg/
+- [2026-04-10 23:00:59] Практические реализации `amnezia-wg-easy` подтверждают, что параметры `JC/JMIN/JMAX/S1/S2/H1-H4` могут передаваться как runtime configuration, но дефолтные значения и чужой image не считаются достаточными для нашего production hardening: https://github.com/w0rng/amnezia-wg-easy
 - [2026-04-10 22:48:10] Исследование Censored Planet по TSPU фиксирует SNI/QUIC/IP-based blocking, packet drop и `RST/ACK`-поведение для отдельных сценариев. Для проекта это источник threat-model, а не доказательство универсальных численных порогов: https://censoredplanet.org/papers/tspu-imc22.pdf
 - [2026-04-10 22:48:10] USENIX Security 2024 GFWeb по GFW показывает класс механизмов stateful HTTPS/SNI filtering, bidirectional injection и residual censorship. Для нашего проекта это полезная аналогия по механике `RST`/residual blocking, но не прямое доказательство поведения каждого российского оператора: https://www.usenix.org/system/files/usenixsecurity24-hoang.pdf
 
@@ -69,6 +71,7 @@
 - [2026-04-10 22:48:10] `Trojan gRPC`, `WS TLS`, classic `XHTTP` и другие существующие подключения сохраняются как fallback/compatibility layer, но не считаются главным anti-DPI направлением без отдельной приёмки.
 - [2026-04-10 22:48:10] Если один IP попадает под грубый IP/ASN блок, transport tuning не решит проблему полностью; для этого нужен резервный сервер или отдельный маршрут.
 - [2026-04-10 22:53:58] Для production не смешиваем дефолтный `AWG` и основной `Xray`-контур на одном IP без отдельной co-tenancy приёмки. Безопасная стратегия: сначала изолировать `AWG` на резервный сервер или отдельный IP, затем возвращаться к совместному размещению только после hardening и тестов.
+- [2026-04-10 23:00:59] Hardened `AWG` допускается как будущий кандидат даже на основном IP, но только если он не использует обычный дефолтный паттерн, имеет сгенерированные параметры, закрытый UI, state/backup/verify и проходит co-tenancy acceptance рядом с `Xray`.
 
 ## Защита от RST и деградации
 
@@ -102,6 +105,15 @@
 - [2026-04-10 22:48:10] Параметры `Jc/Jmin/Jmax/S1-S4/H1-H4/I1-I5` должны генерироваться и сохраняться как state, а не быть одним вечным хардкодом.
 - [2026-04-10 22:48:10] `AWG` требует отдельного verify: kernel module/tools, `/dev/net/tun`, `ip_forward`, NAT, firewall, UDP-доступность, client config, backup/restore.
 - [2026-04-10 22:48:10] `AWG` не переводит весь проект в Docker-first. Для платформы сохраняется `bare-metal-first core`, а Docker используется как optional module там, где это действительно упрощает сопровождение.
+
+## Hardened AWG как будущий кандидат
+
+- [2026-04-10 23:00:59] `AWG` не списывается из-за риска co-tenancy. Списывается только дефолтный неуправляемый запуск без собственной state-модели, auth hardening и acceptance.
+- [2026-04-10 23:00:59] Целевой `AWG`-модуль должен генерировать уникальные `Jc/Jmin/Jmax/S1-S4/H1-H4/I1-I5` в безопасных диапазонах, сохранять их в state и восстанавливать через backup/restore.
+- [2026-04-10 23:00:59] Для `H1-H4` предпочтителен не статичный шаблон, а генерация/подбор под разрешённые значения и модель маскировки; один и тот же набор на все установки запрещён.
+- [2026-04-10 23:00:59] `AWG` UI не должен публиковаться наружу как открытая web-панель: по умолчанию localhost-only или reverse proxy/TLS с отдельным auth/rate-limit.
+- [2026-04-10 23:00:59] Перед совместным размещением с `Xray` обязательны четыре режима проверки: `Xray-only`, `AWG-only`, `Xray+AWG idle`, `Xray+AWG under load`.
+- [2026-04-10 23:00:59] Если hardened `AWG` проходит эти проверки без усиления `RST`/drop-деградации, его можно рассматривать как часть `stealth-multi`/resilience платформы. Если нет — оставлять на отдельном IP/резервном сервере.
 
 ## Пошаговый план реализации
 
@@ -139,6 +151,7 @@
 - [2026-04-10 22:48:10] Сначала design/state/verify/backup модель, затем код.
 - [2026-04-10 22:48:10] Первый rollout — резервный сервер или явно выбранный opt-in режим.
 - [2026-04-10 22:53:58] Перед разрешением `AWG` на основном IP обязателен co-tenancy тест: `Xray-only` baseline, `AWG-only` baseline, совместная работа без нагрузки и совместная работа под нагрузкой.
+- [2026-04-10 23:00:59] После резервного rollout подготовить `hardened-awg` профиль: генерация параметров, закрытый UI, verify, backup/restore, isolated logs и отдельный client handoff.
 - [2026-04-10 22:48:10] После staging подтверждения добавить user-facing инструкцию и branch HTML.
 
 ### Фаза 6. Отдельный performance-блок

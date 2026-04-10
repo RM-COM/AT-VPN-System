@@ -1,5 +1,7 @@
 ﻿# CHANGELOG
 
+- [2026-04-10 23:00:59] Уточнена стратегия по `AWG`: дефолтный контейнерный запуск не считается production-safe соседом `Xray`, но hardened `AWG` остаётся будущим кандидатом после генерации уникальных параметров, закрытия UI, state/verify/backup и co-tenancy acceptance.
+- [2026-04-10 23:00:59] `PROTOCOL_HARDENING_PLAN.md`, `PROJECT_CONNECTIVITY_REQUIREMENTS.md`, `MASTER_PLAN.md` и `RESUME_POINT.md` обновлены под отдельный будущий профиль `hardened-awg`.
 - [2026-04-10 22:53:58] Зафиксирован новый triage-риск `single-IP co-tenancy`: совместная работа дефолтного `AmneziaWG` и `Xray` на одном IP может формировать общий fingerprint и провоцировать IP-level `RST`/drop деградацию.
 - [2026-04-10 22:53:58] `PROTOCOL_HARDENING_PLAN.md`, `PROJECT_CONNECTIVITY_REQUIREMENTS.md`, `XRAY_DPI_PLAN.md`, `MASTER_PLAN.md`, `RESUME_POINT.md` и `PROJECT_STATE.md` обновлены под правило: `AWG` сначала разворачивается как отдельный/резервный контур до co-tenancy acceptance.
 - [2026-04-10 22:48:10] Добавлен канонический технологический документ `docs/PROTOCOL_HARDENING_PLAN.md`: зафиксированы варианты усиления `REALITY/XHTTP/AWG`, модель защиты от `RST`/drop, auth hardening, controlled tuning и phased rollout.
