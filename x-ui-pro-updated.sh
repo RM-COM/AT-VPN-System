@@ -90,6 +90,11 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="true"
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:9443"
+				TRANSPORT_REALITY_TUNING_PROFILE="default"
+				TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+				TRANSPORT_REALITY_FINGERPRINT="random"
+				TRANSPORT_REALITY_SPIDER_X="/"
+				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
 				TRANSPORT_XHTTP_TUNING_PROFILE="default"
 				TRANSPORT_XHTTP_MODE="packet-up"
 				TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=30
@@ -120,6 +125,11 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
+				TRANSPORT_REALITY_TUNING_PROFILE="default"
+				TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+				TRANSPORT_REALITY_FINGERPRINT="random"
+				TRANSPORT_REALITY_SPIDER_X="/"
+				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
 				;;
 			stealth-xhttp)
 				TRANSPORT_PROFILE_LABEL="Stealth XHTTP"
@@ -133,6 +143,11 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
+				TRANSPORT_REALITY_TUNING_PROFILE="default"
+				TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+				TRANSPORT_REALITY_FINGERPRINT="random"
+				TRANSPORT_REALITY_SPIDER_X="/"
+				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
 				TRANSPORT_XHTTP_TUNING_PROFILE="default"
 				TRANSPORT_XHTTP_MODE="packet-up"
 				TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=30
@@ -512,6 +527,10 @@ print_runtime_context() {
 	append_debug_log "  transport_reality_inbound_port=$(platform_transport_reality_inbound_port)"
 	append_debug_log "  transport_reality_xver=$(platform_transport_reality_xver)"
 	append_debug_log "  transport_reality_accept_proxy_protocol=$(platform_transport_reality_accept_proxy_protocol)"
+	append_debug_log "  transport_reality_tuning_profile=${TRANSPORT_REALITY_TUNING_PROFILE:-default}"
+	append_debug_log "  transport_reality_client_flow=${TRANSPORT_REALITY_CLIENT_FLOW:-xtls-rprx-vision}"
+	append_debug_log "  transport_reality_fingerprint=${TRANSPORT_REALITY_FINGERPRINT:-random}"
+	append_debug_log "  transport_reality_spider_x=${TRANSPORT_REALITY_SPIDER_X:-/}"
 	if [[ -n "${TRANSPORT_XHTTP_MODE:-}" ]]; then
 		append_debug_log "  transport_xhttp_tuning_profile=${TRANSPORT_XHTTP_TUNING_PROFILE:-default}"
 		append_debug_log "  transport_xhttp_mode=${TRANSPORT_XHTTP_MODE:-packet-up}"
@@ -678,14 +697,19 @@ acceptance_artifact_path() {
 capture_acceptance_snapshot() {
 	[[ -n "$DEBUG_DIR" ]] || return 0
 	capture_command_output "acceptance/ss-lntp.txt" ss -lntp
+	capture_command_output "acceptance/ss-tinp.txt" ss -tinp
+	capture_command_output "acceptance/ss-summary.txt" ss -s
 	capture_command_output "acceptance/systemctl-nginx.txt" systemctl status nginx --no-pager
 	capture_command_output "acceptance/systemctl-x-ui.txt" systemctl status x-ui --no-pager
+	capture_command_output "acceptance/journal-nginx.txt" journalctl -u nginx -n 200 --no-pager
+	capture_command_output "acceptance/journal-x-ui.txt" journalctl -u x-ui -n 200 --no-pager
 	if [[ -f "$SUB2SINGBOX_SERVICE" ]]; then
 		capture_command_output "acceptance/systemctl-sub2sing-box.txt" systemctl status sub2sing-box --no-pager
+		capture_command_output "acceptance/journal-sub2sing-box.txt" journalctl -u sub2sing-box -n 200 --no-pager
 	fi
 }
 write_acceptance_manual_checklist() {
-	local checklist_file public_https_port client_target_hint client_log_hint transport_extra_url
+	local checklist_file public_https_port client_target_hint client_log_hint transport_extra_url secondary_target_hint
 	[[ -n "$DEBUG_DIR" ]] || return 0
 	public_https_port="$(platform_public_https_port)"
 	checklist_file="$(acceptance_artifact_path "manual-client-checklist.md")"
@@ -695,16 +719,19 @@ write_acceptance_manual_checklist() {
 			client_target_hint="Для client-load проверки выбирайте узел remark \`🇷🇺 xhttp\`, а не \`🇷🇺 reality-shield\`."
 			client_log_hint="Если в логе \`v2rayN\` видны строки \`REALITY ... DialTLSContext\`, значит выбран shield-профиль, а не \`xhttp\`."
 			transport_extra_url="- XHTTP path: https://${domain:-<domain>}/${xhttp_path:-<xhttp_path>}"
+			secondary_target_hint="- Дополнительный контроль: отдельно прогоните \`🇷🇺 reality-shield\` как reality-only узел в той же мобильной сети."
 			;;
 		stealth-xray)
 			client_target_hint="Для client-load проверки выбирайте узел remark \`🇷🇺 reality-shield\` / обычный \`VLESS REALITY TCP\`."
 			client_log_hint="Для этого профиля строки \`REALITY ... DialTLSContext\` в логе \`v2rayN\` ожидаемы."
 			transport_extra_url=""
+			secondary_target_hint="- Дополнительный контроль: сравните этот reality-only профиль с последним результатом \`stealth-xhttp\` в той же сети."
 			;;
 		*)
 			client_target_hint="Выбирайте узел, соответствующий текущему transport profile."
 			client_log_hint="Если лог клиента не соответствует выбранному transport profile, проверьте, какой именно узел импортирован."
 			transport_extra_url=""
+			secondary_target_hint=""
 			;;
 	esac
 	cat > "$checklist_file" <<EOF
@@ -725,6 +752,7 @@ write_acceptance_manual_checklist() {
 5. Выполнить ручное переподключение клиента и убедиться, что профиль восстанавливается.
 6. Если возможно, повторить проверку с другой сети или на другом типе устройства.
 7. Зафиксировать, какой профиль тестировался: \`$(platform_selection_summary)\`.
+8. При деградации записать точное время по Москве, тип сети (\`Wi-Fi/LTE\`), помог ли reconnect и какие сайты перестали открываться.
 
 ## Полезные URL текущей ноды
 
@@ -735,6 +763,7 @@ write_acceptance_manual_checklist() {
 - Subscription path: https://${domain:-<domain>}/${sub_path:-<sub_path>}
 - Subscription JSON path: https://${domain:-<domain>}/${json_path:-<json_path>}
 ${transport_extra_url}
+${secondary_target_hint}
 
 - Client target hint: ${client_target_hint}
 - Client log hint: ${client_log_hint}
@@ -742,21 +771,29 @@ EOF
 	append_debug_log "Acceptance manual checklist written to ${checklist_file}"
 }
 acceptance_probe_url() {
-	local label="$1" host="$2" path="$3" artifact_name="$4" public_https_port curl_output
+	local label="$1" host="$2" path="$3" artifact_name="$4" public_https_port curl_output curl_metrics artifact_base
 	public_https_port="$(platform_public_https_port)"
 	if [[ -z "$host" || -z "$path" ]]; then
 		record_acceptance_result "FAIL" "${label}: не удалось определить host/path"
 		return 1
 	fi
+	artifact_base="${artifact_name%.*}"
+	curl_metrics=$(curl -kfsS -o /dev/null -w 'http_code=%{http_code} remote_ip=%{remote_ip} time_namelookup=%{time_namelookup} time_connect=%{time_connect} time_appconnect=%{time_appconnect} time_starttransfer=%{time_starttransfer} time_total=%{time_total}\n' --resolve "${host}:${public_https_port}:127.0.0.1" "https://${host}${path}" 2>&1)
 	if curl_output=$(curl -kfsS --resolve "${host}:${public_https_port}:127.0.0.1" "https://${host}${path}" 2>&1); then
 		record_acceptance_result "PASS" "${label}: HTTPS probe passed"
 		if [[ -n "$DEBUG_DIR" ]]; then
 			printf '%s' "$curl_output" > "$(acceptance_artifact_path "${artifact_name}")"
+			printf '%s' "$curl_metrics" > "$(acceptance_artifact_path "${artifact_base}.metrics.txt")"
 		fi
 		return 0
 	fi
 	record_acceptance_result "FAIL" "${label}: HTTPS probe failed"
 	append_debug_log "${label} curl output: ${curl_output}"
+	append_debug_log "${label} curl metrics: ${curl_metrics}"
+	if [[ -n "$DEBUG_DIR" ]]; then
+		printf '%s' "$curl_metrics" > "$(acceptance_artifact_path "${artifact_base}.metrics.txt")"
+		capture_acceptance_snapshot
+	fi
 	return 1
 }
 run_stealth_acceptance_stage() {
@@ -2854,7 +2891,7 @@ write_transport_inbounds_stealth_xray() {
 	     "clients": [
     {
       "id": "${client_id}",
-      "flow": "xtls-rprx-vision",
+      "flow": "${TRANSPORT_REALITY_CLIENT_FLOW:-xtls-rprx-vision}",
       "email": "first",
       "limitIp": 0,
       "totalGB": 0,
@@ -2905,15 +2942,15 @@ write_transport_inbounds_stealth_xray() {
     ],
     "settings": {
       "publicKey": "${public_key}",
-      "fingerprint": "random",
+      "fingerprint": "${TRANSPORT_REALITY_FINGERPRINT:-random}",
       "serverName": "",
-      "spiderX": "/"
+      "spiderX": "${TRANSPORT_REALITY_SPIDER_X:-/}"
     }
   },
   "tcpSettings": {
     "acceptProxyProtocol": ${reality_accept_proxy_protocol},
     "header": {
-      "type": "none"
+      "type": "${TRANSPORT_REALITY_TCP_HEADER_TYPE:-none}"
     }
   }
 }',
@@ -2957,7 +2994,7 @@ write_transport_inbounds_stealth_xhttp() {
 	     "clients": [
     {
       "id": "${client_id}",
-      "flow": "xtls-rprx-vision",
+      "flow": "${TRANSPORT_REALITY_CLIENT_FLOW:-xtls-rprx-vision}",
       "email": "first",
       "limitIp": 0,
       "totalGB": 0,
@@ -3008,15 +3045,15 @@ write_transport_inbounds_stealth_xhttp() {
     ],
     "settings": {
       "publicKey": "${public_key}",
-      "fingerprint": "random",
+      "fingerprint": "${TRANSPORT_REALITY_FINGERPRINT:-random}",
       "serverName": "",
-      "spiderX": "/"
+      "spiderX": "${TRANSPORT_REALITY_SPIDER_X:-/}"
     }
   },
   "tcpSettings": {
     "acceptProxyProtocol": ${reality_accept_proxy_protocol},
     "header": {
-      "type": "none"
+      "type": "${TRANSPORT_REALITY_TCP_HEADER_TYPE:-none}"
     }
   }
 }',

@@ -79,6 +79,8 @@
 - [2026-04-09 20:50:25] `[В РАБОТЕ]` Следующий подшаг блока C теперь уточнён как `mobile-data acceptance + time-of-day degradation investigation`; только после этого можно выдавать финальную рекомендацию выбора между `stealth-xray` и `stealth-xhttp`.
 - [2026-04-10 00:34:06] `[СДЕЛАНО]` Следующий безопасный кодовый срез уже выполнен: `xhttp`-tuning и ключевые `sockopt` вынесены в transport metadata для `classic-xray` и `stealth-xhttp`, а текущие runtime-дефолты сохранены.
 - [2026-04-10 00:34:06] `[В РАБОТЕ]` Следующий подшаг блока C теперь смещается на controlled tuning: подготовить `mobile-safe` пресет для `stealth-xhttp` и transport-level acceptance без смешивания этого этапа с `AWG`.
+- [2026-04-10 08:06:43] `[СДЕЛАНО]` Следующий safe-slice тоже уже закрыт: metadata-driven tuning подготовлен и для `REALITY`, а `stage=acceptance` получил расширенный mobile-triage bundle и transport-aware клиентский handoff.
+- [2026-04-10 08:06:43] `[В РАБОТЕ]` Новый ближайший подшаг блока C теперь симметричный: собрать controlled `mobile-safe` пресеты сначала для `stealth-xhttp`, затем для `stealth-xray/reality-shield`, и только потом возвращаться к long-running/mobile-data приёмке.
 - [2026-04-09 01:10:14] `[В РАБОТЕ]` Следующий активный шаг теперь конкретный: переключить staging на `stealth-xhttp`, прогнать тот же клиентский сценарий и только потом переходить к длинным сессиям 30-60 минут.
 - [2026-04-05 07:13:07] `[В РАБОТЕ]` Зафиксировать и довести до production-уровня рабочий цикл `Windows -> GitHub -> Linux staging`.
 - [2026-04-05 07:13:07] `[В РАБОТЕ]` Сохранить и проверить сценарии сопровождения сервера: `install`, `verify`, `stage=websub`, `uninstall`, `backup`, `restore`.
@@ -183,3 +185,5 @@
 - [2026-04-09 20:50:25] `[ПУНКТ 43 / В РАБОТЕ]` Этот шаг уточнён: сначала нужно закрыть `mobile-data` диагностику и понять, это carrier/DPI-эффект, деградация по времени суток или слабость конкретного transport-пути.
 - [2026-04-10 00:34:06] `[ПУНКТ 44 / СДЕЛАНО]` Подготовлен metadata-driven слой для `xhttp` tuning: giant SQL больше не является единственным источником transport-параметров.
 - [2026-04-10 00:34:06] `[ПУНКТ 45 / В РАБОТЕ]` Следующий шаг — собрать и проверить первый `mobile-safe` preset для `stealth-xhttp`, а затем вернуться к long-running/mobile-data приёмке.
+- [2026-04-10 08:06:43] `[ПУНКТ 46 / СДЕЛАНО]` `REALITY` тоже переведён в metadata-driven tuning слой для stealth-профилей, а acceptance-контур усилен расширенными diagnostic artifacts.
+- [2026-04-10 08:06:43] `[ПУНКТ 47 / В РАБОТЕ]` Следующий шаг — ввести controlled `mobile-safe` пресет сначала для `stealth-xhttp`, затем для `stealth-xray/reality-shield`, и только после этого возвращаться к сравнительным mobile-data прогонам.

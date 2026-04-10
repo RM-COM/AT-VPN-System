@@ -91,6 +91,7 @@
 - [2026-04-09 20:50:25] `desktop short-load`: `PASS` для `stealth-xray` и `stealth-xhttp` по сценарию `4K + browsing` около 10 минут.
 - [2026-04-09 20:50:25] `mobile long-run`: `DEGRADED`, потому что `stealth-xhttp` работает, но теряет стабильность в длительном дневном использовании, а старые reality-схемы на mobile internet не подтверждены.
 - [2026-04-09 20:50:25] `time-of-day sensitivity`: `SUSPECTED`, потому что утром `stealth-xhttp` работал лучше, чем позже в тот же день.
+- [2026-04-10 08:06:43] `acceptance observability`: `IMPROVED`, потому что `stage=acceptance` теперь снимает не только `ss -lntp/systemctl`, но и `ss -tinp`, `ss -s`, `journalctl` для `nginx/x-ui/sub2sing-box`, а также transport-aware клиентский чек-лист для сравнения `xhttp` и `reality`.
 
 ## Критерии завершения блока C
 

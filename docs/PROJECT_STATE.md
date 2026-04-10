@@ -108,6 +108,8 @@
 - [2026-04-09 20:50:25] Это означает, что текущий продуктовый фокус по-прежнему остаётся на блоке C `Xray/DPI` этапа: расследование mobile-data нестабильности, long-running приёмка и финальный выбор основного stealth-профиля.
 - [2026-04-10 00:34:06] Первый кодовый шаг этого расследования уже выполнен безопасно: `xhttp`-tuning и ключевые `sockopt` для `classic-xray` и `stealth-xhttp` вынесены в metadata/selection-layer без изменения текущих значений по умолчанию.
 - [2026-04-10 00:34:06] Благодаря этому следующий tuning-этап можно вести как controlled preset work, а не как ручную правку giant SQL-блоков в installer.
+- [2026-04-10 08:06:43] Следующий безопасный шаг тоже уже выполнен: metadata-driven слой подготовлен и для `REALITY` в `stealth-xray`/`reality-shield`, а acceptance-контур теперь собирает более полезные diagnostics для mobile-data triage.
+- [2026-04-10 08:06:43] Это означает, что текущий блок C уже имеет не только profile-selection и server-side soak, но и управляемый слой transport tuning/observability для обоих stealth-путей.
 
 ## Текущие риски блока C
 
