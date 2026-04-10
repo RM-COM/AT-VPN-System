@@ -98,6 +98,9 @@
 - [2026-04-10 00:34:06] Это означает, что следующий реальный инженерный шаг теперь можно делать управляемо: вводить `mobile-safe` пресет и transport-level acceptance для `stealth-xhttp`, а не редактировать SQL-блоки вручную.
 - [2026-04-10 08:06:43] Следующий safe-slice расширил этот подход и на `REALITY`: для `stealth-xray` и `reality-shield` подготовлен metadata-driven слой tuning-параметров, а `stage=acceptance` теперь сохраняет более полезные artifacts для mobile-data triage (`ss -tinp`, `ss -s`, `journalctl`, transport-aware checklist).
 - [2026-04-10 08:06:43] Это не меняет runtime-поведение по умолчанию, но переводит следующий шаг из ручного расследования в управляемый процесс: можно независимо тюнить `stealth-xray` и `stealth-xhttp`, а acceptance уже умеет собирать больше контекста для сравнительного анализа.
+- [2026-04-10 08:10:51] Первый controlled runtime-шаг блока C уже подготовлен: для `stealth-xhttp` включён `mobile-safe` preset без смены архитектуры профиля.
+- [2026-04-10 08:10:51] Текущий `mobile-safe` preset `stealth-xhttp` отличается от прежнего `default` так: меньше buffered posts и post bytes, мягче padding, отключён `tcpMptcp`, отключён `tcpFastOpen`, keepalive сделан явным, `tcpUserTimeout` увеличен до `30000`, а `tcpWindowClamp` сброшен в `0`.
+- [2026-04-10 08:14:46] Этот `mobile-safe stealth-xhttp` уже применён на staging `185.207.64.40`: repeated install завершился успешно, strict `verify` снова дал полный `PASS`, а `x-ui.db` подтверждает фактические значения пресета.
 
 ### Блок D. Закрыть Xray/DPI этап формально
 

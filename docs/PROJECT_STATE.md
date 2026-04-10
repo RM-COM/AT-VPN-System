@@ -110,6 +110,8 @@
 - [2026-04-10 00:34:06] Благодаря этому следующий tuning-этап можно вести как controlled preset work, а не как ручную правку giant SQL-блоков в installer.
 - [2026-04-10 08:06:43] Следующий безопасный шаг тоже уже выполнен: metadata-driven слой подготовлен и для `REALITY` в `stealth-xray`/`reality-shield`, а acceptance-контур теперь собирает более полезные diagnostics для mobile-data triage.
 - [2026-04-10 08:06:43] Это означает, что текущий блок C уже имеет не только profile-selection и server-side soak, но и управляемый слой transport tuning/observability для обоих stealth-путей.
+- [2026-04-10 08:10:51] Первый реальный tuning-шаг тоже уже сделан: `stealth-xhttp` переведён на `mobile-safe` preset, который уменьшает burstiness и убирает наиболее агрессивные socket-настройки, сохраняя тот же ingress/runtime-контур.
+- [2026-04-10 08:14:46] Этот preset уже не только в коде, но и на staging runtime: repeated install подтверждён, strict `verify` проходит, а `x-ui.db` содержит обновлённые `xhttpSettings/sockopt` значения.
 
 ## Текущие риски блока C
 

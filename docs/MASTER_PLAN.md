@@ -81,6 +81,10 @@
 - [2026-04-10 00:34:06] `[В РАБОТЕ]` Следующий подшаг блока C теперь смещается на controlled tuning: подготовить `mobile-safe` пресет для `stealth-xhttp` и transport-level acceptance без смешивания этого этапа с `AWG`.
 - [2026-04-10 08:06:43] `[СДЕЛАНО]` Следующий safe-slice тоже уже закрыт: metadata-driven tuning подготовлен и для `REALITY`, а `stage=acceptance` получил расширенный mobile-triage bundle и transport-aware клиентский handoff.
 - [2026-04-10 08:06:43] `[В РАБОТЕ]` Новый ближайший подшаг блока C теперь симметричный: собрать controlled `mobile-safe` пресеты сначала для `stealth-xhttp`, затем для `stealth-xray/reality-shield`, и только потом возвращаться к long-running/mobile-data приёмке.
+- [2026-04-10 08:10:51] `[СДЕЛАНО]` Первый controlled preset уже введён: `stealth-xhttp` переключён на `mobile-safe` параметры без смены архитектуры профиля.
+- [2026-04-10 08:10:51] `[В РАБОТЕ]` Следующий шаг теперь конкретный: проверить этот `mobile-safe stealth-xhttp` на staging/mobile network и затем сделать симметричный preset для `stealth-xray/reality-shield`.
+- [2026-04-10 08:14:46] `[СДЕЛАНО]` `mobile-safe stealth-xhttp` уже применён и подтверждён на staging repeated install + strict `verify`.
+- [2026-04-10 08:14:46] `[В РАБОТЕ]` Следующий шаг теперь разделяется: пользовательский mobile-data тест нового `stealth-xhttp` пресета и подготовка симметричного controlled preset для `stealth-xray/reality-shield`.
 - [2026-04-09 01:10:14] `[В РАБОТЕ]` Следующий активный шаг теперь конкретный: переключить staging на `stealth-xhttp`, прогнать тот же клиентский сценарий и только потом переходить к длинным сессиям 30-60 минут.
 - [2026-04-05 07:13:07] `[В РАБОТЕ]` Зафиксировать и довести до production-уровня рабочий цикл `Windows -> GitHub -> Linux staging`.
 - [2026-04-05 07:13:07] `[В РАБОТЕ]` Сохранить и проверить сценарии сопровождения сервера: `install`, `verify`, `stage=websub`, `uninstall`, `backup`, `restore`.
@@ -187,3 +191,7 @@
 - [2026-04-10 00:34:06] `[ПУНКТ 45 / В РАБОТЕ]` Следующий шаг — собрать и проверить первый `mobile-safe` preset для `stealth-xhttp`, а затем вернуться к long-running/mobile-data приёмке.
 - [2026-04-10 08:06:43] `[ПУНКТ 46 / СДЕЛАНО]` `REALITY` тоже переведён в metadata-driven tuning слой для stealth-профилей, а acceptance-контур усилен расширенными diagnostic artifacts.
 - [2026-04-10 08:06:43] `[ПУНКТ 47 / В РАБОТЕ]` Следующий шаг — ввести controlled `mobile-safe` пресет сначала для `stealth-xhttp`, затем для `stealth-xray/reality-shield`, и только после этого возвращаться к сравнительным mobile-data прогонам.
+- [2026-04-10 08:10:51] `[ПУНКТ 47 / СДЕЛАНО]` Первый controlled `mobile-safe` preset введён для `stealth-xhttp`.
+- [2026-04-10 08:10:51] `[ПУНКТ 48 / В РАБОТЕ]` Следующий шаг — прогнать `mobile-safe stealth-xhttp` на staging и после этого подготовить симметричный controlled preset для `stealth-xray/reality-shield`.
+- [2026-04-10 08:14:46] `[ПУНКТ 48 / СДЕЛАНО]` `mobile-safe stealth-xhttp` прогнан на staging repeated install + strict `verify`.
+- [2026-04-10 08:14:46] `[ПУНКТ 49 / В РАБОТЕ]` Следующий шаг — полевой тест нового `mobile-safe stealth-xhttp` и затем controlled preset для `stealth-xray/reality-shield`.
