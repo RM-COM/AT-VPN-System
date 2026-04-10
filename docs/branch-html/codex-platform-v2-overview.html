@@ -3,54 +3,85 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch Overview — codex/platform-v2</title>
+  <title>Обзор ветки - codex/platform-v2</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Ветка: codex/platform-v2</h1>
-      <div class="muted">Отчёт branch-overview. Формат: project-safe, без личного контекста.</div>
-      <div class="links">
-        <span class="tag active">ACTIVE IMPLEMENTATION</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="codex-platform-v2-progress.html">Progress/Plan</a>
-        <a class="pill" href="codex-platform-v2-strategy.html">Strategy</a>
+      <div class="eyebrow">Обзор ветки</div>
+      <h1>codex/platform-v2</h1>
+      <p class="lead">Главная рабочая ветка нового платформенного слоя: anti-DPI hardening, профили, fallback и будущая модульность.</p>
+      <div class="nav">
+        <span class="tag active">АКТИВНАЯ IMPLEMENTATION-ВЕТКА</span>
+        <a href="index.html">К индексу</a>
+        <a href="codex-platform-v2-progress.html">Прогресс и план</a>
+        <a href="codex-platform-v2-strategy.html">Стратегия</a>
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Можно устанавливать</b>Да, но только как тестовый контур. Это не замена main до закрытия Block C1 и regression.</div>
+        <div class="meta"><b>Основной фокус</b>Разработка модульной платформы с выбором профилей: classic, stealth-xray, stealth-xhttp, будущий stealth-multi и будущий hardened-awg.</div>
+        <div class="meta"><b>Технический профиль</b>REALITY/Vision для скорости, REALITY/XHTTP для снижения сигнатурности, подготовка нескольких проверенных fallback-путей.</div>
       </div>
     </section>
 
-    <section class="grid section">
-      <article class="card">
-        <h2>Роль ветки</h2>
-        <ul>
-          <li>Основная implementation-ветка platform-v2</li>
-          <li>Scope: Xray/DPI hardening, modular architecture, profile selection</li>
-          <li>Transport focus: stealth-xray, stealth-xhttp, classic-xray</li>
-        </ul>
-      </article>
+    <section class="callout"><b>Короткий вывод.</b> Да, но только как тестовый контур. Это не замена main до закрытия Block C1 и regression.</section>
 
-      <article class="card">
-        <h2>Функциональный профиль</h2>
-        <ul>
-          <li>Сделано: Selection-layer, acceptance stage, mobile-safe tuning</li>
-          <li>В работе: Block C1 по PROTOCOL_HARDENING_PLAN (невидимость + устойчивость + скорость)</li>
-          <li>Риск: single-IP co-tenancy при совместном размещении Xray и AWG</li>
-          <li>Риск: mobile whitelist / IP-level drop требует отдельного fallback-класса</li>
-          <li>Далее: Stealth-multi и затем hardened-awg на резервном контуре</li>
-        </ul>
+    <h2 class="section-title">Что важно понимать</h2>
+    <section class="grid wide section">
+      <article class="card strong">
+        <h2>Назначение</h2>
+        <p>Разработка модульной платформы с выбором профилей: classic, stealth-xray, stealth-xhttp, будущий stealth-multi и будущий hardened-awg.</p>
+        <details open>
+          <summary>Где эта ветка в общем процессе</summary>
+          <div><p>Главная рабочая ветка нового платформенного слоя: anti-DPI hardening, профили, fallback и будущая модульность.</p><p><b>Правило:</b> если ветка не помечена как stable или active implementation, её нельзя использовать как основной источник установки.</p></div>
+        </details>
       </article>
-
-      <article class="card">
-        <h2>DPI/Безопасность</h2>
-        <ul>
-          <li>Модель для GitHub: только технический контент о проекте.</li>
-          <li>Чувствительные данные (учётки, личные кейсы, приватные заметки) в branch docs не публикуются.</li>
-          <li>Проверка готовности: install/verify/acceptance + полевые тесты по матрице этапа.</li>
-        </ul>
+      <article class="card strong">
+        <h2>Технический профиль</h2>
+        <p>REALITY/Vision для скорости, REALITY/XHTTP для снижения сигнатурности, подготовка нескольких проверенных fallback-путей.</p>
+        <details>
+          <summary>Почему это важно</summary>
+          <div><p>Мы разделяем stable, implementation, historical и upstream-ветки, чтобы не смешивать рабочую установку, эксперименты, архитектурные заметки и внешние источники.</p></div>
+        </details>
       </article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 23:09:41 (MSK) • Repo: AT-VPN-System • Branch: codex/platform-v2</p>
+    <h2 class="section-title">Состояние ветки</h2>
+    <section class="grid section">
+      <article class="card accent"><h2>Уже сделано</h2><ul>
+          <li>Добавлен selection-layer для выбора профилей без ломки classic-поведения.</li>
+          <li>Добавлен acceptance stage: установка должна пройти проверку готовности.</li>
+          <li>Зафиксированы mobile-safe tuning и отдельные профили stealth-xray / stealth-xhttp.</li>
+          <li>Заведены документы по DPI, RST/drop, single-IP co-tenancy и mobile whitelist fallback.</li>
+          <li>Сформирована стратегия: несколько управляемых маршрутов вместо одного “магического” протокола.</li>
+        </ul></article>
+      <article class="card warning"><h2>Риски и ограничения</h2><ul>
+          <li>Абсолютной невидимости не обещаем: цель - снижать сигнатурность и быстро переключаться при деградации.</li>
+          <li>AWG и Xray на одном IP могут давать корреляционный риск.</li>
+          <li>Mobile whitelist может блокировать IP/ASN, а не конкретный протокол.</li>
+          <li>Слишком агрессивная обфускация может ухудшить скорость.</li>
+        </ul></article>
+      <article class="card"><h2>Как проверять</h2><ul>
+          <li>Install на чистом staging-сервере.</li>
+          <li>Проверка x-ui, nginx, сертификатов, inbound JSON и service health.</li>
+          <li>Клиентские тесты V2RayN / v2rayNG: Wi-Fi, LTE, reconnect, смена сети.</li>
+          <li>Нагрузочный smoke: несколько 4K-потоков, web, мессенджеры, долгий тест 30-60 минут.</li>
+          <li>Сравнение логов: closed pipe, read/write, TLS/REALITY errors, nginx/x-ui restarts.</li>
+        </ul></article>
+    </section>
+
+    <section class="card danger section">
+      <h2>Что нельзя делать с этой веткой</h2>
+<ul>
+          <li>Не сливать platform-v2 в main без regression.</li>
+          <li>Не добавлять протоколы без проверяемого выигрыша.</li>
+          <li>Не хранить в GitHub личные заметки, пароли, реальные тестовые домены.</li>
+          <li>Не включать AWG по умолчанию до hardening-реализации.</li>
+        </ul>
+    </section>
+
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Репозиторий: AT-VPN-System. Ветка: codex/platform-v2. Формат: project-safe.</p>
   </main>
 </body>
 </html>

@@ -3,104 +3,142 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch HTML Reports</title>
+  <title>AT-VPN-System: документация по веткам</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>AT-VPN-System: Отчёты по веткам</h1>
-      <div class="muted">Отдельные HTML-страницы для каждой ветки: функционал, статус, выполненный план и следующие шаги.</div>
-      <div class="links">
-        <span class="pill">Формат: project-safe</span>
-        <span class="pill">Generated: 2026-04-10 23:09:41 (MSK)</span>
+      <div class="eyebrow">Интерактивная документация</div>
+      <h1>AT-VPN-System: понятные отчёты по веткам</h1>
+      <p class="lead">Здесь собрана project-safe документация по каждой ветке: что она делает, зачем нужна, можно ли из неё устанавливать систему, какие функции уже готовы, какие риски известны и что дальше по плану.</p>
+      <div class="meta-grid">
+        <div class="meta"><b>Формат</b>Только техническая информация о проекте, без приватного контекста.</div>
+        <div class="meta"><b>Источник правды</b><code>BRANCH_MATRIX</code>, <code>MASTER_PLAN</code>, <code>RESUME_POINT</code>.</div>
+        <div class="meta"><b>Обновлено</b>2026-04-10 23:33:52 (MSK)</div>
       </div>
     </section>
+
+    <h2 class="section-title">Как читать эти страницы</h2>
     <section class="grid section">
-      <article class="card">
+      <article class="card accent"><h2>Обзор</h2><p>Назначение ветки, сценарии установки, ограничения, технический профиль и правила использования.</p></article>
+      <article class="card accent"><h2>Прогресс и план</h2><p>Что сделано, что в работе, какие проверки нужны перед merge и какие действия запрещены.</p></article>
+      <article class="card accent"><h2>Стратегия</h2><p>Для platform-v2 отдельно описана идея: снижение сигнатурности, fallback-профили, устойчивость и будущие модули.</p></article>
+    </section>
+
+    <h2 class="section-title">Ветки репозитория</h2>
+    <section class="grid wide section">
+      <article class="card strong">
         <h2>main</h2>
-        <div class="muted">Официальный stable baseline и install-source</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag active">ACTIVE</span>
-          <a class="pill" href="main-overview.html">Overview</a>
-          <a class="pill" href="main-progress.html">Progress</a>
+        <span class="tag active">АКТИВНАЯ / STABLE</span>
+        <p>Стабильная ветка и основной install-source для подтверждённого classic-контура.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Да. Это основной источник для стабильной установки после regression-проверок.</p>
+        <div class="links">
+          <a class="pill" href="main-overview.html">Обзор</a>
+          <a class="pill" href="main-progress.html">Прогресс и план</a>
+
         </div>
       </article>
-      <article class="card">
+      <article class="card strong">
         <h2>codex/platform-v2</h2>
-        <div class="muted">Основная implementation-ветка platform-v2 (active: Block C1 + protocol hardening + mobile whitelist fallback)</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag active">ACTIVE IMPLEMENTATION</span>
-          <a class="pill" href="codex-platform-v2-overview.html">Overview</a>
-          <a class="pill" href="codex-platform-v2-progress.html">Progress</a>
-          <a class="pill" href="codex-platform-v2-strategy.html">Strategy</a>
+        <span class="tag active">АКТИВНАЯ IMPLEMENTATION-ВЕТКА</span>
+        <p>Главная рабочая ветка нового платформенного слоя: anti-DPI hardening, профили, fallback и будущая модульность.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Да, но только как тестовый контур. Это не замена main до закрытия Block C1 и regression.</p>
+        <div class="links">
+          <a class="pill" href="codex-platform-v2-overview.html">Обзор</a>
+          <a class="pill" href="codex-platform-v2-progress.html">Прогресс и план</a>
+          <a class="pill" href="codex-platform-v2-strategy.html">Стратегия</a>
         </div>
       </article>
-      <article class="card">
+      <article class="card strong">
         <h2>codex/staging-reset-workflow</h2>
-        <div class="muted">Историческая ветка reset-workflow</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag frozen">HISTORICAL</span>
-          <a class="pill" href="codex-staging-reset-workflow-overview.html">Overview</a>
-          <a class="pill" href="codex-staging-reset-workflow-progress.html">Progress</a>
+        <span class="tag frozen">ИСТОРИЧЕСКАЯ</span>
+        <p>Закрытая историческая ветка, где отрабатывался безопасный reset/staging workflow.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Нет. Для установки использовать main или тестовую implementation-ветку.</p>
+        <div class="links">
+          <a class="pill" href="codex-staging-reset-workflow-overview.html">Обзор</a>
+          <a class="pill" href="codex-staging-reset-workflow-progress.html">Прогресс и план</a>
+
         </div>
       </article>
-      <article class="card">
+      <article class="card strong">
         <h2>codex/operational-regression</h2>
-        <div class="muted">Историческая ветка operational regression</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag frozen">HISTORICAL</span>
-          <a class="pill" href="codex-operational-regression-overview.html">Overview</a>
-          <a class="pill" href="codex-operational-regression-progress.html">Progress</a>
+        <span class="tag frozen">ИСТОРИЧЕСКАЯ</span>
+        <p>Историческая ветка regression-этапа: установка, operational verify, backup/restore и uninstall.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Нет как основной путь. Её результаты уже должны жить в stable/рабочих ветках.</p>
+        <div class="links">
+          <a class="pill" href="codex-operational-regression-overview.html">Обзор</a>
+          <a class="pill" href="codex-operational-regression-progress.html">Прогресс и план</a>
+
         </div>
       </article>
-      <article class="card">
+      <article class="card strong">
         <h2>codex/legacy-audit</h2>
-        <div class="muted">Переходная историческая ветка</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag frozen">TRANSITIONAL HISTORICAL</span>
-          <a class="pill" href="codex-legacy-audit-overview.html">Overview</a>
-          <a class="pill" href="codex-legacy-audit-progress.html">Progress</a>
+        <span class="tag frozen">ПЕРЕХОДНАЯ ИСТОРИЧЕСКАЯ</span>
+        <p>Ветка аудита старого состояния: что было в исходном форке и какие выводы были сделаны.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Нет. Это не install-source.</p>
+        <div class="links">
+          <a class="pill" href="codex-legacy-audit-overview.html">Обзор</a>
+          <a class="pill" href="codex-legacy-audit-progress.html">Прогресс и план</a>
+
         </div>
       </article>
-      <article class="card">
+      <article class="card strong">
         <h2>codex/stealth-awg-architecture</h2>
-        <div class="muted">Архитектурный источник (design)</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag frozen">FROZEN DESIGN</span>
-          <a class="pill" href="codex-stealth-awg-architecture-overview.html">Overview</a>
-          <a class="pill" href="codex-stealth-awg-architecture-progress.html">Progress</a>
+        <span class="tag frozen">АРХИТЕКТУРНЫЙ ИСТОЧНИК / FROZEN</span>
+        <p>Замороженный design-source по будущему AWG-модулю и общей модульной архитектуре.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Нет. Это не рабочая install-ветка.</p>
+        <div class="links">
+          <a class="pill" href="codex-stealth-awg-architecture-overview.html">Обзор</a>
+          <a class="pill" href="codex-stealth-awg-architecture-progress.html">Прогресс и план</a>
+
         </div>
       </article>
-      <article class="card">
+      <article class="card strong">
         <h2>upstream/master</h2>
-        <div class="muted">Основная upstream ветка</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag readonly">READ-ONLY</span>
-          <a class="pill" href="upstream-master-overview.html">Overview</a>
-          <a class="pill" href="upstream-master-progress.html">Progress</a>
+        <span class="tag readonly">READ-ONLY</span>
+        <p>Основная upstream-ветка для сравнения и точечного переноса идей.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Нет в рамках нашего форка. Для установки используется наш репозиторий и наши ветки.</p>
+        <div class="links">
+          <a class="pill" href="upstream-master-overview.html">Обзор</a>
+          <a class="pill" href="upstream-master-progress.html">Прогресс и план</a>
+
         </div>
       </article>
-      <article class="card">
+      <article class="card strong">
         <h2>upstream/reality</h2>
-        <div class="muted">Вспомогательная upstream ветка</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag readonly">READ-ONLY</span>
-          <a class="pill" href="upstream-reality-overview.html">Overview</a>
-          <a class="pill" href="upstream-reality-progress.html">Progress</a>
+        <span class="tag readonly">READ-ONLY</span>
+        <p>Вспомогательная upstream-ветка для изучения REALITY-идей.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Нет. Это не наш install-source.</p>
+        <div class="links">
+          <a class="pill" href="upstream-reality-overview.html">Обзор</a>
+          <a class="pill" href="upstream-reality-progress.html">Прогресс и план</a>
+
         </div>
       </article>
-      <article class="card">
+      <article class="card strong">
         <h2>upstream/subscriptions</h2>
-        <div class="muted">Вспомогательная upstream ветка</div>
-        <div class="links" style="margin-top:12px;">
-          <span class="tag readonly">READ-ONLY</span>
-          <a class="pill" href="upstream-subscriptions-overview.html">Overview</a>
-          <a class="pill" href="upstream-subscriptions-progress.html">Progress</a>
+        <span class="tag readonly">READ-ONLY</span>
+        <p>Вспомогательная upstream-ветка для идей по подпискам и клиентской выдаче конфигов.</p>
+        <h3>Когда открывать</h3>
+        <p class="muted">Нет. Это не install-source.</p>
+        <div class="links">
+          <a class="pill" href="upstream-subscriptions-overview.html">Обзор</a>
+          <a class="pill" href="upstream-subscriptions-progress.html">Прогресс и план</a>
+
         </div>
       </article>
     </section>
-    <p class="footer">Source of truth: docs/BRANCH_MATRIX.md + docs/MASTER_PLAN.md + docs/RESUME_POINT.md</p>
+
+    <p class="footer">Источник правды: <code>docs/BRANCH_MATRIX.md</code>, <code>docs/MASTER_PLAN.md</code>, <code>docs/RESUME_POINT.md</code>. Обновлено: 2026-04-10 23:33:52 (MSK).</p>
   </main>
 </body>
 </html>

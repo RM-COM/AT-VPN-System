@@ -3,57 +3,76 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch Progress — codex/platform-v2</title>
+  <title>Прогресс и план - codex/platform-v2</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Progress & Plan: codex/platform-v2</h1>
-      <div class="muted">Страница статуса выполнения и планов ветки. Project-safe формат.</div>
-      <div class="links">
-        <span class="tag active">ACTIVE IMPLEMENTATION</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="codex-platform-v2-overview.html">Overview</a>
-        <a class="pill" href="codex-platform-v2-strategy.html">Strategy</a>
+      <div class="eyebrow">Прогресс и план</div>
+      <h1>codex/platform-v2</h1>
+      <p class="lead">Страница показывает, что уже выполнено, что находится в работе, какие проверки нужны и какие следующие шаги допустимы для этой ветки.</p>
+      <div class="nav">
+        <span class="tag active">АКТИВНАЯ IMPLEMENTATION-ВЕТКА</span>
+        <a href="index.html">К индексу</a>
+        <a href="codex-platform-v2-overview.html">Обзор</a>
+        <a href="codex-platform-v2-strategy.html">Стратегия</a>
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Текущий режим</b>АКТИВНАЯ IMPLEMENTATION-ВЕТКА</div>
+        <div class="meta"><b>Установка</b>Да, но только как тестовый контур. Это не замена main до закрытия Block C1 и regression.</div>
+        <div class="meta"><b>Фокус</b>Разработка модульной платформы с выбором профилей: classic, stealth-xray, stealth-xhttp, будущий stealth-multi и будущий hardened-awg.</div>
+      </div>
+    </section>
+
+    <h2 class="section-title">Дорожная карта ветки</h2>
+    <section class="grid wide section">
+      <article class="card accent"><h2>Выполнено</h2><ul>
+          <li>Добавлен selection-layer для выбора профилей без ломки classic-поведения.</li>
+          <li>Добавлен acceptance stage: установка должна пройти проверку готовности.</li>
+          <li>Зафиксированы mobile-safe tuning и отдельные профили stealth-xray / stealth-xhttp.</li>
+          <li>Заведены документы по DPI, RST/drop, single-IP co-tenancy и mobile whitelist fallback.</li>
+          <li>Сформирована стратегия: несколько управляемых маршрутов вместо одного “магического” протокола.</li>
+        </ul></article>
+      <article class="card warning"><h2>В работе</h2><ul>
+          <li>Block C1: сравнить stealth-xray и stealth-xhttp по стабильности, скорости, reconnect и мобильной сети.</li>
+          <li>Разделить причины сбоев: DPI-сигнатура, active probing, IP/ASN-блок, mobile whitelist, совместное размещение Xray+AWG.</li>
+          <li>Собрать production-рекомендацию: основной профиль, DPI fallback и мобильный fallback-класс.</li>
+        </ul></article>
+    </section>
+
+    <section class="card strong section">
+      <h2>Следующие шаги</h2>
+      <div class="timeline">
+        <div class="step">Закрыть Block C1 и выбрать порядок включения профилей.</div>
+        <div class="step">Собрать stealth-multi только из проверенных transport-путей.</div>
+        <div class="step">Усилить admin/subscription-контур: панель, секреты, публикация подписок, rollback.</div>
+        <div class="step">Подготовить hardened-awg как opt-in модуль.</div>
+        <div class="step">Позже исследовать white IP/cloud allowlist: Yandex Cloud, VK Cloud, специальные подсети.</div>
       </div>
     </section>
 
     <section class="grid section">
-      <article class="card">
-        <h2>Выполнено</h2>
-        <ul>
-          <li>Selection-layer, acceptance stage, mobile-safe tuning</li>
-          <li>Protocol hardening plan: REALITY/XHTTP/AWG, RST/drop resilience, auth hardening</li>
-          <li>Документация обновляется по каноническим файлам (CHANGELOG, PROJECT_STATE, RESUME_POINT).</li>
-          <li>Для рабочих веток: обязательный commit+push после завершения этапа.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>В работе</h2>
-        <ul>
-          <li>Block C1: невидимость для DPI + long-running/reconnect устойчивость + приемлемая скорость</li>
-          <li>Новый triage-риск: single-IP co-tenancy для смешанного Xray+AWG на одном IP</li>
-          <li>Новый triage-риск: mobile whitelist / IP-level drop при рабочем Wi-Fi и нерабочем LTE</li>
-          <li>Для implementation-веток: regression-цикл и mobile/field проверки по матрице этапа.</li>
-          <li>Для historical/read-only веток: изменений не планируется.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>Следующие шаги</h2>
-        <ul>
-          <li>Закрыть Block C1 по PROTOCOL_HARDENING_PLAN: mobile-data/reconnect сравнение stealth-xray и stealth-xhttp</li>
-          <li>Собрать production-рекомендацию: основной stealth-профиль + DPI fallback + mobile whitelist fallback</li>
-          <li>После закрытия C1: stealth-multi и затем hardened-awg на резервном контуре</li>
-          <li>Перед merge в main: только проверенные изменения с подтверждёнными тестами.</li>
-          <li>Публикуемый контент остаётся project-safe и нейтральным.</li>
-        </ul>
-      </article>
+      <article class="card"><h2>Проверки перед завершением этапа</h2><ul>
+          <li>Install на чистом staging-сервере.</li>
+          <li>Проверка x-ui, nginx, сертификатов, inbound JSON и service health.</li>
+          <li>Клиентские тесты V2RayN / v2rayNG: Wi-Fi, LTE, reconnect, смена сети.</li>
+          <li>Нагрузочный smoke: несколько 4K-потоков, web, мессенджеры, долгий тест 30-60 минут.</li>
+          <li>Сравнение логов: closed pipe, read/write, TLS/REALITY errors, nginx/x-ui restarts.</li>
+        </ul></article>
+      <article class="card danger"><h2>Стоп-условия</h2><ul>
+          <li>Не сливать platform-v2 в main без regression.</li>
+          <li>Не добавлять протоколы без проверяемого выигрыша.</li>
+          <li>Не хранить в GitHub личные заметки, пароли, реальные тестовые домены.</li>
+          <li>Не включать AWG по умолчанию до hardening-реализации.</li>
+        </ul></article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 23:09:41 (MSK) • Repo: AT-VPN-System • Branch: codex/platform-v2</p>
+    <section class="callout warning">
+      <b>Правило проекта.</b> После значимого исправления, debug-этапа, документационного блока или новой функции изменения фиксируются в документации, коммитятся и отправляются в GitHub. Stable-ветка принимает только проверенные изменения.
+    </section>
+
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Репозиторий: AT-VPN-System. Ветка: codex/platform-v2. Формат: project-safe.</p>
   </main>
 </body>
 </html>

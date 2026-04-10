@@ -3,51 +3,76 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch Overview — codex/staging-reset-workflow</title>
+  <title>Обзор ветки - codex/staging-reset-workflow</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Ветка: codex/staging-reset-workflow</h1>
-      <div class="muted">Отчёт branch-overview. Формат: project-safe, без личного контекста.</div>
-      <div class="links">
-        <span class="tag frozen">HISTORICAL</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="codex-staging-reset-workflow-progress.html">Progress/Plan</a>
+      <div class="eyebrow">Обзор ветки</div>
+      <h1>codex/staging-reset-workflow</h1>
+      <p class="lead">Закрытая историческая ветка, где отрабатывался безопасный reset/staging workflow.</p>
+      <div class="nav">
+        <span class="tag frozen">ИСТОРИЧЕСКАЯ</span>
+        <a href="index.html">К индексу</a>
+        <a href="codex-staging-reset-workflow-progress.html">Прогресс и план</a>
+
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Можно устанавливать</b>Нет. Для установки использовать main или тестовую implementation-ветку.</div>
+        <div class="meta"><b>Основной фокус</b>История безопасной работы со staging, восстановлением и проверками перед regression.</div>
+        <div class="meta"><b>Технический профиль</b>Transport-изменения не являются целью ветки.</div>
       </div>
     </section>
 
-    <section class="grid section">
-      <article class="card">
-        <h2>Роль ветки</h2>
-        <ul>
-          <li>Историческая ветка reset-workflow</li>
-          <li>Scope: След истории staging reset этапа</li>
-          <li>Transport focus: n/a</li>
-        </ul>
-      </article>
+    <section class="callout"><b>Короткий вывод.</b> Нет. Для установки использовать main или тестовую implementation-ветку.</section>
 
-      <article class="card">
-        <h2>Функциональный профиль</h2>
-        <ul>
-          <li>Сделано: Слита в main</li>
-          <li>В работе: Новых изменений нет</li>
-          <li>Далее: Хранится только как история решений</li>
-        </ul>
+    <h2 class="section-title">Что важно понимать</h2>
+    <section class="grid wide section">
+      <article class="card strong">
+        <h2>Назначение</h2>
+        <p>История безопасной работы со staging, восстановлением и проверками перед regression.</p>
+        <details open>
+          <summary>Где эта ветка в общем процессе</summary>
+          <div><p>Закрытая историческая ветка, где отрабатывался безопасный reset/staging workflow.</p><p><b>Правило:</b> если ветка не помечена как stable или active implementation, её нельзя использовать как основной источник установки.</p></div>
+        </details>
       </article>
-
-      <article class="card">
-        <h2>DPI/Безопасность</h2>
-        <ul>
-          <li>Модель для GitHub: только технический контент о проекте.</li>
-          <li>Чувствительные данные (учётки, личные кейсы, приватные заметки) в branch docs не публикуются.</li>
-          <li>Проверка готовности: install/verify/acceptance + полевые тесты по матрице этапа.</li>
-        </ul>
+      <article class="card strong">
+        <h2>Технический профиль</h2>
+        <p>Transport-изменения не являются целью ветки.</p>
+        <details>
+          <summary>Почему это важно</summary>
+          <div><p>Мы разделяем stable, implementation, historical и upstream-ветки, чтобы не смешивать рабочую установку, эксперименты, архитектурные заметки и внешние источники.</p></div>
+        </details>
       </article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 20:16:31 (MSK) • Repo: AT-VPN-System • Branch: codex/staging-reset-workflow</p>
+    <h2 class="section-title">Состояние ветки</h2>
+    <section class="grid section">
+      <article class="card accent"><h2>Уже сделано</h2><ul>
+          <li>Сценарий staging/reset зафиксирован и перенесён в общий процесс.</li>
+          <li>Исторический контекст сохранён для аудита.</li>
+          <li>Ветка признана нерабочей для новой реализации.</li>
+        </ul></article>
+      <article class="card warning"><h2>Риски и ограничения</h2><ul>
+          <li>Новые правки создадут путаницу с platform-v2.</li>
+          <li>Установка из этой ветки не поддерживается.</li>
+        </ul></article>
+      <article class="card"><h2>Как проверять</h2><ul>
+          <li>Новые тесты не требуются.</li>
+          <li>Исторический код поднимается только как отдельный ad-hoc анализ.</li>
+        </ul></article>
+    </section>
+
+    <section class="card danger section">
+      <h2>Что нельзя делать с этой веткой</h2>
+<ul>
+          <li>Не использовать как install-source.</li>
+          <li>Не переносить новые platform-функции сюда.</li>
+        </ul>
+    </section>
+
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Репозиторий: AT-VPN-System. Ветка: codex/staging-reset-workflow. Формат: project-safe.</p>
   </main>
 </body>
 </html>

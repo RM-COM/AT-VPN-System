@@ -3,51 +3,63 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch Progress — codex/staging-reset-workflow</title>
+  <title>Прогресс и план - codex/staging-reset-workflow</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Progress & Plan: codex/staging-reset-workflow</h1>
-      <div class="muted">Страница статуса выполнения и планов ветки. Project-safe формат.</div>
-      <div class="links">
-        <span class="tag frozen">HISTORICAL</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="codex-staging-reset-workflow-overview.html">Overview</a>
+      <div class="eyebrow">Прогресс и план</div>
+      <h1>codex/staging-reset-workflow</h1>
+      <p class="lead">Страница показывает, что уже выполнено, что находится в работе, какие проверки нужны и какие следующие шаги допустимы для этой ветки.</p>
+      <div class="nav">
+        <span class="tag frozen">ИСТОРИЧЕСКАЯ</span>
+        <a href="index.html">К индексу</a>
+        <a href="codex-staging-reset-workflow-overview.html">Обзор</a>
+
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Текущий режим</b>ИСТОРИЧЕСКАЯ</div>
+        <div class="meta"><b>Установка</b>Нет. Для установки использовать main или тестовую implementation-ветку.</div>
+        <div class="meta"><b>Фокус</b>История безопасной работы со staging, восстановлением и проверками перед regression.</div>
+      </div>
+    </section>
+
+    <h2 class="section-title">Дорожная карта ветки</h2>
+    <section class="grid wide section">
+      <article class="card accent"><h2>Выполнено</h2><ul>
+          <li>Сценарий staging/reset зафиксирован и перенесён в общий процесс.</li>
+          <li>Исторический контекст сохранён для аудита.</li>
+          <li>Ветка признана нерабочей для новой реализации.</li>
+        </ul></article>
+      <article class="card warning"><h2>В работе</h2><ul>
+          <li>Новых задач нет.</li>
+        </ul></article>
+    </section>
+
+    <section class="card strong section">
+      <h2>Следующие шаги</h2>
+      <div class="timeline">
+        <div class="step">Использовать только как ссылку на историю workflow.</div>
       </div>
     </section>
 
     <section class="grid section">
-      <article class="card">
-        <h2>Выполнено</h2>
-        <ul>
-          <li>Слита в main</li>
-          <li>Документация обновляется по каноническим файлам (CHANGELOG, PROJECT_STATE, RESUME_POINT).</li>
-          <li>Для рабочих веток: обязательный commit+push после завершения этапа.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>В работе</h2>
-        <ul>
-          <li>Новых изменений нет</li>
-          <li>Для implementation-веток: regression-цикл и mobile/field проверки по матрице этапа.</li>
-          <li>Для historical/read-only веток: изменений не планируется.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>Следующие шаги</h2>
-        <ul>
-          <li>Хранится только как история решений</li>
-          <li>Перед merge в main: только проверенные изменения с подтверждёнными тестами.</li>
-          <li>Публикуемый контент остаётся project-safe и нейтральным.</li>
-        </ul>
-      </article>
+      <article class="card"><h2>Проверки перед завершением этапа</h2><ul>
+          <li>Новые тесты не требуются.</li>
+          <li>Исторический код поднимается только как отдельный ad-hoc анализ.</li>
+        </ul></article>
+      <article class="card danger"><h2>Стоп-условия</h2><ul>
+          <li>Не использовать как install-source.</li>
+          <li>Не переносить новые platform-функции сюда.</li>
+        </ul></article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 20:16:31 (MSK) • Repo: AT-VPN-System • Branch: codex/staging-reset-workflow</p>
+    <section class="callout warning">
+      <b>Правило проекта.</b> После значимого исправления, debug-этапа, документационного блока или новой функции изменения фиксируются в документации, коммитятся и отправляются в GitHub. Stable-ветка принимает только проверенные изменения.
+    </section>
+
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Репозиторий: AT-VPN-System. Ветка: codex/staging-reset-workflow. Формат: project-safe.</p>
   </main>
 </body>
 </html>

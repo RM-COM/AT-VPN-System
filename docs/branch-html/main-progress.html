@@ -3,51 +3,69 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch Progress — main</title>
+  <title>Прогресс и план - main</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Progress & Plan: main</h1>
-      <div class="muted">Страница статуса выполнения и планов ветки. Project-safe формат.</div>
-      <div class="links">
-        <span class="tag active">ACTIVE</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="main-overview.html">Overview</a>
+      <div class="eyebrow">Прогресс и план</div>
+      <h1>main</h1>
+      <p class="lead">Страница показывает, что уже выполнено, что находится в работе, какие проверки нужны и какие следующие шаги допустимы для этой ветки.</p>
+      <div class="nav">
+        <span class="tag active">АКТИВНАЯ / STABLE</span>
+        <a href="index.html">К индексу</a>
+        <a href="main-overview.html">Обзор</a>
+
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Текущий режим</b>АКТИВНАЯ / STABLE</div>
+        <div class="meta"><b>Установка</b>Да. Это основной источник для стабильной установки после regression-проверок.</div>
+        <div class="meta"><b>Фокус</b>Поддержка production-ready baseline: установка, панель, web-sub, backup, restore и безопасные обновления.</div>
+      </div>
+    </section>
+
+    <h2 class="section-title">Дорожная карта ветки</h2>
+    <section class="grid wide section">
+      <article class="card accent"><h2>Выполнено</h2><ul>
+          <li>Адаптирован install-flow под наш репозиторий.</li>
+          <li>Проверены install, verify, web-sub, backup, uninstall и restore.</li>
+          <li>README и операционные документы очищены от чужого fork-контекста.</li>
+          <li>Ветка закреплена как стабильная точка без сырых экспериментов.</li>
+        </ul></article>
+      <article class="card warning"><h2>В работе</h2><ul>
+          <li>Только сопровождение и точечные исправления после regression.</li>
+          <li>Приём изменений из platform-v2 только после тестов и отдельного решения.</li>
+        </ul></article>
+    </section>
+
+    <section class="card strong section">
+      <h2>Следующие шаги</h2>
+      <div class="timeline">
+        <div class="step">Переносить только проверенные функции из platform-v2.</div>
+        <div class="step">Сохранять ветку понятным install-source.</div>
+        <div class="step">Перед merge требовать regression и rollback-проверку.</div>
       </div>
     </section>
 
     <section class="grid section">
-      <article class="card">
-        <h2>Выполнено</h2>
-        <ul>
-          <li>Проверенный install/verify/websub/backup/uninstall/restore</li>
-          <li>Документация обновляется по каноническим файлам (CHANGELOG, PROJECT_STATE, RESUME_POINT).</li>
-          <li>Для рабочих веток: обязательный commit+push после завершения этапа.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>В работе</h2>
-        <ul>
-          <li>Только стабильные улучшения после regression</li>
-          <li>Для implementation-веток: regression-цикл и mobile/field проверки по матрице этапа.</li>
-          <li>Для historical/read-only веток: изменений не планируется.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>Следующие шаги</h2>
-        <ul>
-          <li>Принимает только завершённые и проверенные этапы из implementation-веток</li>
-          <li>Перед merge в main: только проверенные изменения с подтверждёнными тестами.</li>
-          <li>Публикуемый контент остаётся project-safe и нейтральным.</li>
-        </ul>
-      </article>
+      <article class="card"><h2>Проверки перед завершением этапа</h2><ul>
+          <li>Чистая установка на свежем сервере.</li>
+          <li>Проверка панели, подписок, сертификатов, web-sub и служб.</li>
+          <li>Backup/uninstall/restore без ручного восстановления.</li>
+          <li>Smoke-тест клиентских подключений.</li>
+        </ul></article>
+      <article class="card danger"><h2>Стоп-условия</h2><ul>
+          <li>Не внедрять экспериментальный stealth/AWG-код напрямую.</li>
+          <li>Не публиковать приватные данные, учётки, тестовые домены и личный контекст.</li>
+        </ul></article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 20:16:31 (MSK) • Repo: AT-VPN-System • Branch: main</p>
+    <section class="callout warning">
+      <b>Правило проекта.</b> После значимого исправления, debug-этапа, документационного блока или новой функции изменения фиксируются в документации, коммитятся и отправляются в GitHub. Stable-ветка принимает только проверенные изменения.
+    </section>
+
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Репозиторий: AT-VPN-System. Ветка: main. Формат: project-safe.</p>
   </main>
 </body>
 </html>

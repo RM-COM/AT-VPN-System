@@ -1,85 +1,101 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Platform Strategy — codex/platform-v2</title>
+  <title>Стратегия platform-v2</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Стратегия platform-v2</h1>
-      <div class="muted">Идея доработанного форка: multi-transport платформа с anti-DPI hardening, fallback и управляемым rollout.</div>
-      <div class="links">
-        <span class="tag active">ACTIVE STRATEGY</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="codex-platform-v2-overview.html">Overview</a>
-        <a class="pill" href="codex-platform-v2-progress.html">Progress</a>
+      <div class="eyebrow">Стратегия платформы</div>
+      <h1>platform-v2: невидимость, устойчивость и управляемые профили</h1>
+      <p class="lead">Цель ветки - превратить форк в локально контролируемую multi-transport платформу: не зависеть от одного протокола, снижать сигнатурность, иметь fallback-пути и проверять каждую гипотезу через staging и полевые тесты.</p>
+      <div class="nav">
+        <span class="tag active">АКТИВНАЯ СТРАТЕГИЯ</span>
+        <a href="index.html">К индексу</a>
+        <a href="codex-platform-v2-overview.html">Обзор ветки</a>
+        <a href="codex-platform-v2-progress.html">Прогресс и план</a>
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Главная идея</b>Снижение сигнатурности плюс быстрый fallback, а не вера в один “вечный” протокол.</div>
+        <div class="meta"><b>Текущий этап</b>Block C1: сравнение stealth-xray и stealth-xhttp.</div>
+        <div class="meta"><b>Источник</b><code>docs/PLATFORM_VISION_PLAN.md</code></div>
+      </div>
+    </section>
+
+    <section class="callout">
+      <b>Практический вывод.</b> Наша цель - не обещать абсолютную невидимость, а системно уменьшать признаки, по которым DPI может классифицировать трафик, и не терять доступ надолго, если сеть деградировала, включила whitelist или начала сбрасывать соединения.
+    </section>
+
+    <h2 class="section-title">Что мы строим</h2>
+    <section class="grid wide section">
+      <article class="card accent">
+        <h2>Локальная платформа</h2>
+        <p>Всё, что относится к нашему форку, должно жить в нашем репозитории: installer, профили, документация, будущие модули, правила проверки и HTML-отчёты. Внешние проекты можно изучать, но production-поведение должно быть управляемым нами.</p>
+      </article>
+      <article class="card accent">
+        <h2>Несколько профилей</h2>
+        <p>Платформа должна иметь основной профиль, DPI fallback, мобильный fallback-класс и резервный контур. Профили не должны конфликтовать и не должны включаться все сразу без причины.</p>
+      </article>
+    </section>
+
+    <h2 class="section-title">Модель угроз</h2>
+    <section class="grid section">
+      <article class="card warning"><h2>DPI и сигнатуры</h2><p>Проверяем TLS/SNI/ALPN/HTTP-поведение, количество соединений, тип транспорта, реакцию клиента и характер ошибок. Цель - уменьшать узнаваемость, не ломая скорость.</p></article>
+      <article class="card warning"><h2>Active probing</h2><p>Публичный 443 должен выглядеть правдоподобно. Если сканер приходит не как наш клиент, он не должен видеть открытую служебную поверхность.</p></article>
+      <article class="card warning"><h2>RST/drop</h2><p>RST-инъекции и silent drop нельзя лечить одной настройкой. Нужны reconnect-проверки, fallback-профили, наблюдаемость логов и аккуратная работа с транспортами.</p></article>
+      <article class="card warning"><h2>Mobile whitelist</h2><p>Если мобильная сеть пропускает только белые IP/ASN, transport-тюнинг может не помочь. Это отдельное будущее направление: white IP, Yandex Cloud, VK Cloud, специальные подсети.</p></article>
+      <article class="card warning"><h2>Single-IP co-tenancy</h2><p>Если Xray и AWG активно шумят на одном IP, DPI может коррелировать поведение. Поэтому AWG должен идти отдельным hardened-модулем и с отдельной приёмкой.</p></article>
+      <article class="card warning"><h2>Скорость</h2><p>Слишком тяжёлая обфускация может снизить скорость. Поэтому каждый профиль должен иметь баланс: невидимость, устойчивость, задержка, throughput и стабильность при нагрузке.</p></article>
+    </section>
+
+    <h2 class="section-title">Технологические направления</h2>
+    <section class="grid wide section">
+      <article class="card strong"><h2>REALITY / Vision</h2><p>Быстрый low-latency профиль. Подходит как основной кандидат, если сеть не режет его по признакам или IP/ASN. Требует проверки на reconnect и мобильной сети.</p></article>
+      <article class="card strong"><h2>REALITY / XHTTP</h2><p>Более выраженный anti-DPI кандидат. Его задача - дать другой сетевой рисунок и fallback, когда обычный Vision деградирует или становится нестабильным.</p></article>
+      <article class="card strong"><h2>stealth-multi</h2><p>Будущий объединённый профиль. Он должен собираться только из проверенных transport-путей, а не просто добавлять “много подключений” без понятной цели.</p></article>
+      <article class="card strong"><h2>Admin hardening</h2><p>Панель, подписки, секреты и web-sub должны быть защищены отдельно. Нельзя усиливать transport и оставлять слабую выдачу конфигов.</p></article>
+      <article class="card strong"><h2>Hardened AWG</h2><p>AmneziaWG остаётся будущим opt-in модулем. Его нужно локализовать в репозитории, настроить безопаснее дефолта, добавить auth и проверить IP-риск общего узла.</p></article>
+      <article class="card strong"><h2>Наблюдаемость</h2><p>Нужны verify-команды, диагностика nginx/x-ui/xray, фиксация ошибок closed pipe/read-write, service health, inbound JSON и поведения клиентов.</p></article>
+    </section>
+
+    <h2 class="section-title">План реализации</h2>
+    <section class="card strong section">
+      <div class="timeline">
+        <div class="step"><b>Закрыть Block C1.</b> Сравнить stealth-xray и stealth-xhttp: Wi-Fi, LTE, reconnect, 30-60 минут, 4K-нагрузка, Telegram/web, ошибки клиентов и серверные логи.</div>
+        <div class="step"><b>Выбрать production-профиль.</b> Отдельно назначить основной путь, DPI fallback и мобильный fallback-класс.</div>
+        <div class="step"><b>Собрать stealth-multi.</b> Включать только проверенные transport-пути, чтобы не создавать лишний шум и не ухудшить скорость.</div>
+        <div class="step"><b>Усилить admin/subscription.</b> Защитить панель, web-sub, секреты, выдачу конфигов и rollback.</div>
+        <div class="step"><b>Подготовить hardened-awg.</b> Локальный модуль, docker-управление, auth, безопасные параметры, отдельная приёмка и оценка single-IP риска.</div>
+        <div class="step"><b>Позже исследовать white IP.</b> Отдельно проверить Yandex Cloud, VK Cloud, специальные подсети и сценарии mobile whitelist. Сейчас это идея, не текущая реализация.</div>
+        <div class="step"><b>Оптимизировать скорость.</b> После transport/security-стабилизации открыть performance-блок: throughput, latency, mux, параметры клиентов и нагрузочные профили.</div>
       </div>
     </section>
 
     <section class="grid section">
-      <article class="card">
-        <h2>Идея</h2>
+      <article class="card accent">
+        <h2>Критерии успеха</h2>
         <ul>
-          <li>Не один магический протокол, а управляемая local-first платформа.</li>
-          <li>Цель: невидимость до детекта, устойчивость после деградации, быстрый fallback.</li>
-          <li>Каждый этап проходит design, staging, field acceptance, docs, commit and push.</li>
+          <li>Есть минимум один стабильный основной профиль и один реально проверенный fallback.</li>
+          <li>Понятно, где проблема transport/DPI, а где IP/ASN или mobile whitelist.</li>
+          <li>Каждый модуль имеет install, verify, rollback и документацию.</li>
+          <li>HTML и MD-документы обновлены после каждого этапа.</li>
         </ul>
       </article>
-
-      <article class="card">
-        <h2>Технологии</h2>
+      <article class="card danger">
+        <h2>Чего не делаем</h2>
         <ul>
-          <li>REALITY/Vision как быстрый low-latency профиль.</li>
-          <li>REALITY/XHTTP как более агрессивный anti-DPI профиль.</li>
-          <li>Controlled tuning: mobile-safe, low-latency, aggressive-stealth.</li>
-          <li>Hardened AWG как будущий opt-in модуль, не дефолтный контейнер.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>Threat Model</h2>
-        <ul>
-          <li>ordinary DPI: TLS/SNI/ALPN/HTTP fingerprint.</li>
-          <li>active probing: публичный 443 должен давать правдоподобный fallback.</li>
-          <li>single-IP co-tenancy: Xray и AWG на одном IP требуют отдельной приёмки.</li>
-          <li>mobile whitelist: LTE может требовать отдельный fallback-класс.</li>
+          <li>Не обещаем абсолютную невидимость.</li>
+          <li>Не добавляем протоколы без тестовой пользы.</li>
+          <li>Не публикуем приватный контекст в GitHub.</li>
+          <li>Не включаем AWG в общий installer до hardening-плана.</li>
         </ul>
       </article>
     </section>
 
-    <section class="grid section">
-      <article class="card">
-        <h2>Ближайший фокус</h2>
-        <ul>
-          <li>Закрыть Block C1: stealth-xray vs stealth-xhttp.</li>
-          <li>Разделять причины сбоев: DPI, co-tenancy, whitelist, IP/ASN.</li>
-          <li>Собрать production-рекомендацию: main profile, DPI fallback, mobile whitelist fallback.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>После C1</h2>
-        <ul>
-          <li>Ввести stealth-multi только из проверенных transport-путей.</li>
-          <li>Усилить admin/subscription контур.</li>
-          <li>Подготовить hardened-awg на резервном контуре.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>Отложено</h2>
-        <ul>
-          <li>White IP / cloud allowlist research для mobile whitelist windows.</li>
-          <li>Yandex Cloud / VK Cloud / специальные подсети проверять позже по актуальным источникам.</li>
-          <li>Performance tuning открыть отдельным этапом после transport/security.</li>
-        </ul>
-      </article>
-    </section>
-
-    <p class="footer">Generated: 2026-04-10 23:09:41 (MSK) • Source: docs/PLATFORM_VISION_PLAN.md • Branch: codex/platform-v2</p>
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Источник: <code>docs/PLATFORM_VISION_PLAN.md</code>. Ветка: codex/platform-v2. Формат: project-safe.</p>
   </main>
 </body>
 </html>

@@ -3,51 +3,63 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch Progress — upstream/master</title>
+  <title>Прогресс и план - upstream/master</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Progress & Plan: upstream/master</h1>
-      <div class="muted">Страница статуса выполнения и планов ветки. Project-safe формат.</div>
-      <div class="links">
+      <div class="eyebrow">Прогресс и план</div>
+      <h1>upstream/master</h1>
+      <p class="lead">Страница показывает, что уже выполнено, что находится в работе, какие проверки нужны и какие следующие шаги допустимы для этой ветки.</p>
+      <div class="nav">
         <span class="tag readonly">READ-ONLY</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="upstream-master-overview.html">Overview</a>
+        <a href="index.html">К индексу</a>
+        <a href="upstream-master-overview.html">Обзор</a>
+
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Текущий режим</b>READ-ONLY</div>
+        <div class="meta"><b>Установка</b>Нет в рамках нашего форка. Для установки используется наш репозиторий и наши ветки.</div>
+        <div class="meta"><b>Фокус</b>Внешняя база проекта до наших изменений.</div>
+      </div>
+    </section>
+
+    <h2 class="section-title">Дорожная карта ветки</h2>
+    <section class="grid wide section">
+      <article class="card accent"><h2>Выполнено</h2><ul>
+          <li>Ветка помечена как read-only.</li>
+          <li>Роль upstream отделена от stable и implementation-контуров.</li>
+        </ul></article>
+      <article class="card warning"><h2>В работе</h2><ul>
+          <li>Только периодическое сравнение при необходимости.</li>
+        </ul></article>
+    </section>
+
+    <section class="card strong section">
+      <h2>Следующие шаги</h2>
+      <div class="timeline">
+        <div class="step">Переносить идеи только через review и тесты в нашей ветке.</div>
       </div>
     </section>
 
     <section class="grid section">
-      <article class="card">
-        <h2>Выполнено</h2>
-        <ul>
-          <li>Используется для анализа</li>
-          <li>Документация обновляется по каноническим файлам (CHANGELOG, PROJECT_STATE, RESUME_POINT).</li>
-          <li>Для рабочих веток: обязательный commit+push после завершения этапа.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>В работе</h2>
-        <ul>
-          <li>Локальных изменений нет</li>
-          <li>Для implementation-веток: regression-цикл и mobile/field проверки по матрице этапа.</li>
-          <li>Для historical/read-only веток: изменений не планируется.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>Следующие шаги</h2>
-        <ul>
-          <li>Только read-only reference</li>
-          <li>Перед merge в main: только проверенные изменения с подтверждёнными тестами.</li>
-          <li>Публикуемый контент остаётся project-safe и нейтральным.</li>
-        </ul>
-      </article>
+      <article class="card"><h2>Проверки перед завершением этапа</h2><ul>
+          <li>Перед переносом идеи: diff, code review, staging, regression.</li>
+          <li>Без тестов upstream-изменения не попадают в main.</li>
+        </ul></article>
+      <article class="card danger"><h2>Стоп-условия</h2><ul>
+          <li>Не пушить в upstream/*.</li>
+          <li>Не использовать как документацию нашего форка.</li>
+          <li>Не заменять наш README upstream-текстом.</li>
+        </ul></article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 20:16:31 (MSK) • Repo: AT-VPN-System • Branch: upstream/master</p>
+    <section class="callout warning">
+      <b>Правило проекта.</b> После значимого исправления, debug-этапа, документационного блока или новой функции изменения фиксируются в документации, коммитятся и отправляются в GitHub. Stable-ветка принимает только проверенные изменения.
+    </section>
+
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Репозиторий: AT-VPN-System. Ветка: upstream/master. Формат: project-safe.</p>
   </main>
 </body>
 </html>

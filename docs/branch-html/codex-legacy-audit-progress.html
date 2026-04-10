@@ -3,51 +3,63 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch Progress — codex/legacy-audit</title>
+  <title>Прогресс и план - codex/legacy-audit</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Progress & Plan: codex/legacy-audit</h1>
-      <div class="muted">Страница статуса выполнения и планов ветки. Project-safe формат.</div>
-      <div class="links">
-        <span class="tag frozen">TRANSITIONAL HISTORICAL</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="codex-legacy-audit-overview.html">Overview</a>
+      <div class="eyebrow">Прогресс и план</div>
+      <h1>codex/legacy-audit</h1>
+      <p class="lead">Страница показывает, что уже выполнено, что находится в работе, какие проверки нужны и какие следующие шаги допустимы для этой ветки.</p>
+      <div class="nav">
+        <span class="tag frozen">ПЕРЕХОДНАЯ ИСТОРИЧЕСКАЯ</span>
+        <a href="index.html">К индексу</a>
+        <a href="codex-legacy-audit-overview.html">Обзор</a>
+
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Текущий режим</b>ПЕРЕХОДНАЯ ИСТОРИЧЕСКАЯ</div>
+        <div class="meta"><b>Установка</b>Нет. Это не install-source.</div>
+        <div class="meta"><b>Фокус</b>Legacy audit, фиксация различий старого форка и нашей будущей структуры.</div>
+      </div>
+    </section>
+
+    <h2 class="section-title">Дорожная карта ветки</h2>
+    <section class="grid wide section">
+      <article class="card accent"><h2>Выполнено</h2><ul>
+          <li>Сохранены уникальные подготовительные коммиты.</li>
+          <li>Зафиксирована история старого форка и причины реорганизации.</li>
+          <li>Определено, что новая большая разработка идёт в platform-v2.</li>
+        </ul></article>
+      <article class="card warning"><h2>В работе</h2><ul>
+          <li>Новых задач нет.</li>
+        </ul></article>
+    </section>
+
+    <section class="card strong section">
+      <h2>Следующие шаги</h2>
+      <div class="timeline">
+        <div class="step">Переносить только идеи, а не продолжать ветку как рабочую.</div>
       </div>
     </section>
 
     <section class="grid section">
-      <article class="card">
-        <h2>Выполнено</h2>
-        <ul>
-          <li>Уникальные исторические коммиты сохранены</li>
-          <li>Документация обновляется по каноническим файлам (CHANGELOG, PROJECT_STATE, RESUME_POINT).</li>
-          <li>Для рабочих веток: обязательный commit+push после завершения этапа.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>В работе</h2>
-        <ul>
-          <li>Новых implementation-изменений нет</li>
-          <li>Для implementation-веток: regression-цикл и mobile/field проверки по матрице этапа.</li>
-          <li>Для historical/read-only веток: изменений не планируется.</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>Следующие шаги</h2>
-        <ul>
-          <li>Не использовать как install-source</li>
-          <li>Перед merge в main: только проверенные изменения с подтверждёнными тестами.</li>
-          <li>Публикуемый контент остаётся project-safe и нейтральным.</li>
-        </ul>
-      </article>
+      <article class="card"><h2>Проверки перед завершением этапа</h2><ul>
+          <li>Тестирование не требуется.</li>
+          <li>Содержимое используется как справочный материал.</li>
+        </ul></article>
+      <article class="card danger"><h2>Стоп-условия</h2><ul>
+          <li>Не использовать для установки.</li>
+          <li>Не добавлять новые anti-DPI или AWG изменения.</li>
+        </ul></article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 20:16:31 (MSK) • Repo: AT-VPN-System • Branch: codex/legacy-audit</p>
+    <section class="callout warning">
+      <b>Правило проекта.</b> После значимого исправления, debug-этапа, документационного блока или новой функции изменения фиксируются в документации, коммитятся и отправляются в GitHub. Stable-ветка принимает только проверенные изменения.
+    </section>
+
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Репозиторий: AT-VPN-System. Ветка: codex/legacy-audit. Формат: project-safe.</p>
   </main>
 </body>
 </html>

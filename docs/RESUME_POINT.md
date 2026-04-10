@@ -10,6 +10,7 @@
 - [2026-04-10 23:00:59] Уточнение по `AWG`: hardened `AWG` не запрещён для будущего основного IP, но сначала должен пройти отдельную реализацию и co-tenancy acceptance; дефолтный контейнерный запуск не подходит как production-сосед `Xray`.
 - [2026-04-10 23:05:05] Новый симптом для текущего triage: `Reality First` работает на Wi‑Fi, но на мобильной сети даёт `I/O read/write on closed pipe`; текущая гипотеза — mobile whitelist/IP-level drop, поэтому нужен отдельный whitelist-resilient fallback-класс.
 - [2026-04-10 23:09:41] Итоговая идея форка и staged-план работ вынесены в `PLATFORM_VISION_PLAN.md`; HTML-версия для ветки находится в `docs/branch-html/codex-platform-v2-strategy.html`.
+- [2026-04-10 23:30:48] Visual docs-слой пересобран: `docs/branch-html/index.html` и все branch-specific HTML теперь на русском, с подробными карточками назначения, install-режима, рисков, проверок, стоп-условий и дальнейших шагов; генератор находится в `docs/branch-html/render-branch-html.ps1`.
 - [2026-04-10 22:10:47] После закрытия `C1`: формальная production-рекомендация «основной профиль + fallback-профиль», затем переход к `stealth-multi`/`AWG`.
 - [2026-04-10 22:10:47] Документация приведена к единому процессу через `DOCS_WORKFLOW.md`; текущий ориентир по docs-слою — `INDEX.md` и `DOCS_MATRIX.md`.
 

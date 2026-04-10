@@ -3,51 +3,76 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Branch Overview — codex/legacy-audit</title>
+  <title>Обзор ветки - codex/legacy-audit</title>
   <link rel="stylesheet" href="assets/branch-report.css" />
 </head>
 <body>
   <main class="container">
     <section class="header">
-      <h1>Ветка: codex/legacy-audit</h1>
-      <div class="muted">Отчёт branch-overview. Формат: project-safe, без личного контекста.</div>
-      <div class="links">
-        <span class="tag frozen">TRANSITIONAL HISTORICAL</span>
-        <a class="pill" href="index.html">К индексу веток</a>
-        <a class="pill" href="codex-legacy-audit-progress.html">Progress/Plan</a>
+      <div class="eyebrow">Обзор ветки</div>
+      <h1>codex/legacy-audit</h1>
+      <p class="lead">Ветка аудита старого состояния: что было в исходном форке и какие выводы были сделаны.</p>
+      <div class="nav">
+        <span class="tag frozen">ПЕРЕХОДНАЯ ИСТОРИЧЕСКАЯ</span>
+        <a href="index.html">К индексу</a>
+        <a href="codex-legacy-audit-progress.html">Прогресс и план</a>
+
+      </div>
+      <div class="meta-grid">
+        <div class="meta"><b>Можно устанавливать</b>Нет. Это не install-source.</div>
+        <div class="meta"><b>Основной фокус</b>Legacy audit, фиксация различий старого форка и нашей будущей структуры.</div>
+        <div class="meta"><b>Технический профиль</b>Не является transport-веткой.</div>
       </div>
     </section>
 
-    <section class="grid section">
-      <article class="card">
-        <h2>Роль ветки</h2>
-        <ul>
-          <li>Переходная историческая ветка</li>
-          <li>Scope: Legacy audit и подготовительные коммиты</li>
-          <li>Transport focus: n/a</li>
-        </ul>
-      </article>
+    <section class="callout"><b>Короткий вывод.</b> Нет. Это не install-source.</section>
 
-      <article class="card">
-        <h2>Функциональный профиль</h2>
-        <ul>
-          <li>Сделано: Уникальные исторические коммиты сохранены</li>
-          <li>В работе: Новых implementation-изменений нет</li>
-          <li>Далее: Не использовать как install-source</li>
-        </ul>
+    <h2 class="section-title">Что важно понимать</h2>
+    <section class="grid wide section">
+      <article class="card strong">
+        <h2>Назначение</h2>
+        <p>Legacy audit, фиксация различий старого форка и нашей будущей структуры.</p>
+        <details open>
+          <summary>Где эта ветка в общем процессе</summary>
+          <div><p>Ветка аудита старого состояния: что было в исходном форке и какие выводы были сделаны.</p><p><b>Правило:</b> если ветка не помечена как stable или active implementation, её нельзя использовать как основной источник установки.</p></div>
+        </details>
       </article>
-
-      <article class="card">
-        <h2>DPI/Безопасность</h2>
-        <ul>
-          <li>Модель для GitHub: только технический контент о проекте.</li>
-          <li>Чувствительные данные (учётки, личные кейсы, приватные заметки) в branch docs не публикуются.</li>
-          <li>Проверка готовности: install/verify/acceptance + полевые тесты по матрице этапа.</li>
-        </ul>
+      <article class="card strong">
+        <h2>Технический профиль</h2>
+        <p>Не является transport-веткой.</p>
+        <details>
+          <summary>Почему это важно</summary>
+          <div><p>Мы разделяем stable, implementation, historical и upstream-ветки, чтобы не смешивать рабочую установку, эксперименты, архитектурные заметки и внешние источники.</p></div>
+        </details>
       </article>
     </section>
 
-    <p class="footer">Generated: 2026-04-10 20:16:31 (MSK) • Repo: AT-VPN-System • Branch: codex/legacy-audit</p>
+    <h2 class="section-title">Состояние ветки</h2>
+    <section class="grid section">
+      <article class="card accent"><h2>Уже сделано</h2><ul>
+          <li>Сохранены уникальные подготовительные коммиты.</li>
+          <li>Зафиксирована история старого форка и причины реорганизации.</li>
+          <li>Определено, что новая большая разработка идёт в platform-v2.</li>
+        </ul></article>
+      <article class="card warning"><h2>Риски и ограничения</h2><ul>
+          <li>Можно ошибочно принять legacy-аудит за актуальное состояние проекта.</li>
+          <li>Новые изменения усложнят историю веток.</li>
+        </ul></article>
+      <article class="card"><h2>Как проверять</h2><ul>
+          <li>Тестирование не требуется.</li>
+          <li>Содержимое используется как справочный материал.</li>
+        </ul></article>
+    </section>
+
+    <section class="card danger section">
+      <h2>Что нельзя делать с этой веткой</h2>
+<ul>
+          <li>Не использовать для установки.</li>
+          <li>Не добавлять новые anti-DPI или AWG изменения.</li>
+        </ul>
+    </section>
+
+    <p class="footer">Обновлено: 2026-04-10 23:33:52 (MSK). Репозиторий: AT-VPN-System. Ветка: codex/legacy-audit. Формат: project-safe.</p>
   </main>
 </body>
 </html>

@@ -36,7 +36,7 @@
 - [2026-04-08 04:30:47] `SERVICES_PLAN.md` — детальный инфраструктурный источник; теперь используется как supporting-source для `PROJECT_STATE.md`.
 - [2026-04-08 04:30:47] `DEBUG_MODE.md` — детальный источник по диагностике; теперь используется как supporting-source для `OPERATIONS.md`.
 - [2026-04-08 04:30:47] `STAGING_RESET.md` — детальный источник по reset-сценарию; теперь используется как supporting-source для `OPERATIONS.md`.
-- [2026-04-10 20:16:31] `branch-html/` — визуальный слой branch-specific отчётов (`overview` и `progress`) для каждой ветки из `BRANCH_MATRIX.md`.
+- [2026-04-10 23:30:48] `branch-html/` — визуальный слой branch-specific отчётов для каждой ветки из `BRANCH_MATRIX.md`: `overview`, `progress`, стратегия `platform-v2`, общий стиль и генератор `render-branch-html.ps1`.
 
 ## Исторические и справочные документы
 

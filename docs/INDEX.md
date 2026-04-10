@@ -33,7 +33,7 @@
 - [2026-04-05 06:17:58] `DEBUG_MODE.md` — подробный документ по диагностическим режимам.
 - [2026-04-05 07:35:53] `STAGING_RESET.md` — подробный документ по reset-потоку staging-ноды.
 - [2026-04-07 03:53:02] `ARCHITECTURE_NEXT.md` — переходный design-doc перед появлением `PLATFORM_BLUEPRINT.md`.
-- [2026-04-10 20:16:31] `branch-html/` — branch-specific HTML-отчёты (`overview` и `progress`) для каждой ветки из `BRANCH_MATRIX.md`.
+- [2026-04-10 23:30:48] `branch-html/` — подробные branch-specific HTML-отчёты на русском языке: `overview`, `progress`, стратегия `platform-v2`, общий стиль и генератор `render-branch-html.ps1`.
 
 ## Исторические и справочные документы
 
