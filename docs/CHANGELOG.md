@@ -207,6 +207,8 @@
 - [2026-04-10 08:06:43] `platform-v2`: metadata-driven tuning расширен и на `REALITY` для stealth-профилей, а `stage=acceptance` получил расширенный mobile-triage bundle (`ss -tinp`, `ss -s`, `journalctl`, transport-aware checklist) без изменения текущих runtime-дефолтов.
 - [2026-04-10 08:10:51] `platform-v2`: для `stealth-xhttp` включён первый controlled `mobile-safe` preset. Профиль теперь использует более мягкие `xhttp`/`sockopt` параметры для mobile-data теста, не меняя общую stealth-архитектуру.
 - [2026-04-10 08:14:46] `staging`: новый `mobile-safe stealth-xhttp` уже применён на `185.207.64.40`, repeated install завершился успешно, strict `verify` подтвердил `PASS`, а `x-ui.db` показывает новые `xhttpSettings/sockopt` значения пресета.
+- [2026-04-10 22:10:47] В `XRAY_DPI_PLAN.md` добавлен обязательный подэтап `Block C1 (must-have)`: формально зафиксированы цели «максимальная невидимость для DPI + устойчивость long-running/reconnect + приемлемая скорость» и условия закрытия этого подэтапа до перехода к `AWG`.
+- [2026-04-10 22:10:47] Канонические точки исполнения синхронизированы под `Block C1`: обновлены `PROJECT_STATE.md`, `RESUME_POINT.md` и `MASTER_PLAN.md` (добавлен `[ПУНКТ 52 / В РАБОТЕ]`).
 
 
 
