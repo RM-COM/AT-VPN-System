@@ -1,6 +1,8 @@
 ﻿# CHANGELOG
 
-- [2026-04-10 20:07:20] Зафиксирован новый канонический документ `docs/FAMILY_CONNECTIVITY_REQUIREMENTS.md`: в нём собраны продуктовые выводы из диалогов по устойчивой связи для семьи/работы, ограничениям по инфраструктуре, anti-RST подходу, staged-интеграции `AWG` и требованиям к операционной фиксации контекста.
+- [2026-04-10 20:19:11] В `RULES.md` добавлено обязательное project-safe правило публикации: в GitHub-документации и branch HTML/README допускается только технический контент о проекте без личного контекста.
+- [2026-04-10 20:19:11] Добавлен visual-layer `docs/branch-html/`: общий `index.html`, единый стиль `assets/branch-report.css` и по 2 branch-specific страницы (`overview` + `progress`) для всех веток из `BRANCH_MATRIX.md`.
+- [2026-04-10 20:07:20] Зафиксирован новый канонический документ `docs/PROJECT_CONNECTIVITY_REQUIREMENTS.md`: в нём собраны продуктовые выводы по устойчивой связи и рабочим сценариям, ограничениям по инфраструктуре, anti-RST подходу, staged-интеграции `AWG` и требованиям к операционной фиксации контекста.
 - [2026-04-10 20:07:20] Канонический слой документации синхронизирован под новый документ: обновлены `INDEX.md`, `DOCS_MATRIX.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `XRAY_DPI_PLAN.md`.
 - [2026-04-10 19:41:17] На новом staging-сервере `217.199.253.102` повторно подтверждён runnable-контур `stealth/stealth-xhttp`: выполнены install, strict `-stage verify` и `-stage acceptance` (`5m/30s`) с полным `PASS`.
 - [2026-04-10 19:41:17] Зафиксирован operational-нюанс деплоя: для выбора профиля через `sudo` нужно передавать env как `sudo env PLATFORM_PROFILE=... TRANSPORT_PROFILE=...`, иначе сервер поднимается с `classic` defaults.
@@ -205,6 +207,9 @@
 - [2026-04-10 08:06:43] `platform-v2`: metadata-driven tuning расширен и на `REALITY` для stealth-профилей, а `stage=acceptance` получил расширенный mobile-triage bundle (`ss -tinp`, `ss -s`, `journalctl`, transport-aware checklist) без изменения текущих runtime-дефолтов.
 - [2026-04-10 08:10:51] `platform-v2`: для `stealth-xhttp` включён первый controlled `mobile-safe` preset. Профиль теперь использует более мягкие `xhttp`/`sockopt` параметры для mobile-data теста, не меняя общую stealth-архитектуру.
 - [2026-04-10 08:14:46] `staging`: новый `mobile-safe stealth-xhttp` уже применён на `185.207.64.40`, repeated install завершился успешно, strict `verify` подтвердил `PASS`, а `x-ui.db` показывает новые `xhttpSettings/sockopt` значения пресета.
+
+
+
 
 
 

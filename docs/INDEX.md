@@ -1,6 +1,6 @@
 ﻿# Индекс документации
 
-- [2026-04-10 20:07:20] Канонический минимальный набор документов для повседневной работы: `RULES.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `CHANGELOG.md`, `PROJECT_STATE.md`, `OPERATIONS.md`, `REGRESSION_CHECKLIST.md`, `FORK_PASSPORT.md`, `PLATFORM_BLUEPRINT.md`, `XRAY_DPI_PLAN.md`, `ANTI_DPI_MATRIX.md`, `FAMILY_CONNECTIVITY_REQUIREMENTS.md`, `BRANCH_MATRIX.md`, `DOCS_MATRIX.md`, `BRANCH_CONTEXT.md`.
+- [2026-04-10 20:07:20] Канонический минимальный набор документов для повседневной работы: `RULES.md`, `MASTER_PLAN.md`, `RESUME_POINT.md`, `CHANGELOG.md`, `PROJECT_STATE.md`, `OPERATIONS.md`, `REGRESSION_CHECKLIST.md`, `FORK_PASSPORT.md`, `PLATFORM_BLUEPRINT.md`, `XRAY_DPI_PLAN.md`, `ANTI_DPI_MATRIX.md`, `PROJECT_CONNECTIVITY_REQUIREMENTS.md`, `BRANCH_MATRIX.md`, `DOCS_MATRIX.md`, `BRANCH_CONTEXT.md`.
 
 ## Канонические документы
 
@@ -16,7 +16,7 @@
 - [2026-04-07 04:23:02] `PLATFORM_BLUEPRINT.md` — каноническое верхнеуровневое ТЗ следующей платформенной архитектуры.
 - [2026-04-08 22:29:01] `XRAY_DPI_PLAN.md` — отдельный фазовый план закрытия текущего `Xray/DPI` этапа до перехода к `AWG` и следующему блоку ускорений.
 - [2026-04-09 00:15:49] `ANTI_DPI_MATRIX.md` — каноническая матрица приёмки и выбора между `classic`, `stealth-xray` и `stealth-xhttp`.
-- [2026-04-10 20:07:20] `FAMILY_CONNECTIVITY_REQUIREMENTS.md` — зафиксированные продуктовые выводы по «всегда на связи» сценарию: ограничения, целевая архитектура, anti-RST требования и операционные правила фиксации контекста.
+- [2026-04-10 20:07:20] `PROJECT_CONNECTIVITY_REQUIREMENTS.md` — зафиксированные продуктовые выводы по «всегда на связи» сценарию: ограничения, целевая архитектура, anti-RST требования и операционные правила фиксации контекста.
 - [2026-04-08 04:30:47] `BRANCH_MATRIX.md` — каноническая матрица веток, их ролей и статусов.
 - [2026-04-08 04:30:47] `DOCS_MATRIX.md` — каноническая матрица документации и ролей файлов.
 
@@ -29,9 +29,11 @@
 - [2026-04-05 06:17:58] `DEBUG_MODE.md` — подробный документ по диагностическим режимам.
 - [2026-04-05 07:35:53] `STAGING_RESET.md` — подробный документ по reset-потоку staging-ноды.
 - [2026-04-07 03:53:02] `ARCHITECTURE_NEXT.md` — переходный design-doc перед появлением `PLATFORM_BLUEPRINT.md`.
+- [2026-04-10 20:16:31] `branch-html/` — branch-specific HTML-отчёты (`overview` и `progress`) для каждой ветки из `BRANCH_MATRIX.md`.
 
 ## Исторические и справочные документы
 
 - [2026-04-05 05:53:47] `REPOSITORY_MAP.md` — карта репозитория и назначение ключевых файлов.
 - [2026-04-05 05:58:19] `REPOSITORY_AUDIT.md` — первичный технический и безопасностный аудит форка.
 - [2026-04-07 01:16:59] `LEGACY_AUDIT.md` — аудит архивного `x-ui-pro-old.sh` и причины блокировки legacy-контура.
+

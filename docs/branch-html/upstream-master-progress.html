@@ -1,0 +1,53 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Branch Progress — upstream/master</title>
+  <link rel="stylesheet" href="assets/branch-report.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="header">
+      <h1>Progress & Plan: upstream/master</h1>
+      <div class="muted">Страница статуса выполнения и планов ветки. Project-safe формат.</div>
+      <div class="links">
+        <span class="tag readonly">READ-ONLY</span>
+        <a class="pill" href="index.html">К индексу веток</a>
+        <a class="pill" href="upstream-master-overview.html">Overview</a>
+      </div>
+    </section>
+
+    <section class="grid section">
+      <article class="card">
+        <h2>Выполнено</h2>
+        <ul>
+          <li>Используется для анализа</li>
+          <li>Документация обновляется по каноническим файлам (CHANGELOG, PROJECT_STATE, RESUME_POINT).</li>
+          <li>Для рабочих веток: обязательный commit+push после завершения этапа.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>В работе</h2>
+        <ul>
+          <li>Локальных изменений нет</li>
+          <li>Для implementation-веток: regression-цикл и mobile/field проверки по матрице этапа.</li>
+          <li>Для historical/read-only веток: изменений не планируется.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>Следующие шаги</h2>
+        <ul>
+          <li>Только read-only reference</li>
+          <li>Перед merge в main: только проверенные изменения с подтверждёнными тестами.</li>
+          <li>Публикуемый контент остаётся project-safe и нейтральным.</li>
+        </ul>
+      </article>
+    </section>
+
+    <p class="footer">Generated: 2026-04-10 20:16:31 (MSK) • Repo: AT-VPN-System • Branch: upstream/master</p>
+  </main>
+</body>
+</html>
