@@ -109,6 +109,8 @@ def maybe_inject_sockopt(outbound, sockopt_map):
     if isinstance(existing_sockopt, dict) and existing_sockopt:
         return outbound
     injected_sockopt = sockopt_map.get((network, security))
+    if not injected_sockopt:
+        injected_sockopt = sockopt_map.get((network, None))
     if injected_sockopt:
         stream_settings["sockopt"] = injected_sockopt
     return outbound
@@ -185,6 +187,8 @@ class RewriteHTTPServer(ThreadingHTTPServer):
                     client_sockopt = build_client_sockopt(stream_settings.get("sockopt"))
                     if network and security and client_sockopt:
                         sockopt_map[(network, security)] = client_sockopt
+                    if network and client_sockopt and (network, None) not in sockopt_map:
+                        sockopt_map[(network, None)] = client_sockopt
                 return sockopt_map
             finally:
                 connection.close()
