@@ -156,6 +156,7 @@ sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes
 ```bash
 sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xray -reality_tuning_profile aggressive-stealth -acceptance_label xray-evening -acceptance_matrix_group c1-longrun -acceptance_network LTE -acceptance_operator "MTS" -acceptance_time_window "evening-no-whitelist" -acceptance_client "Android/v2rayNG" -acceptance_minutes 5 -acceptance_interval_seconds 30
 sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xhttp -reality_tuning_profile mobile-safe -xhttp_tuning_profile handoff-safe -acceptance_label xhttp-evening -acceptance_matrix_group c1-longrun -acceptance_network LTE -acceptance_operator "MTS" -acceptance_time_window "evening-no-whitelist" -acceptance_client "Android/v2rayNG" -acceptance_minutes 5 -acceptance_interval_seconds 30
+sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xhttp -reality_tuning_profile mobile-safe -xhttp_tuning_profile balanced-speed -acceptance_label xhttp-balanced-speed -acceptance_matrix_group c1-speed -acceptance_network LTE -acceptance_operator "MTS" -acceptance_time_window "daytime" -acceptance_client "Android/v2rayNG" -acceptance_minutes 5 -acceptance_interval_seconds 30
 ```
 
 Безопасный предпросмотр install-сценария без изменения системы:
