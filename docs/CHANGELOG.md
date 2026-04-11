@@ -1,4 +1,6 @@
 ﻿# CHANGELOG
+- [2026-04-11 19:35:00] fix: installer `3x-ui` теперь явно включает `subJsonEnable=true`; раньше JSON subscription route физически не монтировался, из-за чего `https://<domain>/<subJsonPath>/<subid>` возвращал `404`.
+- [2026-04-11 19:35:00] fix: `subJsonURI` приведён к реальному JSON endpoint (`https://<domain>/<subJsonPath>/`), а не к web-sub странице `/?name=`; `verify` дополнительно начал проверять локальный JSON subscription endpoint и валить установку, если он отвечает HTML или не отвечает вовсе.
 - [2026-04-11 18:25:00] fix: найдена и устранена реальная server-side причина падения `stealth-xhttp` на staging: Xray inbound, сгенерированный `x-ui`, отбрасывал запросы с `invalid padding`, потому что server-side `xPaddingBytes` в preset'ах был уже, чем фактический client-side default padding.
 - [2026-04-11 18:25:00] fix: для `stealth-xhttp` безопасный server-side диапазон `TRANSPORT_XHTTP_X_PADDING_BYTES` выровнен на `100-1000` в профильных defaults и preset'ах `mobile-safe`, `low-latency`, `aggressive-stealth`; узкие значения вроде `16-96` и `32-256` больше не применяются серверу.
 - [2026-04-11 18:40:00] docs: `site realism` вынесен в явный backlog anti-probing hardening: оба публичных домена должны вести себя как правдоподобные живые HTTPS-сайты, а не как формальные технические заглушки.

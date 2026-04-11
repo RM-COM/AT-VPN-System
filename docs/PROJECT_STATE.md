@@ -7,6 +7,8 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-11 19:35:00] Для subscription delivery подтверждён отдельный installer-регресс: JSON subscription route в `3x-ui` не включался, потому что форк записывал `subJsonPath`, но не записывал `subJsonEnable=true`; это исправлено в актуальном installer-контуре.
+- [2026-04-11 19:35:00] Дополнительно нормализован контракт `subJsonURI`: он снова указывает на реальный JSON endpoint, а `verify` теперь валидирует этот путь отдельной локальной HTTPS-пробой и не пропускает silent `404/HTML` деградацию.
 - [2026-04-11 18:25:00] Для `stealth-xhttp` подтверждён отдельный runtime-риск server-side compatibility: server-side `xPaddingBytes` не может быть уже фактического client-side default padding, иначе inbound начинает отвергать запросы ещё до полноценного proxy traffic.
 - [2026-04-11 18:25:00] На staging это уже локализовано через controlled self-test: минимальный официальный `XHTTP + nginx + grpc_pass` работает, а `x-ui`-generated inbound ломался именно на узком диапазоне `xPaddingBytes`; после возврата к `100-1000` контракт снова становится совместимым.
 

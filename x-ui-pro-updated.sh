@@ -215,6 +215,7 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				PANEL_PROVIDER_TIME_LOCATION="Europe/Moscow"
 				PANEL_PROVIDER_SECRET_ENABLE="false"
 				PANEL_PROVIDER_SUB_ENABLE="true"
+				PANEL_PROVIDER_SUB_JSON_ENABLE="true"
 				PANEL_PROVIDER_SUB_DOMAIN=""
 				PANEL_PROVIDER_SUB_CERT_FILE=""
 				PANEL_PROVIDER_SUB_KEY_FILE=""
@@ -873,7 +874,7 @@ load_existing_runtime_context() {
 			| head -n1)
 		[[ -n "$detected_site" ]] && reality_domain="$detected_site"
 	fi
-	if [[ -z "$web_path" ]]; then
+	if [[ -z "$web_path" && "$json_uri" == *"?name="* ]]; then
 		web_path=$(printf '%s' "$json_uri" | sed -nE 's#https?://[^/]+/([^/?]+)/?.*#\1#p' | head -n1)
 	fi
 	if [[ -f /etc/nginx/snippets/includes.conf ]]; then
@@ -891,8 +892,8 @@ load_existing_runtime_context() {
 	if [[ -z "$sub_uri" && -n "$domain" && -n "$sub_path" ]]; then
 		sub_uri="https://${domain}/${sub_path}/"
 	fi
-	if [[ -z "$json_uri" && -n "$domain" && -n "$web_path" ]]; then
-		json_uri="https://${domain}/${web_path}/?name="
+	if [[ -z "$json_uri" && -n "$domain" && -n "$json_path" ]]; then
+		json_uri="https://${domain}/${json_path}/"
 	fi
 	print_runtime_context
 }
@@ -1906,6 +1907,30 @@ verify_existing_installation() {
 		fi
 	else
 		record_verify_result "PASS" "Локальная HTTPS-проверка web-sub пропущена для staged-профиля ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
+	fi
+
+	if [[ "$https_proxy_checks_enabled" == "enabled" ]]; then
+		if [[ -n "$domain" && -n "$json_path" ]]; then
+			if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${json_path}/first" 2>&1); then
+				record_verify_result "PASS" "Subscription JSON endpoint responds through local HTTPS"
+				[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/subscription-json-body.txt"
+				if grep -Eqi '<!doctype html|<html' <<<"$curl_output"; then
+					record_verify_result "FAIL" "Subscription JSON endpoint returns HTML instead of client config"
+					failures=$((failures + 1))
+				else
+					record_verify_result "PASS" "Subscription JSON endpoint returns non-HTML client config"
+				fi
+			else
+				record_verify_result "FAIL" "Subscription JSON endpoint does not respond through local HTTPS"
+				append_debug_log "subscription json curl output: ${curl_output}"
+				failures=$((failures + 1))
+			fi
+		else
+			record_verify_result "FAIL" "Не удалось определить domain/json_path для локальной JSON subscription проверки"
+			failures=$((failures + 1))
+		fi
+	else
+		record_verify_result "PASS" "Локальная HTTPS-проверка JSON subscription пропущена для staged-профиля ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
 	fi
 
 	if [[ "$https_proxy_checks_enabled" == "enabled" ]]; then
@@ -3363,6 +3388,7 @@ write_panel_provider_settings_3xui() {
              INSERT INTO "settings" ("key", "value") VALUES ("subJsonPath",  '${json_path}');
 	     INSERT INTO "settings" ("key", "value") VALUES ("subJsonURI",  '${json_uri}');
              INSERT INTO "settings" ("key", "value") VALUES ("subEnable",  '${PANEL_PROVIDER_SUB_ENABLE:-true}');
+             INSERT INTO "settings" ("key", "value") VALUES ("subJsonEnable",  '${PANEL_PROVIDER_SUB_JSON_ENABLE:-true}');
              INSERT INTO "settings" ("key", "value") VALUES ("webListen",  '${PANEL_PROVIDER_WEB_LISTEN:-}');
 	     INSERT INTO "settings" ("key", "value") VALUES ("webDomain",  '${PANEL_PROVIDER_WEB_DOMAIN:-}');
              INSERT INTO "settings" ("key", "value") VALUES ("webCertFile",  '${PANEL_PROVIDER_WEB_CERT_FILE:-}');
@@ -4506,7 +4532,7 @@ main() {
 	# 7. Generate random ports and paths
 	platform_generate_runtime_defaults
 	sub_uri="https://${domain}/${sub_path}/"
-	json_uri="https://${domain}/${web_path}/?name="
+	json_uri="https://${domain}/${json_path}/"
 	print_runtime_context
 
 	if is_yes "$DRY_RUN"; then
