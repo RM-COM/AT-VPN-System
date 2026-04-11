@@ -7,6 +7,9 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-11 20:05:00] Для user-facing JSON-подписок подтверждён отдельный upstream-дефект `3x-ui`: `XRAY JSON Subscription` для `vless` отдавал невалидный outbound-контракт `settings.address/id/port` вместо `settings.vnext`, из-за чего клиенты вроде `v2rayNG` импортировали такие профили как сломанные `null:null`.
+- [2026-04-11 20:05:00] В актуальном installer-контуре этот дефект закрыт без форка upstream-бинарника: рядом с `x-ui` теперь поднимается локальный `subjson-rewrite` bridge, а публичный JSON endpoint проксируется через него и отдаёт уже нормальные `vnext`-конфиги для `REALITY` и `XHTTP`.
+- [2026-04-11 20:05:00] Staging-проверка на новой переустановке подтвердила новый контракт: strict `verify` видит активный `subjson-rewrite`, а `https://<domain>/<subJsonPath>/first` возвращает валидные `vless` JSON-конфиги, пригодные для повторного импорта в `v2rayNG/v2rayN`.
 - [2026-04-11 19:40:00] Для `stealth-xhttp low-latency` теперь подтверждён ещё один transport-контракт: server-side inbound получает `xhttpSettings.xmux`, strict `verify` валидирует этот блок в `x-ui.db`, а loopback self-test использует тот же `xmux`, который уходит в клиентскую JSON-подписку.
 - [2026-04-11 19:40:00] На staging это уже подтверждено повторной установкой: `xhttpSettings.xmux` присутствует и в `x-ui.db`, и в `https://<domain>/<subJsonPath>/first`, поэтому следующий handoff-тест можно проводить не вслепую, а на реально доставленном low-latency tuning-слое.
 - [2026-04-11 19:40:00] Зафиксировано и эксплуатационное ограничение: direct URI/QR формат upstream `3x-ui` не переносит `xhttpSettings.xmux`, поэтому для сравнения `Wi‑Fi <-> LTE` в `stealth-xhttp low-latency` нужно использовать `XRAY JSON Subscription` или client route, который импортирует именно JSON-конфиг.

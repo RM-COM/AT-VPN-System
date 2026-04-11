@@ -58,6 +58,7 @@
 - `stealth-xhttp` уже является вторым runnable stealth transport и подтверждён staging install/verify.
 - Для `stealth-xhttp` базовый runtime-контракт переведён на `XHTTP mode=auto`, потому что `packet-up` оказался плохим default для нашего `nginx + TLS` контура.
 - Для `stealth-xhttp low-latency` `xmux` теперь доставляется через `XRAY JSON Subscription`; обычный direct QR/base64 URI этот слой не передаёт, поэтому handoff-тесты нужно делать через JSON-sub import/update.
+- Публичный `XRAY JSON Subscription` теперь проходит через локальный `subjson-rewrite` bridge: он исправляет upstream-баг `3x-ui`, где `vless` JSON-конфиги отдавались в невалидном формате `settings.address/id/port` вместо `settings.vnext`.
 - `AmneziaWG` в этой ветке пока не реализован и остаётся следующим большим модулем после завершения текущего `Xray/DPI` этапа.
 - Branch-specific статус и ограничения этой ветки зафиксированы в `docs/BRANCH_CONTEXT.md`.
 
