@@ -1252,21 +1252,21 @@ LIMIT 1;
 	append_debug_log "verify reality tuning fingerprint=${actual_fingerprint:-<empty>} spiderX=${actual_spider:-<empty>} header=${actual_header:-<empty>}"
 
 	if [[ "${actual_fingerprint:-}" == "${TRANSPORT_REALITY_FINGERPRINT:-}" ]]; then
-		record_verify_result "PASS" "REALITY fingerprint соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		record_verify_result "PASS" "REALITY fingerprint соответствует preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
 	else
-		record_verify_result "FAIL" "REALITY fingerprint не соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		record_verify_result "FAIL" "REALITY fingerprint не соответствует preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
 		mismatch_count=$((mismatch_count + 1))
 	fi
 	if [[ "${actual_spider:-}" == "${TRANSPORT_REALITY_SPIDER_X:-}" ]]; then
-		record_verify_result "PASS" "REALITY spiderX соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		record_verify_result "PASS" "REALITY spiderX соответствует preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
 	else
-		record_verify_result "FAIL" "REALITY spiderX не соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		record_verify_result "FAIL" "REALITY spiderX не соответствует preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
 		mismatch_count=$((mismatch_count + 1))
 	fi
 	if [[ "${actual_header:-}" == "${TRANSPORT_REALITY_TCP_HEADER_TYPE:-}" ]]; then
-		record_verify_result "PASS" "REALITY tcp header соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		record_verify_result "PASS" "REALITY tcp header соответствует preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
 	else
-		record_verify_result "FAIL" "REALITY tcp header не соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		record_verify_result "FAIL" "REALITY tcp header не соответствует preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
 		mismatch_count=$((mismatch_count + 1))
 	fi
 
@@ -1289,51 +1289,51 @@ LIMIT 1;
 		append_debug_log "verify xhttp tuning mode=${actual_mode:-<empty>} buffered=${actual_buffered:-<empty>} bytes=${actual_each_bytes:-<empty>} padding=${actual_padding:-<empty>} fastopen=${actual_fast_open:-<empty>} mptcp=${actual_mptcp:-<empty>} timeout=${actual_user_timeout:-<empty>} clamp=${actual_window_clamp:-<empty>}"
 
 		if [[ "${actual_mode:-}" == "${TRANSPORT_XHTTP_MODE:-}" ]]; then
-			record_verify_result "PASS" "XHTTP mode соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "PASS" "XHTTP mode соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
-			record_verify_result "FAIL" "XHTTP mode не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "FAIL" "XHTTP mode не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 		if [[ "${actual_buffered:-}" == "${TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS:-}" ]]; then
-			record_verify_result "PASS" "XHTTP scMaxBufferedPosts соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "PASS" "XHTTP scMaxBufferedPosts соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
-			record_verify_result "FAIL" "XHTTP scMaxBufferedPosts не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "FAIL" "XHTTP scMaxBufferedPosts не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 		if [[ "${actual_each_bytes:-}" == "${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-}" ]]; then
-			record_verify_result "PASS" "XHTTP scMaxEachPostBytes соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "PASS" "XHTTP scMaxEachPostBytes соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
-			record_verify_result "FAIL" "XHTTP scMaxEachPostBytes не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "FAIL" "XHTTP scMaxEachPostBytes не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 		if [[ "${actual_padding:-}" == "${TRANSPORT_XHTTP_X_PADDING_BYTES:-}" ]]; then
-			record_verify_result "PASS" "XHTTP xPaddingBytes соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "PASS" "XHTTP xPaddingBytes соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
-			record_verify_result "FAIL" "XHTTP xPaddingBytes не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "FAIL" "XHTTP xPaddingBytes не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 		if [[ "${actual_fast_open:-}" == "$(platform_normalize_expected_sqlite_value "${TRANSPORT_XHTTP_TCP_FAST_OPEN:-}")" ]]; then
-			record_verify_result "PASS" "XHTTP tcpFastOpen соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "PASS" "XHTTP tcpFastOpen соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
-			record_verify_result "FAIL" "XHTTP tcpFastOpen не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "FAIL" "XHTTP tcpFastOpen не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 		if [[ "${actual_mptcp:-}" == "$(platform_normalize_expected_sqlite_value "${TRANSPORT_XHTTP_TCP_MPTCP:-}")" ]]; then
-			record_verify_result "PASS" "XHTTP tcpMptcp соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "PASS" "XHTTP tcpMptcp соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
-			record_verify_result "FAIL" "XHTTP tcpMptcp не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "FAIL" "XHTTP tcpMptcp не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 		if [[ "${actual_user_timeout:-}" == "${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-}" ]]; then
-			record_verify_result "PASS" "XHTTP tcpUserTimeout соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "PASS" "XHTTP tcpUserTimeout соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
-			record_verify_result "FAIL" "XHTTP tcpUserTimeout не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "FAIL" "XHTTP tcpUserTimeout не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 		if [[ "${actual_window_clamp:-}" == "${TRANSPORT_XHTTP_TCP_WINDOW_CLAMP:-}" ]]; then
-			record_verify_result "PASS" "XHTTP tcpWindowClamp соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "PASS" "XHTTP tcpWindowClamp соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
-			record_verify_result "FAIL" "XHTTP tcpWindowClamp не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			record_verify_result "FAIL" "XHTTP tcpWindowClamp не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 	fi
