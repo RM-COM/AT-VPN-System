@@ -1672,7 +1672,7 @@ write_acceptance_manual_checklist() {
 
 ## Что заполнить после теста
 
-- Итог: `PASS` / `DEGRADED` / `FAIL`
+- Итог: \`PASS\` / \`DEGRADED\` / \`FAIL\`
 - Время начала по Москве:
 - Время сбоя по Москве:
 - Симптом:
