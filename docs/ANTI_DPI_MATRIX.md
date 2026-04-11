@@ -1,4 +1,4 @@
-# ANTI_DPI_MATRIX
+﻿# ANTI_DPI_MATRIX
 
 ## Назначение
 
@@ -92,6 +92,7 @@
 - [2026-04-09 20:50:25] `mobile long-run`: `DEGRADED`, потому что `stealth-xhttp` работает, но теряет стабильность в длительном дневном использовании, а старые reality-схемы на mobile internet не подтверждены.
 - [2026-04-09 20:50:25] `time-of-day sensitivity`: `SUSPECTED`, потому что утром `stealth-xhttp` работал лучше, чем позже в тот же день.
 - [2026-04-10 08:06:43] `acceptance observability`: `IMPROVED`, потому что `stage=acceptance` теперь снимает не только `ss -lntp/systemctl`, но и `ss -tinp`, `ss -s`, `journalctl` для `nginx/x-ui/sub2sing-box`, а также transport-aware клиентский чек-лист для сравнения `xhttp` и `reality`.
+- [2026-04-11 00:05:00] `network handoff`: `PASS (initial field signal)` для текущего тестового контура `platform-v2`, потому что ручное переключение `Wi‑Fi <-> mobile` прошло без прежней длинной задержки восстановления, а базовый browsing/video трафик остался рабочим вне окна `mobile whitelist`.
 
 ## Критерии завершения блока C
 
