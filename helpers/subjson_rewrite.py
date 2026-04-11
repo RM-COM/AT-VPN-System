@@ -20,6 +20,7 @@ PASS_HEADERS = (
     "Etag",
     "Last-Modified",
 )
+PASS_HEADERS_LOWER = {header.lower() for header in PASS_HEADERS}
 
 CLIENT_SOCKOPT_KEYS = (
     "tcpFastOpen",
@@ -40,7 +41,10 @@ def build_vless_vnext(settings):
     if not isinstance(settings, dict):
         return settings
     if "vnext" in settings:
-        return settings
+        cleaned = dict(settings)
+        for key in ("address", "port", "id", "flow", "encryption", "level", "email"):
+            cleaned.pop(key, None)
+        return cleaned
     address = settings.get("address")
     port = settings.get("port")
     client_id = settings.get("id")
@@ -103,7 +107,7 @@ def maybe_inject_sockopt(outbound, sockopt_map):
         return outbound
     network = stream_settings.get("network")
     security = stream_settings.get("security")
-    if not network or not security:
+    if not network:
         return outbound
     existing_sockopt = stream_settings.get("sockopt")
     if isinstance(existing_sockopt, dict) and existing_sockopt:
@@ -164,7 +168,7 @@ class RewriteHTTPServer(ThreadingHTTPServer):
             context=self.ssl_context,
         ) as response:
             body = response.read()
-            headers = {key: value for key, value in response.headers.items() if key in PASS_HEADERS}
+            headers = {key: value for key, value in response.headers.items() if key.lower() in PASS_HEADERS_LOWER}
             return response.getcode(), headers, body
 
     def load_sockopt_map(self):
@@ -192,7 +196,8 @@ class RewriteHTTPServer(ThreadingHTTPServer):
                 return sockopt_map
             finally:
                 connection.close()
-        except Exception:
+        except Exception as exc:
+            sys.stderr.write(f"sockopt map load failed: {exc}\n")
             return {}
 
 
@@ -205,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
             status_code, headers, body = self.server.fetch_upstream(self.path, host_header)
         except urllib.error.HTTPError as exc:
             status_code = exc.code
-            headers = {key: value for key, value in exc.headers.items() if key in PASS_HEADERS}
+            headers = {key: value for key, value in exc.headers.items() if key.lower() in PASS_HEADERS_LOWER}
             body = exc.read()
         except Exception as exc:
             error_body = json.dumps(
@@ -219,13 +224,22 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(error_body)
             return
 
-        rewritten_body = body
         try:
             parsed = json.loads(body.decode("utf-8"))
             rewritten = rewrite_document(parsed, self.server.load_sockopt_map())
             rewritten_body = json.dumps(rewritten, ensure_ascii=False, indent=2).encode("utf-8")
-        except Exception:
-            pass
+        except Exception as exc:
+            sys.stderr.write(f"json rewrite failed for {self.path}: {exc}\n")
+            error_body = json.dumps(
+                {"error": "subjson rewrite parse failure", "detail": str(exc)},
+                ensure_ascii=False,
+            ).encode("utf-8")
+            self.send_response(502 if 200 <= status_code < 300 else status_code)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(error_body)))
+            self.end_headers()
+            self.wfile.write(error_body)
+            return
 
         self.send_response(status_code)
         for key, value in headers.items():
