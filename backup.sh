@@ -10,6 +10,8 @@ fi
 PKG_MGR=$(command -v apt >/dev/null 2>&1 && echo "apt" || echo "yum")
 DEFAULT_BACKUP_DIR="/backup"
 RUNTIME_PROVENANCE_FILE="/etc/x-ui/runtime-provenance.env"
+SUBJSON_REWRITE_SERVICE="/etc/systemd/system/subjson-rewrite.service"
+SUBJSON_REWRITE_BIN="/usr/local/bin/subjson-rewrite.py"
 
 log() {
 	echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> /var/log/backup_script.log
@@ -116,7 +118,7 @@ backup_xui_runtime() {
 }
 
 backup_helper_binaries() {
-	archive_label "sub2sing-box" /usr/bin/sub2sing-box /etc/systemd/system/sub2sing-box.service
+	archive_label "helpers" /usr/bin/sub2sing-box /etc/systemd/system/sub2sing-box.service "$SUBJSON_REWRITE_BIN" "$SUBJSON_REWRITE_SERVICE"
 	backup_root_crontab
 }
 
@@ -204,9 +206,9 @@ ensure_restore_packages() {
 	echo "Ensuring restore prerequisites are installed..."
 	if [ "$PKG_MGR" = "apt" ]; then
 		DEBIAN_FRONTEND=noninteractive apt -y update
-		DEBIAN_FRONTEND=noninteractive apt -y install nginx-full certbot python3-certbot-nginx sqlite3
+		DEBIAN_FRONTEND=noninteractive apt -y install nginx-full certbot python3 python3-certbot-nginx sqlite3
 	else
-		yum -y install nginx certbot python3-certbot-nginx sqlite
+		yum -y install nginx certbot python3 python3-certbot-nginx sqlite
 	fi
 	log "Restore prerequisites ensured via $PKG_MGR"
 }
@@ -214,6 +216,7 @@ ensure_restore_packages() {
 stop_restore_services() {
 	systemctl stop nginx x-ui 2>/dev/null || true
 	systemctl stop sub2sing-box 2>/dev/null || true
+	systemctl stop subjson-rewrite 2>/dev/null || true
 	pkill -x "sub2sing-box" 2>/dev/null || true
 }
 
@@ -350,6 +353,10 @@ start_restored_services() {
 	elif [ -x /usr/bin/sub2sing-box ] && ! pgrep -x "sub2sing-box" >/dev/null 2>&1; then
 		nohup /usr/bin/sub2sing-box server --bind 127.0.0.1 --port 8080 >/dev/null 2>&1 &
 	fi
+	if [ -f "$SUBJSON_REWRITE_SERVICE" ]; then
+		systemctl enable subjson-rewrite 2>/dev/null || true
+		systemctl restart subjson-rewrite 2>/dev/null || true
+	fi
 }
 
 verify_restore_result() {
@@ -384,6 +391,12 @@ verify_restore_result() {
 		echo "[PASS] sub2sing-box process is active"
 	else
 		echo "[FAIL] sub2sing-box service/process is inactive or binary is missing"
+	fi
+
+	if [ -f "$SUBJSON_REWRITE_SERVICE" ] && systemctl is-active --quiet subjson-rewrite; then
+		echo "[PASS] subjson-rewrite service is active"
+	elif [ -f "$SUBJSON_REWRITE_SERVICE" ]; then
+		echo "[FAIL] subjson-rewrite service is inactive"
 	fi
 
 	load_restore_runtime_context

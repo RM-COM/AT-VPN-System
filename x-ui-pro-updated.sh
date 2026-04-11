@@ -18,6 +18,9 @@ REPO_SLUG="${REPO_SLUG:-mozaroc/x-ui-pro}"
 REPO_REF="${REPO_REF:-master}"
 REPO_RAW_BASE="${REPO_RAW_BASE:-https://raw.githubusercontent.com/${REPO_SLUG}/${REPO_REF}}"
 SUB2SINGBOX_SERVICE="/etc/systemd/system/sub2sing-box.service"
+SUBJSON_REWRITE_SERVICE="/etc/systemd/system/subjson-rewrite.service"
+SUBJSON_REWRITE_BIN="/usr/local/bin/subjson-rewrite.py"
+SUBJSON_REWRITE_PORT="${SUBJSON_REWRITE_PORT:-8091}"
 XUI_REPO_SLUG="${XUI_REPO_SLUG:-MHSanaei/3x-ui}"
 XUI_VERSION="${XUI_VERSION:-v2.8.11}"
 SUB2SINGBOX_REPO_SLUG="${SUB2SINGBOX_REPO_SLUG:-legiz-ru/sub2sing-box}"
@@ -983,6 +986,10 @@ capture_acceptance_snapshot() {
 		capture_command_output "acceptance/systemctl-sub2sing-box.txt" systemctl status sub2sing-box --no-pager
 		capture_command_output "acceptance/journal-sub2sing-box.txt" journalctl -u sub2sing-box -n 200 --no-pager
 	fi
+	if [[ -f "$SUBJSON_REWRITE_SERVICE" ]]; then
+		capture_command_output "acceptance/systemctl-subjson-rewrite.txt" systemctl status subjson-rewrite --no-pager
+		capture_command_output "acceptance/journal-subjson-rewrite.txt" journalctl -u subjson-rewrite -n 200 --no-pager
+	fi
 }
 write_acceptance_runtime_snapshot() {
 	local snapshot_file sqlite_file
@@ -1840,6 +1847,9 @@ verify_existing_installation() {
 	if [[ -f "$SUB2SINGBOX_SERVICE" ]]; then
 		capture_command_output "commands/systemctl-sub2sing-box.txt" systemctl status sub2sing-box --no-pager
 	fi
+	if [[ -f "$SUBJSON_REWRITE_SERVICE" ]]; then
+		capture_command_output "commands/systemctl-subjson-rewrite.txt" systemctl status subjson-rewrite --no-pager
+	fi
 	capture_command_output "commands/nginx-test.txt" nginx -t
 	capture_command_output "commands/nginx-dump.txt" nginx -T
 
@@ -1901,6 +1911,15 @@ verify_existing_installation() {
 	else
 		record_verify_result "FAIL" "sub2sing-box process is inactive"
 		failures=$((failures + 1))
+	fi
+
+	if [[ -f "$SUBJSON_REWRITE_SERVICE" ]]; then
+		if systemctl is-active --quiet subjson-rewrite; then
+			record_verify_result "PASS" "subjson-rewrite service is active"
+		else
+			record_verify_result "FAIL" "subjson-rewrite service is inactive"
+			failures=$((failures + 1))
+		fi
 	fi
 
 	if [[ -f /var/www/subpage/index.html ]]; then
@@ -2038,6 +2057,29 @@ verify_existing_installation() {
 					failures=$((failures + 1))
 				else
 					record_verify_result "PASS" "Subscription JSON endpoint returns non-HTML client config"
+					if printf '%s' "$curl_output" | jq -e '
+						def configs: if type == "array" then . else [.] end;
+						configs
+						| all(
+							.[];
+							(.outbounds // [])
+							| all(
+								.[];
+								if .protocol == "vless" then
+									((.settings.vnext | type) == "array")
+									and ((.settings | has("address")) | not)
+									and ((.settings.vnext[0].users | type) == "array")
+								else
+									true
+								end
+							)
+						)
+					' >/dev/null 2>&1; then
+						record_verify_result "PASS" "Subscription JSON endpoint returns VLESS configs with vnext"
+					else
+						record_verify_result "FAIL" "Subscription JSON endpoint returns invalid VLESS JSON format"
+						failures=$((failures + 1))
+					fi
 				fi
 			else
 				record_verify_result "FAIL" "Subscription JSON endpoint does not respond through local HTTPS"
@@ -2731,11 +2773,16 @@ stop_sub2singbox() {
 		pkill -x "sub2sing-box" 2>/dev/null || true
 	fi
 }
+stop_subjson_rewrite() {
+	systemctl stop subjson-rewrite 2>/dev/null || true
+	systemctl disable subjson-rewrite 2>/dev/null || true
+}
 remove_reset_residuals() {
 	local path
 	local extra_ports=()
 	local web_tls_port reality_site_tls_port
 	stop_sub2singbox
+	stop_subjson_rewrite
 	systemctl stop nginx x-ui 2>/dev/null || true
 	systemctl disable nginx x-ui 2>/dev/null || true
 	web_tls_port="$(platform_transport_web_tls_port)"
@@ -2745,10 +2792,13 @@ remove_reset_residuals() {
 		"/etc/systemd/system/multi-user.target.wants/x-ui.service" \
 		"/etc/systemd/system/sub2sing-box.service" \
 		"/etc/systemd/system/multi-user.target.wants/sub2sing-box.service" \
+		"$SUBJSON_REWRITE_SERVICE" \
+		"/etc/systemd/system/multi-user.target.wants/subjson-rewrite.service" \
 		"/usr/local/x-ui" \
 		"/etc/x-ui" \
 		"/usr/bin/x-ui" \
 		"/usr/bin/sub2sing-box" \
+		"$SUBJSON_REWRITE_BIN" \
 		"/var/www/subpage" \
 		"/var/www/html" \
 		"/etc/nginx" \
@@ -2759,7 +2809,7 @@ remove_reset_residuals() {
 		rm -rf "$path"
 	done
 	systemctl daemon-reload 2>/dev/null || true
-	systemctl reset-failed nginx x-ui sub2sing-box 2>/dev/null || true
+	systemctl reset-failed nginx x-ui sub2sing-box subjson-rewrite 2>/dev/null || true
 	fuser -k 80/tcp 80/udp 443/tcp 443/udp 2>/dev/null || true
 	[[ "$web_tls_port" =~ ^[0-9]+$ && "$web_tls_port" != "80" && "$web_tls_port" != "443" ]] && extra_ports+=("$web_tls_port")
 	[[ "$reality_site_tls_port" =~ ^[0-9]+$ && "$reality_site_tls_port" != "80" && "$reality_site_tls_port" != "443" && "$reality_site_tls_port" != "$web_tls_port" ]] && extra_ports+=("$reality_site_tls_port")
@@ -2777,23 +2827,27 @@ uninstall_xui() {
 	"$PKG_MGR" -y autoremove || true
 	"$PKG_MGR" -y autoclean || true
 	stop_sub2singbox
+	stop_subjson_rewrite
 	systemctl stop nginx x-ui 2>/dev/null || true
-	systemctl disable x-ui sub2sing-box 2>/dev/null || true
+	systemctl disable x-ui sub2sing-box subjson-rewrite 2>/dev/null || true
 	rm -rf /etc/systemd/system/x-ui.service
 	rm -rf /etc/systemd/system/multi-user.target.wants/x-ui.service
 	rm -rf /etc/systemd/system/sub2sing-box.service
 	rm -rf /etc/systemd/system/multi-user.target.wants/sub2sing-box.service
+	rm -rf "$SUBJSON_REWRITE_SERVICE"
+	rm -rf /etc/systemd/system/multi-user.target.wants/subjson-rewrite.service
 	rm -rf /usr/local/x-ui
 	rm -rf /etc/x-ui
 	rm -rf /usr/bin/x-ui
 	rm -rf /usr/bin/sub2sing-box
+	rm -rf "$SUBJSON_REWRITE_BIN"
 	rm -rf /var/www/subpage
 	rm -rf /var/www/html
 	rm -rf /etc/nginx
 	rm -rf /usr/share/nginx
 	rm -rf /root/cert
 	systemctl daemon-reload 2>/dev/null || true
-	systemctl reset-failed nginx x-ui sub2sing-box 2>/dev/null || true
+	systemctl reset-failed nginx x-ui sub2sing-box subjson-rewrite 2>/dev/null || true
 }
 
 ##############################Clean Previous Install######################################################
@@ -2804,16 +2858,20 @@ clean_previous_install() {
 		return 0
 	fi
 	stop_sub2singbox
+	stop_subjson_rewrite
 	systemctl stop nginx x-ui 2>/dev/null || true
-	systemctl disable x-ui sub2sing-box 2>/dev/null || true
+	systemctl disable x-ui sub2sing-box subjson-rewrite 2>/dev/null || true
 	rm -rf /etc/systemd/system/x-ui.service
 	rm -rf /etc/systemd/system/multi-user.target.wants/x-ui.service
 	rm -rf /etc/systemd/system/sub2sing-box.service
 	rm -rf /etc/systemd/system/multi-user.target.wants/sub2sing-box.service
+	rm -rf "$SUBJSON_REWRITE_SERVICE"
+	rm -rf /etc/systemd/system/multi-user.target.wants/subjson-rewrite.service
 	rm -rf /usr/local/x-ui
 	rm -rf /etc/x-ui
 	rm -rf /usr/bin/x-ui
 	rm -rf /usr/bin/sub2sing-box
+	rm -rf "$SUBJSON_REWRITE_BIN"
 	rm -rf /var/www/subpage
 	rm -rf /var/www/html
 	rm -rf /root/cert
@@ -2824,14 +2882,14 @@ clean_previous_install() {
 	rm -rf /etc/nginx/sites-available/*
 	rm -rf /etc/nginx/stream-enabled/*
 	systemctl daemon-reload 2>/dev/null || true
-	systemctl reset-failed nginx x-ui sub2sing-box 2>/dev/null || true
+	systemctl reset-failed nginx x-ui sub2sing-box subjson-rewrite 2>/dev/null || true
 }
 
 ##############################Install Packages############################################################
 install_packages() {
 	if [[ "${INSTALL}" == *"y"* ]]; then
 		"$PKG_MGR" -y update
-		"$PKG_MGR" -y install curl wget jq bash sudo nginx-full certbot python3-certbot-nginx sqlite3 ufw
+		"$PKG_MGR" -y install curl wget jq bash sudo nginx-full certbot python3 python3-certbot-nginx sqlite3 ufw
 		systemctl daemon-reload && systemctl enable --now nginx
 	fi
 	systemctl stop nginx
@@ -3077,7 +3135,7 @@ EOF
                 proxy_set_header Host \$host;
                 proxy_set_header X-Real-IP \$remote_addr;
                 proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                proxy_pass https://127.0.0.1:${sub_port};
+                proxy_pass http://127.0.0.1:${SUBJSON_REWRITE_PORT};
                 break;
         }
 	location /${json_path}/ {
@@ -3086,7 +3144,7 @@ EOF
                 proxy_set_header Host \$host;
                 proxy_set_header X-Real-IP \$remote_addr;
                 proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                proxy_pass https://127.0.0.1:${sub_port};
+                proxy_pass http://127.0.0.1:${SUBJSON_REWRITE_PORT};
                 break;
         }
         #XHTTP
@@ -3335,7 +3393,7 @@ EOF
                 proxy_set_header Host \$host;
                 proxy_set_header X-Real-IP \$remote_addr;
                 proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                proxy_pass https://127.0.0.1:${sub_port};
+                proxy_pass http://127.0.0.1:${SUBJSON_REWRITE_PORT};
                 break;
         }
 	location /${json_path}/ {
@@ -3344,7 +3402,7 @@ EOF
                 proxy_set_header Host \$host;
                 proxy_set_header X-Real-IP \$remote_addr;
                 proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                proxy_pass https://127.0.0.1:${sub_port};
+                proxy_pass http://127.0.0.1:${SUBJSON_REWRITE_PORT};
                 break;
         }
         #XHTTP
@@ -4355,6 +4413,35 @@ RestartSec=3
 WantedBy=multi-user.target
 EOF
 }
+
+write_subjson_rewrite_service() {
+	cat > "$SUBJSON_REWRITE_SERVICE" <<EOF
+[Unit]
+Description=Local JSON subscription rewrite bridge
+After=network-online.target x-ui.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 ${SUBJSON_REWRITE_BIN} --bind 127.0.0.1 --port ${SUBJSON_REWRITE_PORT} --upstream-port ${sub_port}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
+install_subjson_rewrite() {
+	stop_subjson_rewrite
+	rm -f "$SUBJSON_REWRITE_BIN" "$SUBJSON_REWRITE_SERVICE" /etc/systemd/system/multi-user.target.wants/subjson-rewrite.service
+	copy_or_fetch_repo_file "helpers/subjson_rewrite.py" "$SUBJSON_REWRITE_BIN"
+	chmod +x "$SUBJSON_REWRITE_BIN"
+	write_subjson_rewrite_service
+	systemctl daemon-reload
+	systemctl enable --now subjson-rewrite.service
+}
+
 install_sub2singbox() {
 	stop_sub2singbox
 	if [ -f "/usr/bin/sub2sing-box" ]; then
@@ -4701,6 +4788,9 @@ main() {
 
 	# 15. Install sub2sing-box
 	install_sub2singbox
+
+	# 15.5. Install JSON subscription rewrite bridge
+	install_subjson_rewrite
 
 	# 16. Install fake site
 	install_fake_site
