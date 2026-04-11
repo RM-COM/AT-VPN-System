@@ -102,6 +102,13 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="1000000"
 				TRANSPORT_XHTTP_NO_SSE_HEADER="false"
 				TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+				TRANSPORT_XHTTP_XMUX_ENABLE="false"
+				TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY=""
+				TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS=0
+				TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES=0
+				TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES=""
+				TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS=""
+				TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=0
 				TRANSPORT_XHTTP_TCP_FAST_OPEN="true"
 				TRANSPORT_XHTTP_TCP_MPTCP="true"
 				TRANSPORT_XHTTP_TCP_NO_DELAY="true"
@@ -273,6 +280,21 @@ platform_tuning_summary() {
 		"${TRANSPORT_XHTTP_TUNING_PROFILE:-n/a}"
 }
 
+platform_build_xhttp_xmux_block() {
+	[[ "${TRANSPORT_XHTTP_XMUX_ENABLE:-false}" == "true" ]] || return 0
+	cat <<EOF
+,
+    "xmux": {
+      "maxConcurrency": "${TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY:-16-32}",
+      "maxConnections": ${TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS:-0},
+      "cMaxReuseTimes": ${TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES:-0},
+      "hMaxRequestTimes": "${TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES:-600-900}",
+      "hMaxReusableSecs": "${TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS:-1800-3000}",
+      "hKeepAlivePeriod": ${TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD:-0}
+    }
+EOF
+}
+
 write_platform_runtime_provenance_kv() {
 	local target_file="$1"
 	local key="$2"
@@ -367,6 +389,13 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="1000000"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
 			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+			TRANSPORT_XHTTP_XMUX_ENABLE="false"
+			TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY=""
+			TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS=0
+			TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES=0
+			TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES=""
+			TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS=""
+			TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=0
 			TRANSPORT_XHTTP_TCP_FAST_OPEN="true"
 			TRANSPORT_XHTTP_TCP_MPTCP="true"
 			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
@@ -385,6 +414,13 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="262144"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
 			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+			TRANSPORT_XHTTP_XMUX_ENABLE="false"
+			TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY=""
+			TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS=0
+			TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES=0
+			TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES=""
+			TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS=""
+			TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=0
 			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
 			TRANSPORT_XHTTP_TCP_MPTCP="false"
 			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
@@ -403,6 +439,13 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="131072"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
 			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+			TRANSPORT_XHTTP_XMUX_ENABLE="true"
+			TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY="16-32"
+			TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS=0
+			TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES=0
+			TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES="600-900"
+			TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS="1800-3000"
+			TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=10
 			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
 			TRANSPORT_XHTTP_TCP_MPTCP="false"
 			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
@@ -421,6 +464,13 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="131072"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
 			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+			TRANSPORT_XHTTP_XMUX_ENABLE="false"
+			TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY=""
+			TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS=0
+			TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES=0
+			TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES=""
+			TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS=""
+			TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=0
 			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
 			TRANSPORT_XHTTP_TCP_MPTCP="false"
 			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
@@ -992,6 +1042,13 @@ SELECT
   json_extract(stream_settings, '$.realitySettings.settings.fingerprint') AS fingerprint,
   json_extract(stream_settings, '$.xhttpSettings.mode') AS xhttp_mode,
   json_extract(stream_settings, '$.xhttpSettings.scMaxBufferedPosts') AS xhttp_sc_max_buffered_posts,
+  json_type(stream_settings, '$.xhttpSettings.xmux') AS xhttp_xmux_type,
+  json_extract(stream_settings, '$.xhttpSettings.xmux.maxConcurrency') AS xhttp_xmux_max_concurrency,
+  json_extract(stream_settings, '$.xhttpSettings.xmux.maxConnections') AS xhttp_xmux_max_connections,
+  json_extract(stream_settings, '$.xhttpSettings.xmux.cMaxReuseTimes') AS xhttp_xmux_c_max_reuse_times,
+  json_extract(stream_settings, '$.xhttpSettings.xmux.hMaxRequestTimes') AS xhttp_xmux_h_max_request_times,
+  json_extract(stream_settings, '$.xhttpSettings.xmux.hMaxReusableSecs') AS xhttp_xmux_h_max_reusable_secs,
+  json_extract(stream_settings, '$.xhttpSettings.xmux.hKeepAlivePeriod') AS xhttp_xmux_h_keepalive_period,
   json_extract(stream_settings, '$.sockopt.tcpFastOpen') AS tcp_fast_open,
   json_extract(stream_settings, '$.sockopt.tcpMptcp') AS tcp_mptcp,
   json_extract(stream_settings, '$.sockopt.tcpUserTimeout') AS tcp_user_timeout
@@ -1278,6 +1335,13 @@ SELECT
   COALESCE(json_extract(stream_settings, '$.xhttpSettings.scMaxBufferedPosts'), ''),
   COALESCE(json_extract(stream_settings, '$.xhttpSettings.scMaxEachPostBytes'), ''),
   COALESCE(json_extract(stream_settings, '$.xhttpSettings.xPaddingBytes'), ''),
+  COALESCE(json_type(stream_settings, '$.xhttpSettings.xmux'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux.maxConcurrency'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux.maxConnections'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux.cMaxReuseTimes'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux.hMaxRequestTimes'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux.hMaxReusableSecs'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux.hKeepAlivePeriod'), ''),
   COALESCE(json_extract(stream_settings, '$.sockopt.tcpFastOpen'), ''),
   COALESCE(json_extract(stream_settings, '$.sockopt.tcpMptcp'), ''),
   COALESCE(json_extract(stream_settings, '$.sockopt.tcpUserTimeout'), ''),
@@ -1286,8 +1350,8 @@ FROM inbounds
 WHERE json_extract(stream_settings, '$.network')='xhttp'
 LIMIT 1;
 " 2>/dev/null)
-		IFS='|' read -r actual_mode actual_buffered actual_each_bytes actual_padding actual_fast_open actual_mptcp actual_user_timeout actual_window_clamp <<<"$actual_xhttp"
-		append_debug_log "verify xhttp tuning mode=${actual_mode:-<empty>} buffered=${actual_buffered:-<empty>} bytes=${actual_each_bytes:-<empty>} padding=${actual_padding:-<empty>} fastopen=${actual_fast_open:-<empty>} mptcp=${actual_mptcp:-<empty>} timeout=${actual_user_timeout:-<empty>} clamp=${actual_window_clamp:-<empty>}"
+		IFS='|' read -r actual_mode actual_buffered actual_each_bytes actual_padding actual_xmux_type actual_xmux_max_concurrency actual_xmux_max_connections actual_xmux_c_max_reuse_times actual_xmux_h_max_request_times actual_xmux_h_max_reusable_secs actual_xmux_h_keepalive_period actual_fast_open actual_mptcp actual_user_timeout actual_window_clamp <<<"$actual_xhttp"
+		append_debug_log "verify xhttp tuning mode=${actual_mode:-<empty>} buffered=${actual_buffered:-<empty>} bytes=${actual_each_bytes:-<empty>} padding=${actual_padding:-<empty>} xmux_type=${actual_xmux_type:-<empty>} xmux_max_concurrency=${actual_xmux_max_concurrency:-<empty>} xmux_max_connections=${actual_xmux_max_connections:-<empty>} xmux_c_max_reuse_times=${actual_xmux_c_max_reuse_times:-<empty>} xmux_h_max_request_times=${actual_xmux_h_max_request_times:-<empty>} xmux_h_max_reusable_secs=${actual_xmux_h_max_reusable_secs:-<empty>} xmux_h_keepalive_period=${actual_xmux_h_keepalive_period:-<empty>} fastopen=${actual_fast_open:-<empty>} mptcp=${actual_mptcp:-<empty>} timeout=${actual_user_timeout:-<empty>} clamp=${actual_window_clamp:-<empty>}"
 
 		if [[ "${actual_mode:-}" == "${TRANSPORT_XHTTP_MODE:-}" ]]; then
 			record_verify_result "PASS" "XHTTP mode соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
@@ -1312,6 +1376,57 @@ LIMIT 1;
 		else
 			record_verify_result "FAIL" "XHTTP xPaddingBytes не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${TRANSPORT_XHTTP_XMUX_ENABLE:-false}" == "true" ]]; then
+			if [[ "${actual_xmux_type:-}" == "object" ]]; then
+				record_verify_result "PASS" "XHTTP xmux present for preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			else
+				record_verify_result "FAIL" "XHTTP xmux missing for preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+				mismatch_count=$((mismatch_count + 1))
+			fi
+			if [[ "${actual_xmux_max_concurrency:-}" == "${TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY:-}" ]]; then
+				record_verify_result "PASS" "XHTTP xmux.maxConcurrency matches preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			else
+				record_verify_result "FAIL" "XHTTP xmux.maxConcurrency does not match preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+				mismatch_count=$((mismatch_count + 1))
+			fi
+			if [[ "${actual_xmux_max_connections:-}" == "${TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS:-}" ]]; then
+				record_verify_result "PASS" "XHTTP xmux.maxConnections matches preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			else
+				record_verify_result "FAIL" "XHTTP xmux.maxConnections does not match preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+				mismatch_count=$((mismatch_count + 1))
+			fi
+			if [[ "${actual_xmux_c_max_reuse_times:-}" == "${TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES:-}" ]]; then
+				record_verify_result "PASS" "XHTTP xmux.cMaxReuseTimes matches preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			else
+				record_verify_result "FAIL" "XHTTP xmux.cMaxReuseTimes does not match preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+				mismatch_count=$((mismatch_count + 1))
+			fi
+			if [[ "${actual_xmux_h_max_request_times:-}" == "${TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES:-}" ]]; then
+				record_verify_result "PASS" "XHTTP xmux.hMaxRequestTimes matches preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			else
+				record_verify_result "FAIL" "XHTTP xmux.hMaxRequestTimes does not match preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+				mismatch_count=$((mismatch_count + 1))
+			fi
+			if [[ "${actual_xmux_h_max_reusable_secs:-}" == "${TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS:-}" ]]; then
+				record_verify_result "PASS" "XHTTP xmux.hMaxReusableSecs matches preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			else
+				record_verify_result "FAIL" "XHTTP xmux.hMaxReusableSecs does not match preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+				mismatch_count=$((mismatch_count + 1))
+			fi
+			if [[ "${actual_xmux_h_keepalive_period:-}" == "${TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD:-}" ]]; then
+				record_verify_result "PASS" "XHTTP xmux.hKeepAlivePeriod matches preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			else
+				record_verify_result "FAIL" "XHTTP xmux.hKeepAlivePeriod does not match preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+				mismatch_count=$((mismatch_count + 1))
+			fi
+		else
+			if [[ -z "${actual_xmux_type:-}" ]]; then
+				record_verify_result "PASS" "XHTTP xmux disabled for preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			else
+				record_verify_result "FAIL" "XHTTP xmux should be disabled for preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+				mismatch_count=$((mismatch_count + 1))
+			fi
 		fi
 		if [[ "${actual_fast_open:-}" == "$(platform_normalize_expected_sqlite_value "${TRANSPORT_XHTTP_TCP_FAST_OPEN:-}")" ]]; then
 			record_verify_result "PASS" "XHTTP tcpFastOpen соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
@@ -1342,7 +1457,7 @@ LIMIT 1;
 	return "$mismatch_count"
 }
 xhttp_transport_self_test() {
-	local xray_bin="" xhttp_client_id="" xhttp_mode="" xhttp_host="" xhttp_path_db=""
+	local xray_bin="" xhttp_client_id="" xhttp_mode="" xhttp_host="" xhttp_path_db="" xhttp_xmux_json=""
 	local test_dir="" config_file="" xray_log="" curl_log="" curl_output="" curl_rc=0
 	local curl_target="https://www.gstatic.com/generate_204" xray_pid="" failure_hint=""
 
@@ -1371,10 +1486,12 @@ xhttp_transport_self_test() {
 	xhttp_path_db=$(sqlite3 -list "$XUIDB" "SELECT json_extract(stream_settings, '$.xhttpSettings.path') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
 	xhttp_host=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.host'), '') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
 	xhttp_mode=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.mode'), '') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+	xhttp_xmux_json=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux'), 'null') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
 	xhttp_path_db="$(trim_slashes "$xhttp_path_db")"
 	[[ -z "$xhttp_mode" ]] && xhttp_mode="${TRANSPORT_XHTTP_MODE:-auto}"
+	[[ -z "$xhttp_xmux_json" ]] && xhttp_xmux_json='null'
 
-	append_debug_log "xhttp self-test target domain=${domain:-<empty>} path=${xhttp_path_db:-<empty>} mode=${xhttp_mode:-<empty>} host=${xhttp_host:-<empty>} xray_bin=${xray_bin}"
+	append_debug_log "xhttp self-test target domain=${domain:-<empty>} path=${xhttp_path_db:-<empty>} mode=${xhttp_mode:-<empty>} host=${xhttp_host:-<empty>} xmux=${xhttp_xmux_json:-null} xray_bin=${xray_bin}"
 
 	if [[ -z "$domain" || -z "$xhttp_path_db" || -z "$xhttp_client_id" ]]; then
 		record_verify_result "FAIL" "XHTTP self-test cannot resolve domain/path/client id from the current installation"
@@ -1392,6 +1509,7 @@ xhttp_transport_self_test() {
 		--arg path "/${xhttp_path_db}" \
 		--arg mode "$xhttp_mode" \
 		--arg host "$xhttp_host" \
+		--argjson xmux "$xhttp_xmux_json" \
 		'{
 			log: { loglevel: "info" },
 			inbounds: [
@@ -1431,7 +1549,8 @@ xhttp_transport_self_test() {
 						},
 						xhttpSettings: (
 							{ path: $path, mode: $mode } +
-							(if $host != "" then { host: $host } else {} end)
+							(if $host != "" then { host: $host } else {} end) +
+							(if $xmux != null then { xmux: $xmux } else {} end)
 						)
 					}
 				}
@@ -3632,7 +3751,7 @@ write_transport_inbounds_classic_xray() {
     "scMaxEachPostBytes": "${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-1000000}",
     "noSSEHeader": ${TRANSPORT_XHTTP_NO_SSE_HEADER:-false},
     "xPaddingBytes": "${TRANSPORT_XHTTP_X_PADDING_BYTES:-100-1000}",
-    "mode": "${TRANSPORT_XHTTP_MODE:-auto}"
+    "mode": "${TRANSPORT_XHTTP_MODE:-auto}"$(platform_build_xhttp_xmux_block)
   },
   "sockopt": {
     "acceptProxyProtocol": false,
@@ -3980,7 +4099,7 @@ write_transport_inbounds_stealth_xhttp() {
     "scMaxEachPostBytes": "${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-1000000}",
     "noSSEHeader": ${TRANSPORT_XHTTP_NO_SSE_HEADER:-false},
     "xPaddingBytes": "${TRANSPORT_XHTTP_X_PADDING_BYTES:-100-1000}",
-    "mode": "${TRANSPORT_XHTTP_MODE:-auto}"
+    "mode": "${TRANSPORT_XHTTP_MODE:-auto}"$(platform_build_xhttp_xmux_block)
   },
   "sockopt": {
     "acceptProxyProtocol": false,
