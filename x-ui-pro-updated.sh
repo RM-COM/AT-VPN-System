@@ -278,6 +278,22 @@ platform_validate_tuning_profile_name() {
 	esac
 }
 
+platform_validate_reality_tuning_profile_name() {
+	local profile_name="$1"
+	case "$profile_name" in
+		default|mobile-safe|low-latency|aggressive-stealth) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+platform_validate_xhttp_tuning_profile_name() {
+	local profile_name="$1"
+	case "$profile_name" in
+		default|mobile-safe|low-latency|handoff-safe|aggressive-stealth) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
 platform_tuning_summary() {
 	printf 'reality=%s xhttp=%s' \
 		"${TRANSPORT_REALITY_TUNING_PROFILE:-default}" \
@@ -524,13 +540,13 @@ platform_apply_requested_tuning_profiles() {
 	requested_reality="${OVERRIDE_REALITY_TUNING_PROFILE:-${TRANSPORT_REALITY_TUNING_PROFILE:-default}}"
 	requested_xhttp="${OVERRIDE_XHTTP_TUNING_PROFILE:-${TRANSPORT_XHTTP_TUNING_PROFILE:-default}}"
 
-	if ! platform_validate_tuning_profile_name "$requested_reality"; then
+	if ! platform_validate_reality_tuning_profile_name "$requested_reality"; then
 		die "Unsupported REALITY tuning profile: ${requested_reality}"
 	fi
 	platform_apply_reality_tuning_profile "$requested_reality"
 
 	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]]; then
-		if ! platform_validate_tuning_profile_name "$requested_xhttp"; then
+		if ! platform_validate_xhttp_tuning_profile_name "$requested_xhttp"; then
 			die "Unsupported XHTTP tuning profile: ${requested_xhttp}"
 		fi
 		platform_apply_xhttp_tuning_profile "$requested_xhttp"
@@ -1323,7 +1339,7 @@ verify_transport_tuning_contract() {
 	local actual_reality actual_xhttp
 	local actual_fingerprint actual_spider actual_header
 	local actual_mode actual_buffered actual_each_bytes actual_padding
-	local actual_fast_open actual_mptcp actual_user_timeout actual_window_clamp
+	local actual_fast_open actual_mptcp actual_keepalive_interval actual_keepalive_idle actual_user_timeout actual_window_clamp
 	local mismatch_count=0
 
 	if ! command -v sqlite3 >/dev/null 2>&1 || [[ ! -f "$XUIDB" ]]; then
@@ -1377,14 +1393,16 @@ SELECT
   COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux.hKeepAlivePeriod'), ''),
   COALESCE(json_extract(stream_settings, '$.sockopt.tcpFastOpen'), ''),
   COALESCE(json_extract(stream_settings, '$.sockopt.tcpMptcp'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpKeepAliveInterval'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpKeepAliveIdle'), ''),
   COALESCE(json_extract(stream_settings, '$.sockopt.tcpUserTimeout'), ''),
   COALESCE(json_extract(stream_settings, '$.sockopt.tcpWindowClamp'), '')
 FROM inbounds
 WHERE json_extract(stream_settings, '$.network')='xhttp'
 LIMIT 1;
 " 2>/dev/null)
-		IFS='|' read -r actual_mode actual_buffered actual_each_bytes actual_padding actual_xmux_type actual_xmux_max_concurrency actual_xmux_max_connections actual_xmux_c_max_reuse_times actual_xmux_h_max_request_times actual_xmux_h_max_reusable_secs actual_xmux_h_keepalive_period actual_fast_open actual_mptcp actual_user_timeout actual_window_clamp <<<"$actual_xhttp"
-		append_debug_log "verify xhttp tuning mode=${actual_mode:-<empty>} buffered=${actual_buffered:-<empty>} bytes=${actual_each_bytes:-<empty>} padding=${actual_padding:-<empty>} xmux_type=${actual_xmux_type:-<empty>} xmux_max_concurrency=${actual_xmux_max_concurrency:-<empty>} xmux_max_connections=${actual_xmux_max_connections:-<empty>} xmux_c_max_reuse_times=${actual_xmux_c_max_reuse_times:-<empty>} xmux_h_max_request_times=${actual_xmux_h_max_request_times:-<empty>} xmux_h_max_reusable_secs=${actual_xmux_h_max_reusable_secs:-<empty>} xmux_h_keepalive_period=${actual_xmux_h_keepalive_period:-<empty>} fastopen=${actual_fast_open:-<empty>} mptcp=${actual_mptcp:-<empty>} timeout=${actual_user_timeout:-<empty>} clamp=${actual_window_clamp:-<empty>}"
+		IFS='|' read -r actual_mode actual_buffered actual_each_bytes actual_padding actual_xmux_type actual_xmux_max_concurrency actual_xmux_max_connections actual_xmux_c_max_reuse_times actual_xmux_h_max_request_times actual_xmux_h_max_reusable_secs actual_xmux_h_keepalive_period actual_fast_open actual_mptcp actual_keepalive_interval actual_keepalive_idle actual_user_timeout actual_window_clamp <<<"$actual_xhttp"
+		append_debug_log "verify xhttp tuning mode=${actual_mode:-<empty>} buffered=${actual_buffered:-<empty>} bytes=${actual_each_bytes:-<empty>} padding=${actual_padding:-<empty>} xmux_type=${actual_xmux_type:-<empty>} xmux_max_concurrency=${actual_xmux_max_concurrency:-<empty>} xmux_max_connections=${actual_xmux_max_connections:-<empty>} xmux_c_max_reuse_times=${actual_xmux_c_max_reuse_times:-<empty>} xmux_h_max_request_times=${actual_xmux_h_max_request_times:-<empty>} xmux_h_max_reusable_secs=${actual_xmux_h_max_reusable_secs:-<empty>} xmux_h_keepalive_period=${actual_xmux_h_keepalive_period:-<empty>} fastopen=${actual_fast_open:-<empty>} mptcp=${actual_mptcp:-<empty>} keepalive_interval=${actual_keepalive_interval:-<empty>} keepalive_idle=${actual_keepalive_idle:-<empty>} timeout=${actual_user_timeout:-<empty>} clamp=${actual_window_clamp:-<empty>}"
 
 		if [[ "${actual_mode:-}" == "${TRANSPORT_XHTTP_MODE:-}" ]]; then
 			record_verify_result "PASS" "XHTTP mode соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
@@ -1471,6 +1489,18 @@ LIMIT 1;
 			record_verify_result "PASS" "XHTTP tcpMptcp соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 		else
 			record_verify_result "FAIL" "XHTTP tcpMptcp не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_keepalive_interval:-}" == "${TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL:-}" ]]; then
+			record_verify_result "PASS" "XHTTP tcpKeepAliveInterval соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+		else
+			record_verify_result "FAIL" "XHTTP tcpKeepAliveInterval не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_keepalive_idle:-}" == "${TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE:-}" ]]; then
+			record_verify_result "PASS" "XHTTP tcpKeepAliveIdle соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
+		else
+			record_verify_result "FAIL" "XHTTP tcpKeepAliveIdle не соответствует preset '${TRANSPORT_XHTTP_TUNING_PROFILE:-default}'"
 			mismatch_count=$((mismatch_count + 1))
 		fi
 		if [[ "${actual_user_timeout:-}" == "${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-}" ]]; then
@@ -2083,7 +2113,12 @@ verify_existing_installation() {
 					failures=$((failures + 1))
 				else
 					record_verify_result "PASS" "Subscription JSON endpoint returns non-HTML client config"
-					if printf '%s' "$curl_output" | jq -e '
+					if printf '%s' "$curl_output" | jq -e \
+						--arg expectedTcpNoDelay "${TRANSPORT_XHTTP_TCP_NO_DELAY:-}" \
+						--arg expectedKeepAliveInterval "${TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL:-}" \
+						--arg expectedKeepAliveIdle "${TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE:-}" \
+						--arg expectedTcpUserTimeout "${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-}" \
+						'
 						def configs: if type == "array" then . else [.] end;
 						configs
 						| all(
@@ -2100,6 +2135,12 @@ verify_existing_installation() {
 											((.streamSettings.sockopt | type) == "object")
 											and (.streamSettings.sockopt | has("tcpNoDelay"))
 											and (.streamSettings.sockopt | has("tcpUserTimeout"))
+											and (.streamSettings.sockopt | has("tcpKeepAliveInterval"))
+											and (.streamSettings.sockopt | has("tcpKeepAliveIdle"))
+											and ((.streamSettings.sockopt.tcpNoDelay | tostring) == $expectedTcpNoDelay)
+											and ((.streamSettings.sockopt.tcpKeepAliveInterval | tostring) == $expectedKeepAliveInterval)
+											and ((.streamSettings.sockopt.tcpKeepAliveIdle | tostring) == $expectedKeepAliveIdle)
+											and ((.streamSettings.sockopt.tcpUserTimeout | tostring) == $expectedTcpUserTimeout)
 										else
 											true
 										end
