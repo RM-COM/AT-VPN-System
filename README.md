@@ -57,8 +57,8 @@
 - `stealth-xray` уже является runnable-профилем и подтверждён staging-регрессом.
 - `stealth-xhttp` уже является вторым runnable stealth transport и подтверждён staging install/verify.
 - Для `stealth-xhttp` базовый runtime-контракт переведён на `XHTTP mode=auto`, потому что `packet-up` оказался плохим default для нашего `nginx + TLS` контура.
-- Для `stealth-xhttp low-latency` `xmux` теперь доставляется через `XRAY JSON Subscription`; обычный direct QR/base64 URI этот слой не передаёт, поэтому handoff-тесты нужно делать через JSON-sub import/update.
-- Публичный `XRAY JSON Subscription` теперь проходит через локальный `subjson-rewrite` bridge: он исправляет upstream-баг `3x-ui`, где `vless` JSON-конфиги отдавались в невалидном формате `settings.address/id/port` вместо `settings.vnext`.
+- Для `stealth-xhttp handoff-safe` handoff/reconnect тюнинг доставляется через `XRAY JSON Subscription`; обычный direct QR/base64 URI этот слой не передаёт, поэтому handoff-тесты нужно делать через JSON-sub import/update.
+- Публичный `XRAY JSON Subscription` теперь проходит через локальный `subjson-rewrite` bridge: он исправляет upstream-баг `3x-ui`, где `vless` JSON-конфиги отдавались в невалидном формате `settings.address/id/port` вместо `settings.vnext`, и добавляет client-side `streamSettings.sockopt` для `XHTTP`.
 - `AmneziaWG` в этой ветке пока не реализован и остаётся следующим большим модулем после завершения текущего `Xray/DPI` этапа.
 - Branch-specific статус и ограничения этой ветки зафиксированы в `docs/BRANCH_CONTEXT.md`.
 
@@ -84,16 +84,16 @@ sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
 Для явного выбора профиля через переменные окружения:
 
 ```bash
-PLATFORM_PROFILE=classic TRANSPORT_PROFILE=classic-xray sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
-PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xray sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
-PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+sudo env PLATFORM_PROFILE=classic TRANSPORT_PROFILE=classic-xray bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+sudo env PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xray bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+sudo env PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
 ```
 
 Для controlled tuning можно сразу передавать preset-профили:
 
 ```bash
-PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xray REALITY_TUNING_PROFILE=aggressive-stealth sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
-PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp REALITY_TUNING_PROFILE=mobile-safe XHTTP_TUNING_PROFILE=low-latency sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+sudo env PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xray REALITY_TUNING_PROFILE=aggressive-stealth bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+sudo env PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp REALITY_TUNING_PROFILE=mobile-safe XHTTP_TUNING_PROFILE=handoff-safe bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
 ```
 
 Если нужен тестовый сценарий с автодоменами на staging:
@@ -155,7 +155,7 @@ sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes
 
 ```bash
 sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xray -reality_tuning_profile aggressive-stealth -acceptance_label xray-evening -acceptance_matrix_group c1-longrun -acceptance_network LTE -acceptance_operator "MTS" -acceptance_time_window "evening-no-whitelist" -acceptance_client "Android/v2rayNG" -acceptance_minutes 5 -acceptance_interval_seconds 30
-sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xhttp -reality_tuning_profile mobile-safe -xhttp_tuning_profile low-latency -acceptance_label xhttp-evening -acceptance_matrix_group c1-longrun -acceptance_network LTE -acceptance_operator "MTS" -acceptance_time_window "evening-no-whitelist" -acceptance_client "Android/v2rayNG" -acceptance_minutes 5 -acceptance_interval_seconds 30
+sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xhttp -reality_tuning_profile mobile-safe -xhttp_tuning_profile handoff-safe -acceptance_label xhttp-evening -acceptance_matrix_group c1-longrun -acceptance_network LTE -acceptance_operator "MTS" -acceptance_time_window "evening-no-whitelist" -acceptance_client "Android/v2rayNG" -acceptance_minutes 5 -acceptance_interval_seconds 30
 ```
 
 Безопасный предпросмотр install-сценария без изменения системы:

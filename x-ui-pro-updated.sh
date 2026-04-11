@@ -1218,6 +1218,7 @@ append_acceptance_probe_result_jsonl() {
 write_acceptance_matrix_row_json() {
 	local failures="${1:-0}" panel_passes="${2:-0}" panel_fails="${3:-0}" websub_passes="${4:-0}" websub_fails="${5:-0}"
 	local sub2singbox_passes="${6:-0}" sub2singbox_fails="${7:-0}" fallback_passes="${8:-0}" fallback_fails="${9:-0}"
+	local json_passes="${10:-0}" json_fails="${11:-0}"
 	local matrix_file
 	[[ -n "$DEBUG_DIR" ]] || return 0
 	command -v jq >/dev/null 2>&1 || return 0
@@ -1264,6 +1265,8 @@ write_acceptance_matrix_row_json() {
 		--argjson sub2singbox_fails "${sub2singbox_fails}" \
 		--argjson fallback_passes "${fallback_passes}" \
 		--argjson fallback_fails "${fallback_fails}" \
+		--argjson json_passes "${json_passes}" \
+		--argjson json_fails "${json_fails}" \
 		'{
 			generated_at: $generated_at,
 			selection: {
@@ -1304,7 +1307,8 @@ write_acceptance_matrix_row_json() {
 				panel: { pass: $panel_passes, fail: $panel_fails },
 				web_sub: { pass: $websub_passes, fail: $websub_fails },
 				sub2sing_box: { pass: $sub2singbox_passes, fail: $sub2singbox_fails },
-				fallback_root: { pass: $fallback_passes, fail: $fallback_fails }
+				fallback_root: { pass: $fallback_passes, fail: $fallback_fails },
+				subscription_json: { pass: $json_passes, fail: $json_fails }
 			},
 			manual_fields: {
 				result: "",
@@ -1760,6 +1764,7 @@ run_stealth_acceptance_stage() {
 	local failures=0 iteration=1 total_iterations=0 summary_file public_https_port
 	local panel_passes=0 panel_fails=0 websub_passes=0 websub_fails=0
 	local sub2singbox_passes=0 sub2singbox_fails=0 fallback_passes=0 fallback_fails=0
+	local json_passes=0 json_fails=0
 
 	KEEP_ARTIFACTS="y"
 	init_debug_session
@@ -1792,7 +1797,7 @@ run_stealth_acceptance_stage() {
 	write_acceptance_runtime_snapshot
 	write_acceptance_session_metadata
 	write_acceptance_manual_checklist
-	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails"
+	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails" "$json_passes" "$json_fails"
 
 	while (( iteration <= total_iterations )); do
 		msg_inf "Acceptance iteration ${iteration}/${total_iterations}"
@@ -1808,6 +1813,13 @@ run_stealth_acceptance_stage() {
 			websub_passes=$((websub_passes + 1))
 		else
 			websub_fails=$((websub_fails + 1))
+			failures=$((failures + 1))
+		fi
+
+		if acceptance_probe_url "$iteration" "Subscription JSON" "${domain}" "/${json_path}/first" "subscription-json-${iteration}.json"; then
+			json_passes=$((json_passes + 1))
+		else
+			json_fails=$((json_fails + 1))
 			failures=$((failures + 1))
 		fi
 
@@ -1851,6 +1863,7 @@ Interval seconds: ${ACCEPTANCE_INTERVAL_SECONDS}
 Minutes: ${ACCEPTANCE_MINUTES}
 Panel: pass=${panel_passes} fail=${panel_fails}
 Web-sub: pass=${websub_passes} fail=${websub_fails}
+Subscription JSON: pass=${json_passes} fail=${json_fails}
 sub2sing-box: pass=${sub2singbox_passes} fail=${sub2singbox_fails}
 Fallback root: pass=${fallback_passes} fail=${fallback_fails}
 EOF
@@ -1858,7 +1871,7 @@ EOF
 	capture_acceptance_snapshot
 	write_acceptance_runtime_snapshot
 	write_acceptance_session_metadata
-	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails"
+	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails" "$json_passes" "$json_fails"
 
 	if (( failures > 0 )); then
 		die "Acceptance завершён с ошибками. Подробности: ${summary_file}"
@@ -2105,6 +2118,23 @@ verify_existing_installation() {
 
 	if [[ "$https_proxy_checks_enabled" == "enabled" ]]; then
 		if [[ -n "$domain" && -n "$json_path" ]]; then
+			if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
+				local_subjson_settings=$(sqlite3 -separator '|' -list "$XUIDB" "
+SELECT
+  COALESCE((SELECT value FROM settings WHERE key='subJsonEnable' LIMIT 1), ''),
+  COALESCE((SELECT value FROM settings WHERE key='subJsonPath' LIMIT 1), ''),
+  COALESCE((SELECT value FROM settings WHERE key='subJsonURI' LIMIT 1), '');
+" 2>/dev/null)
+				IFS='|' read -r actual_subjson_enable actual_subjson_path actual_subjson_uri <<<"$local_subjson_settings"
+				expected_subjson_uri="https://${domain}/${json_path}/"
+				if [[ "${actual_subjson_enable:-}" == "true" && "$(trim_slashes "${actual_subjson_path:-}")" == "${json_path}" && "${actual_subjson_uri:-}" == "$expected_subjson_uri" ]]; then
+					record_verify_result "PASS" "Subscription JSON settings match runtime context"
+				else
+					record_verify_result "FAIL" "Subscription JSON settings do not match runtime context"
+					append_debug_log "subJson settings actual enable=${actual_subjson_enable:-<empty>} path=${actual_subjson_path:-<empty>} uri=${actual_subjson_uri:-<empty>} expected_path=${json_path} expected_uri=${expected_subjson_uri}"
+					failures=$((failures + 1))
+				fi
+			fi
 			if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${json_path}/first" 2>&1); then
 				record_verify_result "PASS" "Subscription JSON endpoint responds through local HTTPS"
 				[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/subscription-json-body.txt"
@@ -2118,37 +2148,30 @@ verify_existing_installation() {
 						--arg expectedKeepAliveInterval "${TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL:-}" \
 						--arg expectedKeepAliveIdle "${TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE:-}" \
 						--arg expectedTcpUserTimeout "${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-}" \
+						--arg expectedTransportProfile "${TRANSPORT_PROFILE:-}" \
 						'
 						def configs: if type == "array" then . else [.] end;
-						configs
-						| all(
-							.[];
-							(.outbounds // [])
-							| all(
-								.[];
-								if .protocol == "vless" then
-									((.settings.vnext | type) == "array")
-									and ((.settings | has("address")) | not)
-									and ((.settings.vnext[0].users | type) == "array")
-									and (
-										if .streamSettings.network == "xhttp" then
-											((.streamSettings.sockopt | type) == "object")
-											and (.streamSettings.sockopt | has("tcpNoDelay"))
-											and (.streamSettings.sockopt | has("tcpUserTimeout"))
-											and (.streamSettings.sockopt | has("tcpKeepAliveInterval"))
-											and (.streamSettings.sockopt | has("tcpKeepAliveIdle"))
-											and ((.streamSettings.sockopt.tcpNoDelay | tostring) == $expectedTcpNoDelay)
-											and ((.streamSettings.sockopt.tcpKeepAliveInterval | tostring) == $expectedKeepAliveInterval)
-											and ((.streamSettings.sockopt.tcpKeepAliveIdle | tostring) == $expectedKeepAliveIdle)
-											and ((.streamSettings.sockopt.tcpUserTimeout | tostring) == $expectedTcpUserTimeout)
-										else
-											true
-										end
-									)
-								else
-									true
-								end
-							)
+						def outbounds: [configs[] | (.outbounds // [])[]];
+						def valid_vless:
+							(.protocol == "vless")
+							and ((.settings.vnext | type) == "array")
+							and ((.settings | has("address")) | not)
+							and ((.settings.vnext[0].users | type) == "array");
+						def valid_xhttp_sockopt:
+							(.streamSettings.network == "xhttp")
+							and ((.streamSettings.sockopt | type) == "object")
+							and ((.streamSettings.sockopt.tcpNoDelay | tostring) == $expectedTcpNoDelay)
+							and ((.streamSettings.sockopt.tcpKeepAliveInterval | tostring) == $expectedKeepAliveInterval)
+							and ((.streamSettings.sockopt.tcpKeepAliveIdle | tostring) == $expectedKeepAliveIdle)
+							and ((.streamSettings.sockopt.tcpUserTimeout | tostring) == $expectedTcpUserTimeout);
+						(outbounds | any(.protocol == "vless"))
+						and (outbounds | all(if .protocol == "vless" then valid_vless else true end))
+						and (
+							if $expectedTransportProfile == "stealth-xhttp" then
+								(outbounds | any(.protocol == "vless" and valid_xhttp_sockopt))
+							else
+								true
+							end
 						)
 					' >/dev/null 2>&1; then
 						record_verify_result "PASS" "Subscription JSON endpoint returns VLESS configs with vnext"
@@ -2280,6 +2303,16 @@ verify_reset_state() {
 		record_verify_result "PASS" "sub2sing-box service/process is stopped"
 	fi
 
+	if systemctl is-active --quiet subjson-rewrite; then
+		record_verify_result "FAIL" "subjson-rewrite service is still active after reset"
+		failures=$((failures + 1))
+	elif pgrep -f "subjson-rewrite.py" >/dev/null 2>&1; then
+		record_verify_result "FAIL" "subjson-rewrite process is still running"
+		failures=$((failures + 1))
+	else
+		record_verify_result "PASS" "subjson-rewrite service/process is stopped"
+	fi
+
 	for path in \
 		"/etc/x-ui" \
 		"/usr/local/x-ui" \
@@ -2290,8 +2323,11 @@ verify_reset_state() {
 		"/var/log/letsencrypt" \
 		"/usr/bin/x-ui" \
 		"/usr/bin/sub2sing-box" \
+		"$SUBJSON_REWRITE_BIN" \
 		"/etc/systemd/system/sub2sing-box.service" \
-		"/etc/systemd/system/multi-user.target.wants/sub2sing-box.service"; do
+		"/etc/systemd/system/multi-user.target.wants/sub2sing-box.service" \
+		"$SUBJSON_REWRITE_SERVICE" \
+		"/etc/systemd/system/multi-user.target.wants/subjson-rewrite.service"; do
 		if [[ -e "$path" ]]; then
 			record_verify_result "FAIL" "Residual path still exists: $path"
 			failures=$((failures + 1))
@@ -2323,6 +2359,9 @@ verify_reset_state() {
 
 	if command -v ss >/dev/null 2>&1; then
 		check_ports=("80" "443")
+		if [[ "$SUBJSON_REWRITE_PORT" =~ ^[0-9]+$ ]]; then
+			check_ports+=("$SUBJSON_REWRITE_PORT")
+		fi
 		for port_value in "$(platform_transport_web_tls_port)" "$(platform_transport_reality_site_tls_port)"; do
 			[[ "$port_value" =~ ^[0-9]+$ ]] || continue
 			[[ "$port_value" == "80" || "$port_value" == "443" ]] && continue
@@ -4743,6 +4782,7 @@ main() {
 		fi
 		install_web_sub_page
 		ensure_sub2singbox_local_ui_proxy
+		install_subjson_rewrite
 		nginx -t >/dev/null 2>&1 || die "nginx validation failed after updating web/sub2sing-box UI."
 		systemctl reload nginx >/dev/null 2>&1 || die "Failed to reload nginx after updating web/sub2sing-box UI."
 		if is_yes "$VERIFY_MODE"; then

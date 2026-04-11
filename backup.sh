@@ -406,6 +406,14 @@ verify_restore_result() {
 		echo "[INFO] runtime provenance file is missing; restore context falls back to heuristics"
 	fi
 	echo "[INFO] restored selection: ${RESTORE_PLATFORM_PROFILE}/${RESTORE_TRANSPORT_PROFILE} | reality_tuning=${RESTORE_REALITY_TUNING_PROFILE:-default} | xhttp_tuning=${RESTORE_XHTTP_TUNING_PROFILE:-n/a}"
+	if [ "$RESTORE_TRANSPORT_PROFILE" = "stealth-xhttp" ]; then
+		if [ -f "$SUBJSON_REWRITE_SERVICE" ] && [ -x "$SUBJSON_REWRITE_BIN" ] && systemctl is-active --quiet subjson-rewrite; then
+			echo "[PASS] stealth-xhttp restore keeps subjson-rewrite service active"
+		else
+			echo "[FAIL] stealth-xhttp restore is missing active subjson-rewrite service"
+			stealth_failures=$((stealth_failures + 1))
+		fi
+	fi
 	if [ "$RESTORE_PLATFORM_PROFILE" = "stealth" ] && command -v ss >/dev/null 2>&1; then
 		listener_output=$(ss -lntp 2>/dev/null || true)
 		if grep -Eq "[:.]${RESTORE_PUBLIC_HTTPS_PORT}[[:space:]].*xray" <<<"$listener_output"; then
@@ -452,6 +460,17 @@ verify_restore_result() {
 		fi
 	else
 		echo "[FAIL] restore runtime context is incomplete for HTTPS web-sub check"
+	fi
+
+	if [ "$RESTORE_TRANSPORT_PROFILE" = "stealth-xhttp" ] && command -v curl >/dev/null 2>&1 && [ -n "$RESTORE_DOMAIN" ] && [ -n "$RESTORE_JSON_PATH" ]; then
+		json_probe_url="https://${RESTORE_DOMAIN}/${RESTORE_JSON_PATH}/first"
+		json_resolve_host="${RESTORE_DOMAIN}:${RESTORE_PUBLIC_HTTPS_PORT}:127.0.0.1"
+		if curl -kfsS --resolve "$json_resolve_host" "$json_probe_url" >/dev/null 2>&1; then
+			echo "[PASS] local HTTPS JSON subscription responds after restore"
+		else
+			echo "[FAIL] local HTTPS JSON subscription does not respond after restore"
+			stealth_failures=$((stealth_failures + 1))
+		fi
 	fi
 
 	if [ "$stealth_failures" -gt 0 ]; then

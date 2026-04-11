@@ -9,7 +9,7 @@
 ## Канонические рабочие сценарии
 
 - [2026-04-08 04:30:47] Поддерживаемая установка: `sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no`
-- [2026-04-11 14:40:00] Установка с controlled tuning preset: `PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp REALITY_TUNING_PROFILE=mobile-safe XHTTP_TUNING_PROFILE=low-latency sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no`
+- [2026-04-11 14:40:00] Установка с controlled tuning preset: `sudo env PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp REALITY_TUNING_PROFILE=mobile-safe XHTTP_TUNING_PROFILE=handoff-safe bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no`
 - [2026-04-08 04:30:47] Проверка существующей установки: `sudo bash ./x-ui-pro-updated.sh -stage verify -debug yes -keep_artifacts yes`
 - [2026-04-08 04:30:47] Переустановка только web-sub контура: `sudo bash ./x-ui-pro-updated.sh -stage websub -verify yes -debug yes`
 - [2026-04-09 00:30:57] Server-side приёмка stealth-профиля: `sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -acceptance_minutes 5 -acceptance_interval_seconds 30`
@@ -35,8 +35,8 @@
 - [2026-04-11 16:05:00] Comparative acceptance теперь дополнительно пишет machine-readable артефакты `acceptance/session-metadata.env`, `acceptance/matrix-row.json` и `acceptance/probe-results.jsonl`, чтобы сравнивать `stealth-xray` и `stealth-xhttp` по единому формату.
 - [2026-04-11 17:50:00] `stage=verify` для `stealth-xhttp` больше не ограничивается socket/path-проверками: он поднимает локальный Xray loopback-client и выполняет активный `XHTTP` self-test через публичный ingress, сохраняя `commands/xhttp-selftest.json`, `commands/xhttp-selftest.xray.log` и `commands/xhttp-selftest.curl.log`.
 - [2026-04-11 17:50:00] Базовый runtime-контракт `stealth-xhttp` синхронизирован с официальным `nginx + TLS + XHTTP` направлением: server-side default переведён с `packet-up` на `auto`, а `nginx`-location для `XHTTP` усилен под H2 ingress.
-- [2026-04-11 19:40:00] Для `stealth-xhttp low-latency` installer теперь встраивает `xhttpSettings.xmux` в inbound, `verify` валидирует этот блок по `x-ui.db`, а loopback self-test использует тот же `xmux`, что и JSON-подписка.
-- [2026-04-11 19:40:00] Практический операторский инвариант: handoff/reconnect тесты `stealth-xhttp low-latency` нужно выполнять через `XRAY JSON Subscription` (`v2rayNG install-config` / update subscription), потому что прямой QR/base64 URI формат upstream `3x-ui` не умеет переносить `xmux`.
+- [2026-04-11 19:40:00] Для `stealth-xhttp handoff-safe` installer теперь встраивает handoff/reconnect tuning в inbound, `verify` валидирует этот блок по `x-ui.db`, а JSON-подписка доставляет клиенту валидный `settings.vnext` и `streamSettings.sockopt`.
+- [2026-04-11 19:40:00] Практический операторский инвариант: handoff/reconnect тесты `stealth-xhttp handoff-safe` нужно выполнять через `XRAY JSON Subscription` (`v2rayNG install-config` / update subscription), потому что прямой QR/base64 URI формат upstream `3x-ui` не умеет переносить полный JSON transport tuning.
 - [2026-04-11 20:05:00] Публичный JSON-sub endpoint больше не отдаётся напрямую из `3x-ui`: nginx проксирует `/${json_path}` в локальный `subjson-rewrite` bridge на `127.0.0.1:8091`, который забирает raw JSON с локального `x-ui` sub-port и переписывает `vless` outbound'ы в валидный `vnext`-формат.
 - [2026-04-11 20:05:00] `stage=verify` теперь валидирует не только то, что JSON endpoint отвечает и не возвращает HTML, но и то, что все `vless`-конфиги приходят с `settings.vnext` и без старого плоского `settings.address/id/port`.
 - [2026-04-08 04:30:47] `-stage reset` подготавливает staging к новому чистому прогону.
