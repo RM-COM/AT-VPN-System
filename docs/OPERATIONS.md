@@ -33,6 +33,8 @@
 - [2026-04-09 00:30:57] `-stage acceptance` запускает server-side stealth acceptance: выполняет строгий `verify`, повторяемые HTTPS-пробы и сохраняет чек-лист ручной клиентской проверки.
 - [2026-04-11 14:40:00] `-reality_tuning_profile` и `-xhttp_tuning_profile` позволяют прогонять comparative acceptance на разных preset'ах без ручной правки metadata или SQL.
 - [2026-04-11 16:05:00] Comparative acceptance теперь дополнительно пишет machine-readable артефакты `acceptance/session-metadata.env`, `acceptance/matrix-row.json` и `acceptance/probe-results.jsonl`, чтобы сравнивать `stealth-xray` и `stealth-xhttp` по единому формату.
+- [2026-04-11 17:50:00] `stage=verify` для `stealth-xhttp` больше не ограничивается socket/path-проверками: он поднимает локальный Xray loopback-client и выполняет активный `XHTTP` self-test через публичный ingress, сохраняя `commands/xhttp-selftest.json`, `commands/xhttp-selftest.xray.log` и `commands/xhttp-selftest.curl.log`.
+- [2026-04-11 17:50:00] Базовый runtime-контракт `stealth-xhttp` синхронизирован с официальным `nginx + TLS + XHTTP` направлением: server-side default переведён с `packet-up` на `auto`, а `nginx`-location для `XHTTP` усилен под H2 ingress.
 - [2026-04-08 04:30:47] `-stage reset` подготавливает staging к новому чистому прогону.
 - [2026-04-08 04:30:47] `-dry_run yes` используется как безопасный preview действий.
 - [2026-04-08 04:30:47] `-keep_artifacts yes` сохраняет артефакты диагностики даже без полного `-debug yes`.

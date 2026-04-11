@@ -97,7 +97,7 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_SPIDER_X="/"
 				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
 				TRANSPORT_XHTTP_TUNING_PROFILE="default"
-				TRANSPORT_XHTTP_MODE="packet-up"
+				TRANSPORT_XHTTP_MODE="auto"
 				TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=30
 				TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="1000000"
 				TRANSPORT_XHTTP_NO_SSE_HEADER="false"
@@ -150,7 +150,7 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_SPIDER_X="/"
 				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
 				TRANSPORT_XHTTP_TUNING_PROFILE="mobile-safe"
-				TRANSPORT_XHTTP_MODE="packet-up"
+				TRANSPORT_XHTTP_MODE="auto"
 				TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=12
 				TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="262144"
 				TRANSPORT_XHTTP_NO_SSE_HEADER="false"
@@ -361,7 +361,7 @@ platform_apply_xhttp_tuning_profile() {
 	local selected_profile="$1"
 	case "$selected_profile" in
 		default)
-			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_MODE="auto"
 			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=30
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="1000000"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
@@ -379,7 +379,7 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=600
 			;;
 		mobile-safe)
-			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_MODE="auto"
 			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=12
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="262144"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
@@ -397,7 +397,7 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
 			;;
 		low-latency)
-			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_MODE="auto"
 			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=8
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="131072"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
@@ -415,7 +415,7 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
 			;;
 		aggressive-stealth)
-			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_MODE="auto"
 			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=24
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="131072"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
@@ -752,7 +752,7 @@ print_runtime_context() {
 	append_debug_log "  override_reality_tuning_profile=${OVERRIDE_REALITY_TUNING_PROFILE:-<none>}"
 	if [[ -n "${TRANSPORT_XHTTP_MODE:-}" ]]; then
 		append_debug_log "  transport_xhttp_tuning_profile=${TRANSPORT_XHTTP_TUNING_PROFILE:-default}"
-		append_debug_log "  transport_xhttp_mode=${TRANSPORT_XHTTP_MODE:-packet-up}"
+	append_debug_log "  transport_xhttp_mode=${TRANSPORT_XHTTP_MODE:-auto}"
 		append_debug_log "  transport_xhttp_sc_max_buffered_posts=${TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS:-30}"
 		append_debug_log "  transport_xhttp_sc_max_each_post_bytes=${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-1000000}"
 		append_debug_log "  transport_xhttp_x_padding_bytes=${TRANSPORT_XHTTP_X_PADDING_BYTES:-100-1000}"
@@ -1340,6 +1340,129 @@ LIMIT 1;
 
 	return "$mismatch_count"
 }
+xhttp_transport_self_test() {
+	local xray_bin="" xhttp_client_id="" xhttp_mode="" xhttp_host="" xhttp_path_db=""
+	local test_dir="" config_file="" xray_log="" curl_log="" curl_output="" curl_rc=0
+	local curl_target="https://www.gstatic.com/generate_204" xray_pid="" failure_hint=""
+
+	[[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]] || return 0
+
+	if ! command -v sqlite3 >/dev/null 2>&1 || [[ ! -f "$XUIDB" ]]; then
+		record_verify_result "FAIL" "XHTTP self-test cannot start without sqlite3 and ${XUIDB}"
+		return 1
+	fi
+	if ! command -v jq >/dev/null 2>&1; then
+		record_verify_result "FAIL" "XHTTP self-test cannot start without jq"
+		return 1
+	fi
+
+	if [[ -x /usr/local/x-ui/bin/xray-linux-amd64 ]]; then
+		xray_bin="/usr/local/x-ui/bin/xray-linux-amd64"
+	else
+		xray_bin="$(command -v xray 2>/dev/null || true)"
+	fi
+	if [[ -z "$xray_bin" || ! -x "$xray_bin" ]]; then
+		record_verify_result "FAIL" "XHTTP self-test cannot find an executable Xray binary"
+		return 1
+	fi
+
+	xhttp_client_id=$(sqlite3 -list "$XUIDB" "SELECT json_extract(settings, '$.clients[0].id') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+	xhttp_path_db=$(sqlite3 -list "$XUIDB" "SELECT json_extract(stream_settings, '$.xhttpSettings.path') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+	xhttp_host=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.host'), '') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+	xhttp_mode=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.mode'), '') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+	xhttp_path_db="$(trim_slashes "$xhttp_path_db")"
+	[[ -z "$xhttp_mode" ]] && xhttp_mode="${TRANSPORT_XHTTP_MODE:-auto}"
+
+	append_debug_log "xhttp self-test target domain=${domain:-<empty>} path=${xhttp_path_db:-<empty>} mode=${xhttp_mode:-<empty>} host=${xhttp_host:-<empty>} xray_bin=${xray_bin}"
+
+	if [[ -z "$domain" || -z "$xhttp_path_db" || -z "$xhttp_client_id" ]]; then
+		record_verify_result "FAIL" "XHTTP self-test cannot resolve domain/path/client id from the current installation"
+		return 1
+	fi
+
+	test_dir="$(mktemp -d)"
+	config_file="${test_dir}/xhttp-selftest.json"
+	xray_log="${test_dir}/xhttp-selftest.xray.log"
+	curl_log="${test_dir}/xhttp-selftest.curl.log"
+
+	jq -n \
+		--arg uuid "$xhttp_client_id" \
+		--arg domain "$domain" \
+		--arg path "/${xhttp_path_db}" \
+		--arg mode "$xhttp_mode" \
+		--arg host "$xhttp_host" \
+		'{
+			log: { loglevel: "info" },
+			inbounds: [
+				{
+					tag: "socks-in",
+					port: 10881,
+					listen: "127.0.0.1",
+					protocol: "socks",
+					settings: { udp: false }
+				}
+			],
+			outbounds: [
+				{
+					tag: "xhttp-selftest",
+					protocol: "vless",
+					settings: {
+						vnext: [
+							{
+								address: $domain,
+								port: 443,
+								users: [
+									{
+										id: $uuid,
+										encryption: "none"
+									}
+								]
+							}
+						]
+					},
+					streamSettings: {
+						network: "xhttp",
+						security: "tls",
+						tlsSettings: {
+							serverName: $domain,
+							fingerprint: "chrome",
+							alpn: ["h2"]
+						},
+						xhttpSettings: (
+							{ path: $path, mode: $mode } +
+							(if $host != "" then { host: $host } else {} end)
+						)
+					}
+				}
+			]
+		}' > "$config_file"
+
+	"$xray_bin" run -c "$config_file" > "$xray_log" 2>&1 &
+	xray_pid=$!
+	sleep 2
+	curl_output=$(curl --max-time 15 --socks5 127.0.0.1:10881 -I "$curl_target" 2>&1)
+	curl_rc=$?
+	printf '%s\n' "$curl_output" > "$curl_log"
+	kill "$xray_pid" >/dev/null 2>&1 || true
+	wait "$xray_pid" 2>/dev/null || true
+
+	capture_file_if_exists "$config_file" "commands/xhttp-selftest.json"
+	capture_file_if_exists "$xray_log" "commands/xhttp-selftest.xray.log"
+	capture_file_if_exists "$curl_log" "commands/xhttp-selftest.curl.log"
+
+	if [[ "$curl_rc" -eq 0 ]]; then
+		record_verify_result "PASS" "Stealth XHTTP transport self-test passed through local loopback client"
+		rm -rf "$test_dir"
+		return 0
+	fi
+
+	failure_hint=$(grep -E 'unexpected status|failed to send upload|XHTTP is dialing|proxy/vless/outbound' "$xray_log" 2>/dev/null | tail -n 4 | tr '\n' '; ')
+	append_debug_log "xhttp self-test curl output: ${curl_output}"
+	append_debug_log "xhttp self-test failure hint: ${failure_hint:-<none>}"
+	record_verify_result "FAIL" "Stealth XHTTP transport self-test failed (${failure_hint:-curl=${curl_rc}})"
+	rm -rf "$test_dir"
+	return 1
+}
 write_acceptance_manual_checklist() {
 	local checklist_file public_https_port client_target_hint client_log_hint transport_extra_url secondary_target_hint
 	[[ -n "$DEBUG_DIR" ]] || return 0
@@ -1740,6 +1863,10 @@ verify_existing_installation() {
 				record_verify_result "PASS" "Stealth XHTTP unix socket exists"
 			else
 				record_verify_result "FAIL" "Stealth XHTTP unix socket is missing"
+				failures=$((failures + 1))
+			fi
+
+			if ! xhttp_transport_self_test; then
 				failures=$((failures + 1))
 			fi
 		fi
@@ -2693,6 +2820,11 @@ server {
 	ssl_ciphers HIGH:!aNULL:!eNULL:!MD5:!DES:!RC4:!ADH:!SSLv3:!EXP:!PSK:!DSS;
 	ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem;
 	ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;
+	client_header_buffer_size 4k;
+	large_client_header_buffers 8 16k;
+	client_body_buffer_size 512k;
+	keepalive_requests 1000;
+	keepalive_timeout 52s;
 	if (\$host !~* ^(.+\.)?$domain\$ ){return 444;}
 	if (\$scheme ~* https) {set \$safe 1;}
 	if (\$ssl_server_name !~* ^(.+\.)?$domain\$ ) {set \$safe "\${safe}0"; }
@@ -2815,17 +2947,21 @@ EOF
         }
         #XHTTP
         location /${xhttp_path} {
-          grpc_pass grpc://unix:/dev/shm/uds2023.sock;
+          client_max_body_size       0;
+          client_body_timeout        1h;
+          grpc_pass                  unix:/dev/shm/uds2023.sock;
           grpc_buffer_size         16k;
           grpc_socket_keepalive    on;
           grpc_read_timeout        1h;
           grpc_send_timeout        1h;
           grpc_set_header Connection         "";
+          grpc_set_header X-Real-IP          \$remote_addr;
           grpc_set_header X-Forwarded-For    \$proxy_add_x_forwarded_for;
           grpc_set_header X-Forwarded-Proto  \$scheme;
           grpc_set_header X-Forwarded-Port   \$server_port;
           grpc_set_header Host               \$host;
           grpc_set_header X-Forwarded-Host   \$host;
+          grpc_set_header Forwarded          "for=\$proxy_add_x_forwarded_for;proto=\$scheme";
           }
 	#Xray Config Path
 	location ~ ^/(?<fwdport>\d+)/(?<fwdpath>.*)\$ {
@@ -2942,6 +3078,11 @@ server {
 	ssl_ciphers HIGH:!aNULL:!eNULL:!MD5:!DES:!RC4:!ADH:!SSLv3:!EXP:!PSK:!DSS;
 	ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem;
 	ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;
+	client_header_buffer_size 4k;
+	large_client_header_buffers 8 16k;
+	client_body_buffer_size 512k;
+	keepalive_requests 1000;
+	keepalive_timeout 52s;
 	if (\$host !~* ^(.+\.)?$domain\$ ){return 444;}
 	if (\$scheme ~* https) {set \$safe 1;}
 	if (\$ssl_server_name !~* ^(.+\.)?$domain\$ ) {set \$safe "\${safe}0"; }
@@ -3064,17 +3205,21 @@ EOF
         }
         #XHTTP
         location /${xhttp_path} {
-          grpc_pass grpc://unix:/dev/shm/uds2023.sock;
+          client_max_body_size       0;
+          client_body_timeout        1h;
+          grpc_pass                  unix:/dev/shm/uds2023.sock;
           grpc_buffer_size         16k;
           grpc_socket_keepalive    on;
           grpc_read_timeout        1h;
           grpc_send_timeout        1h;
           grpc_set_header Connection         "";
+          grpc_set_header X-Real-IP          \$remote_addr;
           grpc_set_header X-Forwarded-For    \$proxy_add_x_forwarded_for;
           grpc_set_header X-Forwarded-Proto  \$scheme;
           grpc_set_header X-Forwarded-Port   \$server_port;
           grpc_set_header Host               \$host;
           grpc_set_header X-Forwarded-Host   \$host;
+          grpc_set_header Forwarded          "for=\$proxy_add_x_forwarded_for;proto=\$scheme";
           }
  	#Xray Config Path
 	location ~ ^/(?<fwdport>\d+)/(?<fwdpath>.*)\$ {
@@ -3461,7 +3606,7 @@ write_transport_inbounds_classic_xray() {
     "scMaxEachPostBytes": "${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-1000000}",
     "noSSEHeader": ${TRANSPORT_XHTTP_NO_SSE_HEADER:-false},
     "xPaddingBytes": "${TRANSPORT_XHTTP_X_PADDING_BYTES:-100-1000}",
-    "mode": "${TRANSPORT_XHTTP_MODE:-packet-up}"
+    "mode": "${TRANSPORT_XHTTP_MODE:-auto}"
   },
   "sockopt": {
     "acceptProxyProtocol": false,
@@ -3809,7 +3954,7 @@ write_transport_inbounds_stealth_xhttp() {
     "scMaxEachPostBytes": "${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-1000000}",
     "noSSEHeader": ${TRANSPORT_XHTTP_NO_SSE_HEADER:-false},
     "xPaddingBytes": "${TRANSPORT_XHTTP_X_PADDING_BYTES:-100-1000}",
-    "mode": "${TRANSPORT_XHTTP_MODE:-packet-up}"
+    "mode": "${TRANSPORT_XHTTP_MODE:-auto}"
   },
   "sockopt": {
     "acceptProxyProtocol": false,
