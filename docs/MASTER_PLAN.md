@@ -85,6 +85,9 @@
 - [2026-04-10 08:10:51] `[В РАБОТЕ]` Следующий шаг теперь конкретный: проверить этот `mobile-safe stealth-xhttp` на staging/mobile network и затем сделать симметричный preset для `stealth-xray/reality-shield`.
 - [2026-04-10 08:14:46] `[СДЕЛАНО]` `mobile-safe stealth-xhttp` уже применён и подтверждён на staging repeated install + strict `verify`.
 - [2026-04-10 08:14:46] `[В РАБОТЕ]` Следующий шаг теперь разделяется: пользовательский mobile-data тест нового `stealth-xhttp` пресета и подготовка симметричного controlled preset для `stealth-xray/reality-shield`.
+- [2026-04-11 14:40:00] `[СДЕЛАНО]` Controlled tuning переведён из design-слоя в исполняемый код: `x-ui-pro-updated.sh` теперь принимает `-reality_tuning_profile` и `-xhttp_tuning_profile`, поддерживает preset'ы `default/mobile-safe/low-latency/aggressive-stealth` и применяет их в `main`, autodetect и `verify`.
+- [2026-04-11 14:40:00] `[СДЕЛАНО]` `stage=acceptance` усилен для comparative triage: рядом с probe-артефактами теперь сохраняются `acceptance/runtime-snapshot.env` и redacted `acceptance/xui-inbounds-summary.txt`.
+- [2026-04-11 14:40:00] `[В РАБОТЕ]` Следующий подшаг блока C теперь конкретный: прогнать живые сравнительные тесты `stealth-xray`/`stealth-xhttp` на controlled preset'ах и на их основе выбрать основной профиль, fallback и known-bad сценарии.
 - [2026-04-09 01:10:14] `[В РАБОТЕ]` Следующий активный шаг теперь конкретный: переключить staging на `stealth-xhttp`, прогнать тот же клиентский сценарий и только потом переходить к длинным сессиям 30-60 минут.
 - [2026-04-05 07:13:07] `[В РАБОТЕ]` Зафиксировать и довести до production-уровня рабочий цикл `Windows -> GitHub -> Linux staging`.
 - [2026-04-05 07:13:07] `[В РАБОТЕ]` Сохранить и проверить сценарии сопровождения сервера: `install`, `verify`, `stage=websub`, `uninstall`, `backup`, `restore`.

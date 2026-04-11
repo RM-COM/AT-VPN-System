@@ -257,6 +257,156 @@ platform_panel_control_bin() {
 	printf '%s' "${PANEL_PROVIDER_CONTROL_BIN:-x-ui}"
 }
 
+platform_validate_tuning_profile_name() {
+	local profile_name="$1"
+	case "$profile_name" in
+		default|mobile-safe|low-latency|aggressive-stealth) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+platform_tuning_summary() {
+	printf 'reality=%s xhttp=%s' \
+		"${TRANSPORT_REALITY_TUNING_PROFILE:-default}" \
+		"${TRANSPORT_XHTTP_TUNING_PROFILE:-n/a}"
+}
+
+platform_apply_reality_tuning_profile() {
+	local selected_profile="$1"
+	case "$selected_profile" in
+		default)
+			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+			TRANSPORT_REALITY_FINGERPRINT="random"
+			TRANSPORT_REALITY_SPIDER_X="/"
+			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			;;
+		mobile-safe)
+			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+			TRANSPORT_REALITY_FINGERPRINT="chrome"
+			TRANSPORT_REALITY_SPIDER_X="/"
+			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			;;
+		low-latency)
+			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+			TRANSPORT_REALITY_FINGERPRINT="chrome"
+			TRANSPORT_REALITY_SPIDER_X="/"
+			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			;;
+		aggressive-stealth)
+			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+			TRANSPORT_REALITY_FINGERPRINT="firefox"
+			TRANSPORT_REALITY_SPIDER_X="/"
+			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			;;
+		*)
+			die "Unsupported REALITY tuning profile: ${selected_profile}"
+			;;
+	esac
+	TRANSPORT_REALITY_TUNING_PROFILE="$selected_profile"
+}
+
+platform_apply_xhttp_tuning_profile() {
+	local selected_profile="$1"
+	case "$selected_profile" in
+		default)
+			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=30
+			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="1000000"
+			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+			TRANSPORT_XHTTP_TCP_FAST_OPEN="true"
+			TRANSPORT_XHTTP_TCP_MPTCP="true"
+			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+			TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=0
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=300
+			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=10000
+			TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+			TRANSPORT_XHTTP_V6_ONLY="false"
+			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=600
+			;;
+		mobile-safe)
+			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=12
+			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="262144"
+			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+			TRANSPORT_XHTTP_X_PADDING_BYTES="32-256"
+			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
+			TRANSPORT_XHTTP_TCP_MPTCP="false"
+			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+			TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=15
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=120
+			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=30000
+			TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+			TRANSPORT_XHTTP_V6_ONLY="false"
+			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
+			;;
+		low-latency)
+			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=8
+			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="131072"
+			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+			TRANSPORT_XHTTP_X_PADDING_BYTES="16-96"
+			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
+			TRANSPORT_XHTTP_TCP_MPTCP="false"
+			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+			TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=10
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=90
+			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=15000
+			TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+			TRANSPORT_XHTTP_V6_ONLY="false"
+			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
+			;;
+		aggressive-stealth)
+			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=24
+			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="131072"
+			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+			TRANSPORT_XHTTP_X_PADDING_BYTES="256-2048"
+			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
+			TRANSPORT_XHTTP_TCP_MPTCP="false"
+			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+			TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=20
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=180
+			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=45000
+			TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+			TRANSPORT_XHTTP_V6_ONLY="false"
+			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
+			;;
+		*)
+			die "Unsupported XHTTP tuning profile: ${selected_profile}"
+			;;
+	esac
+	TRANSPORT_XHTTP_TUNING_PROFILE="$selected_profile"
+}
+
+platform_apply_requested_tuning_profiles() {
+	local requested_reality requested_xhttp
+	requested_reality="${OVERRIDE_REALITY_TUNING_PROFILE:-${TRANSPORT_REALITY_TUNING_PROFILE:-default}}"
+	requested_xhttp="${OVERRIDE_XHTTP_TUNING_PROFILE:-${TRANSPORT_XHTTP_TUNING_PROFILE:-default}}"
+
+	if ! platform_validate_tuning_profile_name "$requested_reality"; then
+		die "Unsupported REALITY tuning profile: ${requested_reality}"
+	fi
+	platform_apply_reality_tuning_profile "$requested_reality"
+
+	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]]; then
+		if ! platform_validate_tuning_profile_name "$requested_xhttp"; then
+			die "Unsupported XHTTP tuning profile: ${requested_xhttp}"
+		fi
+		platform_apply_xhttp_tuning_profile "$requested_xhttp"
+	elif [[ -n "${OVERRIDE_XHTTP_TUNING_PROFILE:-}" ]]; then
+		die "XHTTP tuning profile override is supported only for transport profile stealth-xhttp. Current transport: ${TRANSPORT_PROFILE}"
+	fi
+}
+
 platform_profile_state() {
 	printf '%s' "${PLATFORM_IMPLEMENTATION_STATE:-ready}"
 }
@@ -531,6 +681,7 @@ print_runtime_context() {
 	append_debug_log "  transport_reality_client_flow=${TRANSPORT_REALITY_CLIENT_FLOW:-xtls-rprx-vision}"
 	append_debug_log "  transport_reality_fingerprint=${TRANSPORT_REALITY_FINGERPRINT:-random}"
 	append_debug_log "  transport_reality_spider_x=${TRANSPORT_REALITY_SPIDER_X:-/}"
+	append_debug_log "  override_reality_tuning_profile=${OVERRIDE_REALITY_TUNING_PROFILE:-<none>}"
 	if [[ -n "${TRANSPORT_XHTTP_MODE:-}" ]]; then
 		append_debug_log "  transport_xhttp_tuning_profile=${TRANSPORT_XHTTP_TUNING_PROFILE:-default}"
 		append_debug_log "  transport_xhttp_mode=${TRANSPORT_XHTTP_MODE:-packet-up}"
@@ -540,6 +691,7 @@ print_runtime_context() {
 		append_debug_log "  transport_xhttp_tcp_mptcp=${TRANSPORT_XHTTP_TCP_MPTCP:-true}"
 		append_debug_log "  transport_xhttp_tcp_user_timeout=${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-10000}"
 		append_debug_log "  transport_xhttp_tcp_window_clamp=${TRANSPORT_XHTTP_TCP_WINDOW_CLAMP:-600}"
+		append_debug_log "  override_xhttp_tuning_profile=${OVERRIDE_XHTTP_TUNING_PROFILE:-<none>}"
 	fi
 	append_debug_log "  domain=${domain:-<empty>}"
 	append_debug_log "  reality_domain=${reality_domain:-<empty>}"
@@ -574,6 +726,7 @@ platform_generate_runtime_defaults() {
 }
 print_execution_plan() {
 	msg_inf "Активная сборка: $(platform_selection_summary)"
+	msg_inf "Текущий transport tuning: $(platform_tuning_summary)"
 	if [[ "$(platform_selection_runtime_state)" != "ready" ]]; then
 		msg_inf "Профиль находится в staged-режиме: dry-run уже показывает новую selection-модель, но реальная runtime-установка будет открыта отдельным следующим срезом."
 	fi
@@ -606,6 +759,7 @@ print_acceptance_plan() {
 	msg_inf "5. Использовать отчёт для сравнения stealth-xray и stealth-xhttp."
 	msg_inf "Acceptance duration (minutes): ${ACCEPTANCE_MINUTES}"
 	msg_inf "Acceptance interval (seconds): ${ACCEPTANCE_INTERVAL_SECONDS}"
+	msg_inf "Текущий transport tuning: $(platform_tuning_summary)"
 	print_runtime_context
 }
 load_existing_runtime_context() {
@@ -621,6 +775,7 @@ load_existing_runtime_context() {
 				TRANSPORT_PROFILE="stealth-xray"
 			fi
 			platform_init >/dev/null 2>&1 || true
+			platform_apply_requested_tuning_profiles >/dev/null 2>&1 || true
 			append_debug_log "Autodetected installed selection: ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
 		fi
 	fi
@@ -707,6 +862,188 @@ capture_acceptance_snapshot() {
 		capture_command_output "acceptance/systemctl-sub2sing-box.txt" systemctl status sub2sing-box --no-pager
 		capture_command_output "acceptance/journal-sub2sing-box.txt" journalctl -u sub2sing-box -n 200 --no-pager
 	fi
+}
+write_acceptance_runtime_snapshot() {
+	local snapshot_file sqlite_file
+	[[ -n "$DEBUG_DIR" ]] || return 0
+	snapshot_file="$(acceptance_artifact_path "runtime-snapshot.env")"
+	mkdir -p "$(dirname "$snapshot_file")"
+	cat > "$snapshot_file" <<EOF
+timestamp=$(timestamp)
+selection_summary=$(platform_selection_summary)
+tuning_summary=$(platform_tuning_summary)
+platform_profile=${PLATFORM_PROFILE}
+transport_profile=${TRANSPORT_PROFILE}
+panel_provider=${PANEL_PROVIDER}
+transport_reality_tuning_profile=${TRANSPORT_REALITY_TUNING_PROFILE:-default}
+transport_reality_client_flow=${TRANSPORT_REALITY_CLIENT_FLOW:-xtls-rprx-vision}
+transport_reality_fingerprint=${TRANSPORT_REALITY_FINGERPRINT:-random}
+transport_reality_spider_x=${TRANSPORT_REALITY_SPIDER_X:-/}
+override_reality_tuning_profile=${OVERRIDE_REALITY_TUNING_PROFILE:-}
+transport_xhttp_tuning_profile=${TRANSPORT_XHTTP_TUNING_PROFILE:-}
+transport_xhttp_mode=${TRANSPORT_XHTTP_MODE:-}
+transport_xhttp_sc_max_buffered_posts=${TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS:-}
+transport_xhttp_sc_max_each_post_bytes=${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-}
+transport_xhttp_x_padding_bytes=${TRANSPORT_XHTTP_X_PADDING_BYTES:-}
+transport_xhttp_tcp_fast_open=${TRANSPORT_XHTTP_TCP_FAST_OPEN:-}
+transport_xhttp_tcp_mptcp=${TRANSPORT_XHTTP_TCP_MPTCP:-}
+transport_xhttp_tcp_keepalive_interval=${TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL:-}
+transport_xhttp_tcp_keepalive_idle=${TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE:-}
+transport_xhttp_tcp_user_timeout=${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-}
+transport_xhttp_tcp_window_clamp=${TRANSPORT_XHTTP_TCP_WINDOW_CLAMP:-}
+override_xhttp_tuning_profile=${OVERRIDE_XHTTP_TUNING_PROFILE:-}
+domain=${domain:-}
+reality_domain=${reality_domain:-}
+panel_path=${panel_path:-}
+web_path=${web_path:-}
+sub_path=${sub_path:-}
+json_path=${json_path:-}
+sub2singbox_path=${sub2singbox_path:-}
+xhttp_path=${xhttp_path:-}
+EOF
+	append_debug_log "Acceptance runtime snapshot written to ${snapshot_file}"
+	if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
+		sqlite_file="$(acceptance_artifact_path "xui-inbounds-summary.txt")"
+		sqlite3 -line "$XUIDB" "
+SELECT
+  remark,
+  port,
+  protocol,
+  json_extract(stream_settings, '$.network') AS network,
+  json_extract(stream_settings, '$.security') AS security,
+  json_extract(stream_settings, '$.realitySettings.settings.fingerprint') AS fingerprint,
+  json_extract(stream_settings, '$.xhttpSettings.mode') AS xhttp_mode,
+  json_extract(stream_settings, '$.xhttpSettings.scMaxBufferedPosts') AS xhttp_sc_max_buffered_posts,
+  json_extract(stream_settings, '$.sockopt.tcpFastOpen') AS tcp_fast_open,
+  json_extract(stream_settings, '$.sockopt.tcpMptcp') AS tcp_mptcp,
+  json_extract(stream_settings, '$.sockopt.tcpUserTimeout') AS tcp_user_timeout
+FROM inbounds
+WHERE json_extract(stream_settings, '$.security')='reality'
+   OR json_extract(stream_settings, '$.network')='xhttp';
+" > "$sqlite_file" 2>&1 || true
+		append_debug_log "Acceptance inbound summary written to ${sqlite_file}"
+	fi
+}
+platform_normalize_expected_sqlite_value() {
+	local raw_value="$1"
+	case "$raw_value" in
+		true) printf '1' ;;
+		false) printf '0' ;;
+		*) printf '%s' "$raw_value" ;;
+	esac
+}
+
+verify_transport_tuning_contract() {
+	local actual_reality actual_xhttp
+	local actual_fingerprint actual_spider actual_header
+	local actual_mode actual_buffered actual_each_bytes actual_padding
+	local actual_fast_open actual_mptcp actual_user_timeout actual_window_clamp
+	local mismatch_count=0
+
+	if ! command -v sqlite3 >/dev/null 2>&1 || [[ ! -f "$XUIDB" ]]; then
+		return 0
+	fi
+
+	actual_reality=$(sqlite3 -separator '|' -list "$XUIDB" "
+SELECT
+  COALESCE(json_extract(stream_settings, '$.realitySettings.settings.fingerprint'), ''),
+  COALESCE(json_extract(stream_settings, '$.realitySettings.settings.spiderX'), ''),
+  COALESCE(json_extract(stream_settings, '$.tcpSettings.header.type'), '')
+FROM inbounds
+WHERE json_extract(stream_settings, '$.security')='reality'
+LIMIT 1;
+" 2>/dev/null)
+	IFS='|' read -r actual_fingerprint actual_spider actual_header <<<"$actual_reality"
+	append_debug_log "verify reality tuning fingerprint=${actual_fingerprint:-<empty>} spiderX=${actual_spider:-<empty>} header=${actual_header:-<empty>}"
+
+	if [[ "${actual_fingerprint:-}" == "${TRANSPORT_REALITY_FINGERPRINT:-}" ]]; then
+		record_verify_result "PASS" "REALITY fingerprint соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+	else
+		record_verify_result "FAIL" "REALITY fingerprint не соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		mismatch_count=$((mismatch_count + 1))
+	fi
+	if [[ "${actual_spider:-}" == "${TRANSPORT_REALITY_SPIDER_X:-}" ]]; then
+		record_verify_result "PASS" "REALITY spiderX соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+	else
+		record_verify_result "FAIL" "REALITY spiderX не соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		mismatch_count=$((mismatch_count + 1))
+	fi
+	if [[ "${actual_header:-}" == "${TRANSPORT_REALITY_TCP_HEADER_TYPE:-}" ]]; then
+		record_verify_result "PASS" "REALITY tcp header соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+	else
+		record_verify_result "FAIL" "REALITY tcp header не соответствует preset `${TRANSPORT_REALITY_TUNING_PROFILE:-default}`"
+		mismatch_count=$((mismatch_count + 1))
+	fi
+
+	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]]; then
+		actual_xhttp=$(sqlite3 -separator '|' -list "$XUIDB" "
+SELECT
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.mode'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.scMaxBufferedPosts'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.scMaxEachPostBytes'), ''),
+  COALESCE(json_extract(stream_settings, '$.xhttpSettings.xPaddingBytes'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpFastOpen'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpMptcp'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpUserTimeout'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpWindowClamp'), '')
+FROM inbounds
+WHERE json_extract(stream_settings, '$.network')='xhttp'
+LIMIT 1;
+" 2>/dev/null)
+		IFS='|' read -r actual_mode actual_buffered actual_each_bytes actual_padding actual_fast_open actual_mptcp actual_user_timeout actual_window_clamp <<<"$actual_xhttp"
+		append_debug_log "verify xhttp tuning mode=${actual_mode:-<empty>} buffered=${actual_buffered:-<empty>} bytes=${actual_each_bytes:-<empty>} padding=${actual_padding:-<empty>} fastopen=${actual_fast_open:-<empty>} mptcp=${actual_mptcp:-<empty>} timeout=${actual_user_timeout:-<empty>} clamp=${actual_window_clamp:-<empty>}"
+
+		if [[ "${actual_mode:-}" == "${TRANSPORT_XHTTP_MODE:-}" ]]; then
+			record_verify_result "PASS" "XHTTP mode соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+		else
+			record_verify_result "FAIL" "XHTTP mode не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_buffered:-}" == "${TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS:-}" ]]; then
+			record_verify_result "PASS" "XHTTP scMaxBufferedPosts соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+		else
+			record_verify_result "FAIL" "XHTTP scMaxBufferedPosts не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_each_bytes:-}" == "${TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES:-}" ]]; then
+			record_verify_result "PASS" "XHTTP scMaxEachPostBytes соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+		else
+			record_verify_result "FAIL" "XHTTP scMaxEachPostBytes не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_padding:-}" == "${TRANSPORT_XHTTP_X_PADDING_BYTES:-}" ]]; then
+			record_verify_result "PASS" "XHTTP xPaddingBytes соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+		else
+			record_verify_result "FAIL" "XHTTP xPaddingBytes не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_fast_open:-}" == "$(platform_normalize_expected_sqlite_value "${TRANSPORT_XHTTP_TCP_FAST_OPEN:-}")" ]]; then
+			record_verify_result "PASS" "XHTTP tcpFastOpen соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+		else
+			record_verify_result "FAIL" "XHTTP tcpFastOpen не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_mptcp:-}" == "$(platform_normalize_expected_sqlite_value "${TRANSPORT_XHTTP_TCP_MPTCP:-}")" ]]; then
+			record_verify_result "PASS" "XHTTP tcpMptcp соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+		else
+			record_verify_result "FAIL" "XHTTP tcpMptcp не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_user_timeout:-}" == "${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-}" ]]; then
+			record_verify_result "PASS" "XHTTP tcpUserTimeout соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+		else
+			record_verify_result "FAIL" "XHTTP tcpUserTimeout не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+		if [[ "${actual_window_clamp:-}" == "${TRANSPORT_XHTTP_TCP_WINDOW_CLAMP:-}" ]]; then
+			record_verify_result "PASS" "XHTTP tcpWindowClamp соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+		else
+			record_verify_result "FAIL" "XHTTP tcpWindowClamp не соответствует preset `${TRANSPORT_XHTTP_TUNING_PROFILE:-default}`"
+			mismatch_count=$((mismatch_count + 1))
+		fi
+	fi
+
+	return "$mismatch_count"
 }
 write_acceptance_manual_checklist() {
 	local checklist_file public_https_port client_target_hint client_log_hint transport_extra_url secondary_target_hint
@@ -829,6 +1166,7 @@ run_stealth_acceptance_stage() {
 
 	verify_existing_installation || die "Acceptance остановлен: verify не прошёл."
 	capture_acceptance_snapshot
+	write_acceptance_runtime_snapshot
 	write_acceptance_manual_checklist
 
 	while (( iteration <= total_iterations )); do
@@ -874,6 +1212,7 @@ run_stealth_acceptance_stage() {
 Acceptance summary
 Timestamp: $(timestamp)
 Selection: $(platform_selection_summary)
+Transport tuning: $(platform_tuning_summary)
 Public HTTPS port: ${public_https_port}
 Iterations: ${total_iterations}
 Interval seconds: ${ACCEPTANCE_INTERVAL_SECONDS}
@@ -885,6 +1224,7 @@ Fallback root: pass=${fallback_passes} fail=${fallback_fails}
 EOF
 	append_debug_log "Acceptance summary written to ${summary_file}"
 	capture_acceptance_snapshot
+	write_acceptance_runtime_snapshot
 
 	if (( failures > 0 )); then
 		die "Acceptance завершён с ошибками. Подробности: ${summary_file}"
@@ -1075,6 +1415,10 @@ verify_existing_installation() {
 				failures=$((failures + 1))
 			fi
 		fi
+	fi
+
+	if ! verify_transport_tuning_contract; then
+		failures=$((failures + 1))
 	fi
 
 	if [[ "$https_proxy_checks_enabled" == "enabled" ]]; then
@@ -1732,6 +2076,8 @@ parse_args() {
 	TRANSPORT_PROFILE="${TRANSPORT_PROFILE:-classic-xray}"
 	PANEL_PROVIDER="${PANEL_PROVIDER:-3x-ui}"
 	ENABLE_AWG="${ENABLE_AWG:-n}"
+	OVERRIDE_REALITY_TUNING_PROFILE="${OVERRIDE_REALITY_TUNING_PROFILE:-${REALITY_TUNING_PROFILE:-}}"
+	OVERRIDE_XHTTP_TUNING_PROFILE="${OVERRIDE_XHTTP_TUNING_PROFILE:-${XHTTP_TUNING_PROFILE:-}}"
 
 	while [[ "$#" -gt 0 ]]; do
 		case "$1" in
@@ -1757,6 +2103,8 @@ parse_args() {
 			-transport_profile) TRANSPORT_PROFILE="$2"; shift 2;;
 			-panel_provider) PANEL_PROVIDER="$2"; shift 2;;
 			-enable_awg) ENABLE_AWG="$2"; shift 2;;
+			-reality_tuning_profile) OVERRIDE_REALITY_TUNING_PROFILE="$2"; shift 2;;
+			-xhttp_tuning_profile) OVERRIDE_XHTTP_TUNING_PROFILE="$2"; shift 2;;
 			*) shift 1;;
 		esac
 	done
@@ -3558,6 +3906,7 @@ main() {
 	# 1. Parse arguments BEFORE any destructive action
 	parse_args "$@"
 	platform_init || die "Unsupported platform selection. Current values: $(platform_selection_summary)"
+	platform_apply_requested_tuning_profiles
 	init_debug_session
 	append_debug_log "Stage=${STAGE} Debug=${DEBUG_MODE} DryRun=${DRY_RUN} Verify=${VERIFY_MODE} SkipCleanup=${SKIP_CLEANUP} KeepArtifacts=${KEEP_ARTIFACTS} ConfirmReset=${CONFIRM_RESET} Platform=$(platform_selection_summary)"
 

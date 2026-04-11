@@ -84,6 +84,13 @@ PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xray sudo bash ./x-ui-pro.sh 
 PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
 ```
 
+Для controlled tuning можно сразу передавать preset-профили:
+
+```bash
+PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xray REALITY_TUNING_PROFILE=aggressive-stealth sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp REALITY_TUNING_PROFILE=mobile-safe XHTTP_TUNING_PROFILE=low-latency sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no
+```
+
 Если нужен тестовый сценарий с автодоменами на staging:
 
 ```bash
@@ -139,6 +146,13 @@ Server-side acceptance для текущего stealth-профиля:
 sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -acceptance_minutes 5 -acceptance_interval_seconds 30
 ```
 
+С явным выбором preset для comparative triage:
+
+```bash
+sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xray -reality_tuning_profile aggressive-stealth -acceptance_minutes 5 -acceptance_interval_seconds 30
+sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xhttp -reality_tuning_profile mobile-safe -xhttp_tuning_profile low-latency -acceptance_minutes 5 -acceptance_interval_seconds 30
+```
+
 Безопасный предпросмотр install-сценария без изменения системы:
 
 ```bash
@@ -150,6 +164,11 @@ sudo bash ./x-ui-pro-updated.sh -dry_run yes -install yes -panel 1 -subdomain <�
 ```bash
 /root/x-ui-pro-debug/<timestamp>/
 ```
+
+Для `stage=acceptance` дополнительно сохраняются:
+
+- `acceptance/runtime-snapshot.env` с активным profile/preset/runtime state
+- `acceptance/xui-inbounds-summary.txt` с redacted сводкой по `REALITY/XHTTP` inbound'ам из `x-ui.db`
 
 ## Reset staging-ноды
 
