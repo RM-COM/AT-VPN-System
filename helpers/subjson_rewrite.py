@@ -23,17 +23,11 @@ PASS_HEADERS = (
 PASS_HEADERS_LOWER = {header.lower() for header in PASS_HEADERS}
 
 CLIENT_SOCKOPT_KEYS = (
-    "tcpFastOpen",
-    "tcpMptcp",
     "tcpNoDelay",
     "domainStrategy",
-    "tcpMaxSeg",
     "tcpKeepAliveInterval",
     "tcpKeepAliveIdle",
     "tcpUserTimeout",
-    "tcpcongestion",
-    "V6Only",
-    "tcpWindowClamp",
 )
 
 
@@ -115,6 +109,7 @@ def maybe_inject_sockopt(outbound, sockopt_map):
     injected_sockopt = sockopt_map.get((network, security))
     if not injected_sockopt:
         injected_sockopt = sockopt_map.get((network, None))
+    injected_sockopt = build_client_sockopt(injected_sockopt)
     if injected_sockopt:
         stream_settings["sockopt"] = injected_sockopt
     return outbound
