@@ -7,6 +7,9 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-11 18:25:00] Для `stealth-xhttp` подтверждён отдельный runtime-риск server-side compatibility: server-side `xPaddingBytes` не может быть уже фактического client-side default padding, иначе inbound начинает отвергать запросы ещё до полноценного proxy traffic.
+- [2026-04-11 18:25:00] На staging это уже локализовано через controlled self-test: минимальный официальный `XHTTP + nginx + grpc_pass` работает, а `x-ui`-generated inbound ломался именно на узком диапазоне `xPaddingBytes`; после возврата к `100-1000` контракт снова становится совместимым.
+
 - [2026-04-08 04:30:47] Текущий стабильный baseline проекта — это `classic` install-контур в ветке `main`.
 - [2026-04-08 04:30:47] Официальный install-source репозитория на текущий момент — `main`.
 - [2026-04-08 04:30:47] Основной поддерживаемый installer-контур сосредоточен в `x-ui-pro-updated.sh`.
