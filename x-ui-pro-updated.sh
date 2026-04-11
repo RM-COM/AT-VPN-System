@@ -5,6 +5,7 @@ trap 'rc=$?; (( rc )) && printf "[ERROR] Script exited with code %d\n" "$rc" >&2
 
 ##############################Constants##################################################################
 XUIDB="/etc/x-ui/x-ui.db"
+XUI_RUNTIME_PROVENANCE_FILE="${XUI_RUNTIME_PROVENANCE_FILE:-/etc/x-ui/runtime-provenance.env}"
 IP4_REGEX="^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$"
 IP6_REGEX="([a-f0-9:]+:+)+[a-f0-9]+"
 PKG_MGR=$(type apt &>/dev/null && echo "apt" || echo "yum")
@@ -269,6 +270,57 @@ platform_tuning_summary() {
 	printf 'reality=%s xhttp=%s' \
 		"${TRANSPORT_REALITY_TUNING_PROFILE:-default}" \
 		"${TRANSPORT_XHTTP_TUNING_PROFILE:-n/a}"
+}
+
+write_platform_runtime_provenance_kv() {
+	local target_file="$1"
+	local key="$2"
+	local value="$3"
+	printf '%s=%q\n' "$key" "$value" >> "$target_file"
+}
+
+write_platform_runtime_provenance_file() {
+	local provenance_file="${1:-$XUI_RUNTIME_PROVENANCE_FILE}"
+	mkdir -p "$(dirname "$provenance_file")" || return 1
+	: > "$provenance_file" || return 1
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_WRITTEN_AT" "$(timestamp)"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_SELECTION_SUMMARY" "$(platform_selection_summary)"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_PLATFORM_PROFILE" "${PLATFORM_PROFILE:-classic}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_TRANSPORT_PROFILE" "${TRANSPORT_PROFILE:-classic-xray}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_PANEL_PROVIDER" "${PANEL_PROVIDER:-3x-ui}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE" "${TRANSPORT_REALITY_TUNING_PROFILE:-default}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_XHTTP_TUNING_PROFILE" "${TRANSPORT_XHTTP_TUNING_PROFILE:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_DOMAIN" "${domain:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_REALITY_DOMAIN" "${reality_domain:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_PANEL_PATH" "${panel_path:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_WEB_PATH" "${web_path:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_SUB_PATH" "${sub_path:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_JSON_PATH" "${json_path:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_SUB2SINGBOX_PATH" "${sub2singbox_path:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_XHTTP_PATH" "${xhttp_path:-}"
+	append_debug_log "Runtime provenance written to ${provenance_file}"
+}
+
+load_platform_runtime_provenance_defaults() {
+	local provenance_file="${1:-$XUI_RUNTIME_PROVENANCE_FILE}"
+	[[ -f "$provenance_file" ]] || return 0
+	# shellcheck disable=SC1090
+	source "$provenance_file" 2>/dev/null || return 0
+	if [[ -z "${OVERRIDE_REALITY_TUNING_PROFILE:-}" && -n "${RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE:-}" ]]; then
+		TRANSPORT_REALITY_TUNING_PROFILE="$RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE"
+	fi
+	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" && -z "${OVERRIDE_XHTTP_TUNING_PROFILE:-}" && -n "${RUNTIME_PROVENANCE_XHTTP_TUNING_PROFILE:-}" ]]; then
+		TRANSPORT_XHTTP_TUNING_PROFILE="$RUNTIME_PROVENANCE_XHTTP_TUNING_PROFILE"
+	fi
+	[[ -z "$domain" && -n "${RUNTIME_PROVENANCE_DOMAIN:-}" ]] && domain="$RUNTIME_PROVENANCE_DOMAIN"
+	[[ -z "$reality_domain" && -n "${RUNTIME_PROVENANCE_REALITY_DOMAIN:-}" ]] && reality_domain="$RUNTIME_PROVENANCE_REALITY_DOMAIN"
+	[[ -z "$panel_path" && -n "${RUNTIME_PROVENANCE_PANEL_PATH:-}" ]] && panel_path="$RUNTIME_PROVENANCE_PANEL_PATH"
+	[[ -z "$web_path" && -n "${RUNTIME_PROVENANCE_WEB_PATH:-}" ]] && web_path="$RUNTIME_PROVENANCE_WEB_PATH"
+	[[ -z "$sub_path" && -n "${RUNTIME_PROVENANCE_SUB_PATH:-}" ]] && sub_path="$RUNTIME_PROVENANCE_SUB_PATH"
+	[[ -z "$json_path" && -n "${RUNTIME_PROVENANCE_JSON_PATH:-}" ]] && json_path="$RUNTIME_PROVENANCE_JSON_PATH"
+	[[ -z "$sub2singbox_path" && -n "${RUNTIME_PROVENANCE_SUB2SINGBOX_PATH:-}" ]] && sub2singbox_path="$RUNTIME_PROVENANCE_SUB2SINGBOX_PATH"
+	[[ -z "$xhttp_path" && -n "${RUNTIME_PROVENANCE_XHTTP_PATH:-}" ]] && xhttp_path="$RUNTIME_PROVENANCE_XHTTP_PATH"
+	append_debug_log "Loaded runtime provenance from ${provenance_file}"
 }
 
 platform_apply_reality_tuning_profile() {
@@ -775,10 +827,11 @@ load_existing_runtime_context() {
 				TRANSPORT_PROFILE="stealth-xray"
 			fi
 			platform_init >/dev/null 2>&1 || true
-			platform_apply_requested_tuning_profiles >/dev/null 2>&1 || true
 			append_debug_log "Autodetected installed selection: ${PLATFORM_PROFILE}/${TRANSPORT_PROFILE}"
 		fi
 	fi
+	load_platform_runtime_provenance_defaults
+	platform_apply_requested_tuning_profiles >/dev/null 2>&1 || true
 	if [[ -f "$XUIDB" ]]; then
 		panel_port=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webPort" LIMIT 1;' 2>/dev/null)
 		panel_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webBasePath" LIMIT 1;' 2>/dev/null)")
@@ -4078,6 +4131,9 @@ main() {
 
 	# 18. Setup crontab
 	setup_crontab
+
+	# 18.5. Persist runtime provenance for verify/restore/acceptance flows
+	write_platform_runtime_provenance_file || die "Failed to write runtime provenance file."
 
 	# 19. Setup UFW
 	setup_ufw

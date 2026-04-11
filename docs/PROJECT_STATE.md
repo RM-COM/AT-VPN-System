@@ -44,6 +44,7 @@
 - [2026-04-11 10:28:01] Для платформы формально зафиксирован стабильный клиентский контракт: улучшения transport/fallback слоя должны по возможности укладываться в обычный `subscription refresh`, а не в постоянные полные re-import/ручную перенастройку устройств.
 - [2026-04-11 10:28:01] Транспортные решения текущего этапа тоже формализованы: активное anti-DPI ядро проекта ограничено `stealth-xray` и `stealth-xhttp`, compatibility-layer отделён от главной stealth-стратегии, а `ICMP` исключён из roadmap как нецелевой transport для `VLESS + REALITY`.
 - [2026-04-11 14:40:00] Controlled tuning перестал быть только design-слоем: `x-ui-pro-updated.sh` уже поддерживает preset overrides для `REALITY` и `XHTTP`, а comparative acceptance фиксирует runtime snapshot и redacted inbound summary для последующего triage.
+- [2026-04-11 15:20:00] Runtime provenance теперь закреплён как persistent sidecar в `/etc/x-ui/runtime-provenance.env`: install/verify/acceptance/backup/restore больше не обязаны угадывать `platform/transport/tuning` только по косвенным признакам `x-ui.db` и nginx.
 - [2026-04-08 04:30:47] Рабочий цикл стандартизован как `Windows -> GitHub -> Linux staging`.
 - [2026-04-08 04:30:47] После каждого завершённого этапа требуется отдельный `commit + push`.
 - [2026-04-08 04:30:47] Для проекта уже существует формальный staging regression-checklist.

@@ -8,6 +8,7 @@
 - [2026-04-11 14:40:00] feat: в `x-ui-pro-updated.sh` реализован управляемый preset-layer override для transport tuning; добавлены параметры `-reality_tuning_profile` и `-xhttp_tuning_profile` и preset'ы `default`, `mobile-safe`, `low-latency`, `aggressive-stealth`.
 - [2026-04-11 14:40:00] feat: применение preset'ов встроено в основной startup-flow и в autodetect runtime-контекста, поэтому tuning теперь реально влияет на `main`, `verify` и `acceptance`, а не остаётся только metadata-заготовкой.
 - [2026-04-11 14:40:00] feat: `verify_existing_installation()` теперь валидирует runtime tuning по `x-ui.db`, а `stage=acceptance` дополнительно сохраняет `acceptance/runtime-snapshot.env` и redacted `acceptance/xui-inbounds-summary.txt` для comparative triage.
+- [2026-04-11 15:20:00] feat: install-контур теперь сохраняет sidecar provenance-файл `/etc/x-ui/runtime-provenance.env` с `platform/transport/tuning` контекстом; `backup.sh` копирует его в каталог backup, а `restore` сначала читает этот файл и корректно различает `stealth-xray` и `stealth-xhttp` до fallback на старую эвристику.
 
 - [2026-04-10 23:30:48] Полностью пересобран визуальный слой `docs/branch-html/`: все HTML-страницы переведены на более подробный русскоязычный формат с назначением ветки, правилами установки, рисками, проверками, стоп-условиями и планом.
 - [2026-04-10 23:30:48] Добавлен генератор `docs/branch-html/render-branch-html.ps1`, чтобы дальше обновлять branch HTML единым воспроизводимым способом, а не вручную править набор страниц.

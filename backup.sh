@@ -9,6 +9,7 @@ fi
 
 PKG_MGR=$(command -v apt >/dev/null 2>&1 && echo "apt" || echo "yum")
 DEFAULT_BACKUP_DIR="/backup"
+RUNTIME_PROVENANCE_FILE="/etc/x-ui/runtime-provenance.env"
 
 log() {
 	echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> /var/log/backup_script.log
@@ -103,6 +104,11 @@ backup_nginx_stack() {
 
 backup_xui_database() {
 	archive_label "x-ui-sql" /etc/x-ui
+	if [ -f "$RUNTIME_PROVENANCE_FILE" ]; then
+		cp -f "$RUNTIME_PROVENANCE_FILE" "${BACKUP_DIR_TIMESTAMP}/runtime-provenance.env"
+		echo "Runtime provenance copied to ${BACKUP_DIR_TIMESTAMP}/runtime-provenance.env"
+		log "Runtime provenance copied to ${BACKUP_DIR_TIMESTAMP}/runtime-provenance.env"
+	fi
 }
 
 backup_xui_runtime() {
@@ -257,22 +263,57 @@ load_restore_runtime_context() {
 	RESTORE_DOMAIN=""
 	RESTORE_REALITY_DOMAIN=""
 	RESTORE_WEB_PATH=""
+	RESTORE_PANEL_PATH=""
+	RESTORE_SUB_PATH=""
+	RESTORE_JSON_PATH=""
+	RESTORE_SUB2SINGBOX_PATH=""
+	RESTORE_XHTTP_PATH=""
 	RESTORE_SUB_URI=""
 	RESTORE_JSON_URI=""
 	RESTORE_PLATFORM_PROFILE="classic"
 	RESTORE_TRANSPORT_PROFILE="classic-xray"
+	RESTORE_PANEL_PROVIDER="3x-ui"
+	RESTORE_REALITY_TUNING_PROFILE="default"
+	RESTORE_XHTTP_TUNING_PROFILE=""
 	RESTORE_PUBLIC_HTTPS_PORT="443"
 	RESTORE_WEB_TLS_PORT="7443"
-	local detected_reality_port=""
+	local detected_reality_port="" detected_xhttp_inbound=""
+
+	if [ -f "$RUNTIME_PROVENANCE_FILE" ]; then
+		# shellcheck disable=SC1090
+		. "$RUNTIME_PROVENANCE_FILE" 2>/dev/null || true
+		[ -n "${RUNTIME_PROVENANCE_DOMAIN:-}" ] && RESTORE_DOMAIN="$RUNTIME_PROVENANCE_DOMAIN"
+		[ -n "${RUNTIME_PROVENANCE_REALITY_DOMAIN:-}" ] && RESTORE_REALITY_DOMAIN="$RUNTIME_PROVENANCE_REALITY_DOMAIN"
+		[ -n "${RUNTIME_PROVENANCE_WEB_PATH:-}" ] && RESTORE_WEB_PATH="$RUNTIME_PROVENANCE_WEB_PATH"
+		[ -n "${RUNTIME_PROVENANCE_PANEL_PATH:-}" ] && RESTORE_PANEL_PATH="$RUNTIME_PROVENANCE_PANEL_PATH"
+		[ -n "${RUNTIME_PROVENANCE_SUB_PATH:-}" ] && RESTORE_SUB_PATH="$RUNTIME_PROVENANCE_SUB_PATH"
+		[ -n "${RUNTIME_PROVENANCE_JSON_PATH:-}" ] && RESTORE_JSON_PATH="$RUNTIME_PROVENANCE_JSON_PATH"
+		[ -n "${RUNTIME_PROVENANCE_SUB2SINGBOX_PATH:-}" ] && RESTORE_SUB2SINGBOX_PATH="$RUNTIME_PROVENANCE_SUB2SINGBOX_PATH"
+		[ -n "${RUNTIME_PROVENANCE_XHTTP_PATH:-}" ] && RESTORE_XHTTP_PATH="$RUNTIME_PROVENANCE_XHTTP_PATH"
+		[ -n "${RUNTIME_PROVENANCE_PLATFORM_PROFILE:-}" ] && RESTORE_PLATFORM_PROFILE="$RUNTIME_PROVENANCE_PLATFORM_PROFILE"
+		[ -n "${RUNTIME_PROVENANCE_TRANSPORT_PROFILE:-}" ] && RESTORE_TRANSPORT_PROFILE="$RUNTIME_PROVENANCE_TRANSPORT_PROFILE"
+		[ -n "${RUNTIME_PROVENANCE_PANEL_PROVIDER:-}" ] && RESTORE_PANEL_PROVIDER="$RUNTIME_PROVENANCE_PANEL_PROVIDER"
+		[ -n "${RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE:-}" ] && RESTORE_REALITY_TUNING_PROFILE="$RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE"
+		[ -n "${RUNTIME_PROVENANCE_XHTTP_TUNING_PROFILE:-}" ] && RESTORE_XHTTP_TUNING_PROFILE="$RUNTIME_PROVENANCE_XHTTP_TUNING_PROFILE"
+	fi
 
 	if [ -f /etc/x-ui/x-ui.db ] && command -v sqlite3 >/dev/null 2>&1; then
 		RESTORE_SUB_URI=$(sqlite3 -list /etc/x-ui/x-ui.db 'SELECT value FROM settings WHERE key="subURI" LIMIT 1;' 2>/dev/null)
 		RESTORE_JSON_URI=$(sqlite3 -list /etc/x-ui/x-ui.db 'SELECT value FROM settings WHERE key="subJsonURI" LIMIT 1;' 2>/dev/null)
-		RESTORE_REALITY_DOMAIN=$(sqlite3 -list /etc/x-ui/x-ui.db "SELECT json_extract(stream_settings, '$.realitySettings.serverNames[0]') FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null | head -n1)
+		[ -z "$RESTORE_REALITY_DOMAIN" ] && RESTORE_REALITY_DOMAIN=$(sqlite3 -list /etc/x-ui/x-ui.db "SELECT json_extract(stream_settings, '$.realitySettings.serverNames[0]') FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null | head -n1)
 		detected_reality_port=$(sqlite3 -list /etc/x-ui/x-ui.db "SELECT port FROM inbounds WHERE json_extract(stream_settings, '$.security')='reality' LIMIT 1;" 2>/dev/null | tr -d '[:space:]')
+		detected_xhttp_inbound=$(sqlite3 -list /etc/x-ui/x-ui.db "SELECT COUNT(*) FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp';" 2>/dev/null | tr -d '[:space:]')
 		if [ "$detected_reality_port" = "$RESTORE_PUBLIC_HTTPS_PORT" ]; then
 			RESTORE_PLATFORM_PROFILE="stealth"
-			RESTORE_TRANSPORT_PROFILE="stealth-xray"
+			if [[ "$detected_xhttp_inbound" =~ ^[1-9][0-9]*$ ]]; then
+				RESTORE_TRANSPORT_PROFILE="stealth-xhttp"
+			else
+				RESTORE_TRANSPORT_PROFILE="stealth-xray"
+			fi
+		fi
+		if [ -z "$RESTORE_XHTTP_PATH" ]; then
+			RESTORE_XHTTP_PATH=$(sqlite3 -list /etc/x-ui/x-ui.db "SELECT json_extract(stream_settings, '$.xhttpSettings.path') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+			RESTORE_XHTTP_PATH=$(trim_slashes "$RESTORE_XHTTP_PATH")
 		fi
 	fi
 
@@ -346,6 +387,12 @@ verify_restore_result() {
 	fi
 
 	load_restore_runtime_context
+	if [ -f "$RUNTIME_PROVENANCE_FILE" ]; then
+		echo "[PASS] runtime provenance file restored"
+	else
+		echo "[INFO] runtime provenance file is missing; restore context falls back to heuristics"
+	fi
+	echo "[INFO] restored selection: ${RESTORE_PLATFORM_PROFILE}/${RESTORE_TRANSPORT_PROFILE} | reality_tuning=${RESTORE_REALITY_TUNING_PROFILE:-default} | xhttp_tuning=${RESTORE_XHTTP_TUNING_PROFILE:-n/a}"
 	if [ "$RESTORE_PLATFORM_PROFILE" = "stealth" ] && command -v ss >/dev/null 2>&1; then
 		listener_output=$(ss -lntp 2>/dev/null || true)
 		if grep -Eq "[:.]${RESTORE_PUBLIC_HTTPS_PORT}[[:space:]].*xray" <<<"$listener_output"; then
@@ -365,6 +412,20 @@ verify_restore_result() {
 		else
 			echo "[FAIL] stealth restore unexpectedly still has nginx stream.conf"
 			stealth_failures=$((stealth_failures + 1))
+		fi
+		if [ "$RESTORE_TRANSPORT_PROFILE" = "stealth-xhttp" ]; then
+			if [ -S /dev/shm/uds2023.sock ]; then
+				echo "[PASS] stealth-xhttp restore keeps unix socket"
+			else
+				echo "[FAIL] stealth-xhttp restore is missing unix socket"
+				stealth_failures=$((stealth_failures + 1))
+			fi
+			if [ -n "$RESTORE_XHTTP_PATH" ] && grep -Rqs "location /${RESTORE_XHTTP_PATH} {" /etc/nginx/sites-enabled /etc/nginx/sites-available /etc/nginx/snippets 2>/dev/null; then
+				echo "[PASS] stealth-xhttp restore keeps nginx fallback route"
+			else
+				echo "[FAIL] stealth-xhttp restore is missing nginx fallback route"
+				stealth_failures=$((stealth_failures + 1))
+			fi
 		fi
 	fi
 	if command -v curl >/dev/null 2>&1 && [ -n "$RESTORE_DOMAIN" ] && [ -n "$RESTORE_WEB_PATH" ]; then
