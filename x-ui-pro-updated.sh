@@ -659,6 +659,13 @@ KEEP_ARTIFACTS="n"
 CONFIRM_RESET="n"
 ACCEPTANCE_MINUTES="${ACCEPTANCE_MINUTES:-5}"
 ACCEPTANCE_INTERVAL_SECONDS="${ACCEPTANCE_INTERVAL_SECONDS:-30}"
+ACCEPTANCE_LABEL="${ACCEPTANCE_LABEL:-}"
+ACCEPTANCE_MATRIX_GROUP="${ACCEPTANCE_MATRIX_GROUP:-}"
+ACCEPTANCE_NETWORK_LABEL="${ACCEPTANCE_NETWORK_LABEL:-}"
+ACCEPTANCE_OPERATOR_LABEL="${ACCEPTANCE_OPERATOR_LABEL:-}"
+ACCEPTANCE_TIME_WINDOW="${ACCEPTANCE_TIME_WINDOW:-}"
+ACCEPTANCE_CLIENT_DEVICE="${ACCEPTANCE_CLIENT_DEVICE:-}"
+ACCEPTANCE_NOTES="${ACCEPTANCE_NOTES:-}"
 DEBUG_ROOT="/root/x-ui-pro-debug"
 DEBUG_DIR=""
 DEBUG_LOG=""
@@ -678,6 +685,15 @@ capture_command_output() {
 	[[ -n "$DEBUG_DIR" ]] || return 0
 	mkdir -p "$DEBUG_DIR/$(dirname "$artifact_path")"
 	"$@" > "$DEBUG_DIR/$artifact_path" 2>&1 || true
+}
+acceptance_metadata_summary() {
+	printf 'label=%s group=%s network=%s operator=%s window=%s client=%s' \
+		"${ACCEPTANCE_LABEL:-<none>}" \
+		"${ACCEPTANCE_MATRIX_GROUP:-<none>}" \
+		"${ACCEPTANCE_NETWORK_LABEL:-<none>}" \
+		"${ACCEPTANCE_OPERATOR_LABEL:-<none>}" \
+		"${ACCEPTANCE_TIME_WINDOW:-<none>}" \
+		"${ACCEPTANCE_CLIENT_DEVICE:-<none>}"
 }
 init_debug_session() {
 	if [[ -n "$DEBUG_DIR" ]]; then
@@ -812,6 +828,7 @@ print_acceptance_plan() {
 	msg_inf "Acceptance duration (minutes): ${ACCEPTANCE_MINUTES}"
 	msg_inf "Acceptance interval (seconds): ${ACCEPTANCE_INTERVAL_SECONDS}"
 	msg_inf "Текущий transport tuning: $(platform_tuning_summary)"
+	msg_inf "Acceptance metadata: $(acceptance_metadata_summary)"
 	print_runtime_context
 }
 load_existing_runtime_context() {
@@ -945,6 +962,13 @@ transport_xhttp_tcp_keepalive_idle=${TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE:-}
 transport_xhttp_tcp_user_timeout=${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-}
 transport_xhttp_tcp_window_clamp=${TRANSPORT_XHTTP_TCP_WINDOW_CLAMP:-}
 override_xhttp_tuning_profile=${OVERRIDE_XHTTP_TUNING_PROFILE:-}
+acceptance_label=${ACCEPTANCE_LABEL:-}
+acceptance_matrix_group=${ACCEPTANCE_MATRIX_GROUP:-}
+acceptance_network_label=${ACCEPTANCE_NETWORK_LABEL:-}
+acceptance_operator_label=${ACCEPTANCE_OPERATOR_LABEL:-}
+acceptance_time_window=${ACCEPTANCE_TIME_WINDOW:-}
+acceptance_client_device=${ACCEPTANCE_CLIENT_DEVICE:-}
+acceptance_notes=${ACCEPTANCE_NOTES:-}
 domain=${domain:-}
 reality_domain=${reality_domain:-}
 panel_path=${panel_path:-}
@@ -976,6 +1000,224 @@ WHERE json_extract(stream_settings, '$.security')='reality'
 " > "$sqlite_file" 2>&1 || true
 		append_debug_log "Acceptance inbound summary written to ${sqlite_file}"
 	fi
+}
+write_acceptance_session_metadata() {
+	local metadata_file
+	[[ -n "$DEBUG_DIR" ]] || return 0
+	metadata_file="$(acceptance_artifact_path "session-metadata.env")"
+	mkdir -p "$(dirname "$metadata_file")"
+	cat > "$metadata_file" <<EOF
+timestamp=$(timestamp)
+acceptance_label=${ACCEPTANCE_LABEL:-}
+acceptance_matrix_group=${ACCEPTANCE_MATRIX_GROUP:-}
+acceptance_network_label=${ACCEPTANCE_NETWORK_LABEL:-}
+acceptance_operator_label=${ACCEPTANCE_OPERATOR_LABEL:-}
+acceptance_time_window=${ACCEPTANCE_TIME_WINDOW:-}
+acceptance_client_device=${ACCEPTANCE_CLIENT_DEVICE:-}
+acceptance_notes=${ACCEPTANCE_NOTES:-}
+selection_summary=$(platform_selection_summary)
+tuning_summary=$(platform_tuning_summary)
+EOF
+	append_debug_log "Acceptance session metadata written to ${metadata_file}"
+}
+acceptance_metric_value() {
+	local metrics="$1" key="$2"
+	printf '%s\n' "$metrics" | tr ' ' '\n' | awk -F= -v target="$key" '$1 == target { print $2; exit }'
+}
+append_acceptance_probe_result_jsonl() {
+	local iteration="$1" label="$2" host="$3" path="$4" status="$5" curl_metrics="$6"
+	local jsonl_file http_code remote_ip time_namelookup time_connect time_appconnect time_starttransfer time_total
+	[[ -n "$DEBUG_DIR" ]] || return 0
+	command -v jq >/dev/null 2>&1 || return 0
+	jsonl_file="$(acceptance_artifact_path "probe-results.jsonl")"
+	mkdir -p "$(dirname "$jsonl_file")"
+	http_code="$(acceptance_metric_value "$curl_metrics" "http_code")"
+	remote_ip="$(acceptance_metric_value "$curl_metrics" "remote_ip")"
+	time_namelookup="$(acceptance_metric_value "$curl_metrics" "time_namelookup")"
+	time_connect="$(acceptance_metric_value "$curl_metrics" "time_connect")"
+	time_appconnect="$(acceptance_metric_value "$curl_metrics" "time_appconnect")"
+	time_starttransfer="$(acceptance_metric_value "$curl_metrics" "time_starttransfer")"
+	time_total="$(acceptance_metric_value "$curl_metrics" "time_total")"
+	jq -cn \
+		--arg timestamp "$(timestamp)" \
+		--arg selection_summary "$(platform_selection_summary)" \
+		--arg tuning_summary "$(platform_tuning_summary)" \
+		--arg platform_profile "${PLATFORM_PROFILE}" \
+		--arg transport_profile "${TRANSPORT_PROFILE}" \
+		--arg panel_provider "${PANEL_PROVIDER}" \
+		--arg reality_tuning_profile "${TRANSPORT_REALITY_TUNING_PROFILE:-default}" \
+		--arg xhttp_tuning_profile "${TRANSPORT_XHTTP_TUNING_PROFILE:-}" \
+		--arg label "${label}" \
+		--arg host "${host}" \
+		--arg path "${path}" \
+		--arg status "${status}" \
+		--arg metrics_raw "${curl_metrics}" \
+		--arg http_code "${http_code:-}" \
+		--arg remote_ip "${remote_ip:-}" \
+		--arg time_namelookup "${time_namelookup:-}" \
+		--arg time_connect "${time_connect:-}" \
+		--arg time_appconnect "${time_appconnect:-}" \
+		--arg time_starttransfer "${time_starttransfer:-}" \
+		--arg time_total "${time_total:-}" \
+		--arg acceptance_label "${ACCEPTANCE_LABEL:-}" \
+		--arg acceptance_matrix_group "${ACCEPTANCE_MATRIX_GROUP:-}" \
+		--arg acceptance_network_label "${ACCEPTANCE_NETWORK_LABEL:-}" \
+		--arg acceptance_operator_label "${ACCEPTANCE_OPERATOR_LABEL:-}" \
+		--arg acceptance_time_window "${ACCEPTANCE_TIME_WINDOW:-}" \
+		--arg acceptance_client_device "${ACCEPTANCE_CLIENT_DEVICE:-}" \
+		--arg acceptance_notes "${ACCEPTANCE_NOTES:-}" \
+		--argjson iteration "${iteration:-0}" \
+		'{
+			timestamp: $timestamp,
+			iteration: $iteration,
+			status: $status,
+			probe: {
+				label: $label,
+				host: $host,
+				path: $path,
+				url: ("https://" + $host + $path)
+			},
+			selection: {
+				summary: $selection_summary,
+				tuning: $tuning_summary,
+				platform_profile: $platform_profile,
+				transport_profile: $transport_profile,
+				panel_provider: $panel_provider,
+				reality_tuning_profile: $reality_tuning_profile,
+				xhttp_tuning_profile: $xhttp_tuning_profile
+			},
+			matrix: {
+				label: $acceptance_label,
+				group: $acceptance_matrix_group,
+				network: $acceptance_network_label,
+				operator: $acceptance_operator_label,
+				time_window: $acceptance_time_window,
+				client_device: $acceptance_client_device,
+				notes: $acceptance_notes
+			},
+			metrics: {
+				http_code: $http_code,
+				remote_ip: $remote_ip,
+				time_namelookup: $time_namelookup,
+				time_connect: $time_connect,
+				time_appconnect: $time_appconnect,
+				time_starttransfer: $time_starttransfer,
+				time_total: $time_total,
+				raw: $metrics_raw
+			}
+		}' >> "$jsonl_file"
+	append_debug_log "Acceptance probe JSONL appended to ${jsonl_file}: ${label}/${status}/iteration=${iteration}"
+}
+write_acceptance_matrix_row_json() {
+	local failures="${1:-0}" panel_passes="${2:-0}" panel_fails="${3:-0}" websub_passes="${4:-0}" websub_fails="${5:-0}"
+	local sub2singbox_passes="${6:-0}" sub2singbox_fails="${7:-0}" fallback_passes="${8:-0}" fallback_fails="${9:-0}"
+	local matrix_file
+	[[ -n "$DEBUG_DIR" ]] || return 0
+	command -v jq >/dev/null 2>&1 || return 0
+	matrix_file="$(acceptance_artifact_path "matrix-row.json")"
+	mkdir -p "$(dirname "$matrix_file")"
+	jq -n \
+		--arg generated_at "$(timestamp)" \
+		--arg selection_summary "$(platform_selection_summary)" \
+		--arg tuning_summary "$(platform_tuning_summary)" \
+		--arg platform_profile "${PLATFORM_PROFILE}" \
+		--arg transport_profile "${TRANSPORT_PROFILE}" \
+		--arg panel_provider "${PANEL_PROVIDER}" \
+		--arg reality_tuning_profile "${TRANSPORT_REALITY_TUNING_PROFILE:-default}" \
+		--arg xhttp_tuning_profile "${TRANSPORT_XHTTP_TUNING_PROFILE:-}" \
+		--arg acceptance_label "${ACCEPTANCE_LABEL:-}" \
+		--arg acceptance_matrix_group "${ACCEPTANCE_MATRIX_GROUP:-}" \
+		--arg acceptance_network_label "${ACCEPTANCE_NETWORK_LABEL:-}" \
+		--arg acceptance_operator_label "${ACCEPTANCE_OPERATOR_LABEL:-}" \
+		--arg acceptance_time_window "${ACCEPTANCE_TIME_WINDOW:-}" \
+		--arg acceptance_client_device "${ACCEPTANCE_CLIENT_DEVICE:-}" \
+		--arg acceptance_notes "${ACCEPTANCE_NOTES:-}" \
+		--arg domain "${domain:-}" \
+		--arg reality_domain "${reality_domain:-}" \
+		--arg panel_path "${panel_path:-}" \
+		--arg web_path "${web_path:-}" \
+		--arg sub_path "${sub_path:-}" \
+		--arg json_path "${json_path:-}" \
+		--arg sub2singbox_path "${sub2singbox_path:-}" \
+		--arg xhttp_path "${xhttp_path:-}" \
+		--arg checklist_path "acceptance/manual-client-checklist.md" \
+		--arg probe_results_path "acceptance/probe-results.jsonl" \
+		--arg runtime_snapshot_path "acceptance/runtime-snapshot.env" \
+		--arg session_metadata_path "acceptance/session-metadata.env" \
+		--arg probe_summary_path "acceptance/summary.txt" \
+		--argjson public_https_port "$(platform_public_https_port)" \
+		--argjson acceptance_minutes "${ACCEPTANCE_MINUTES:-0}" \
+		--argjson acceptance_interval_seconds "${ACCEPTANCE_INTERVAL_SECONDS:-0}" \
+		--argjson total_failures "${failures}" \
+		--argjson panel_passes "${panel_passes}" \
+		--argjson panel_fails "${panel_fails}" \
+		--argjson websub_passes "${websub_passes}" \
+		--argjson websub_fails "${websub_fails}" \
+		--argjson sub2singbox_passes "${sub2singbox_passes}" \
+		--argjson sub2singbox_fails "${sub2singbox_fails}" \
+		--argjson fallback_passes "${fallback_passes}" \
+		--argjson fallback_fails "${fallback_fails}" \
+		'{
+			generated_at: $generated_at,
+			selection: {
+				summary: $selection_summary,
+				tuning: $tuning_summary,
+				platform_profile: $platform_profile,
+				transport_profile: $transport_profile,
+				panel_provider: $panel_provider,
+				reality_tuning_profile: $reality_tuning_profile,
+				xhttp_tuning_profile: $xhttp_tuning_profile
+			},
+			matrix: {
+				label: $acceptance_label,
+				group: $acceptance_matrix_group,
+				network: $acceptance_network_label,
+				operator: $acceptance_operator_label,
+				time_window: $acceptance_time_window,
+				client_device: $acceptance_client_device,
+				notes: $acceptance_notes
+			},
+			targets: {
+				public_https_port: $public_https_port,
+				domain: $domain,
+				reality_domain: $reality_domain,
+				panel_path: $panel_path,
+				web_path: $web_path,
+				sub_path: $sub_path,
+				json_path: $json_path,
+				sub2singbox_path: $sub2singbox_path,
+				xhttp_path: $xhttp_path
+			},
+			run: {
+				acceptance_minutes: $acceptance_minutes,
+				acceptance_interval_seconds: $acceptance_interval_seconds
+			},
+			server_probe_summary: {
+				total_failures: $total_failures,
+				panel: { pass: $panel_passes, fail: $panel_fails },
+				web_sub: { pass: $websub_passes, fail: $websub_fails },
+				sub2sing_box: { pass: $sub2singbox_passes, fail: $sub2singbox_fails },
+				fallback_root: { pass: $fallback_passes, fail: $fallback_fails }
+			},
+			manual_fields: {
+				result: "",
+				start_msk: "",
+				failure_msk: "",
+				symptom: "",
+				reconnect_helped: "",
+				handoff_issue: "",
+				client_error: "",
+				client_log_excerpt: ""
+			},
+			artifacts: {
+				checklist_path: $checklist_path,
+				probe_results_path: $probe_results_path,
+				runtime_snapshot_path: $runtime_snapshot_path,
+				session_metadata_path: $session_metadata_path,
+				probe_summary_path: $probe_summary_path
+			}
+		}' > "$matrix_file"
+	append_debug_log "Acceptance matrix row written to ${matrix_file}"
 }
 platform_normalize_expected_sqlite_value() {
 	local raw_value="$1"
@@ -1129,6 +1371,14 @@ write_acceptance_manual_checklist() {
 
 - Дата генерации: $(timestamp)
 - Профиль: $(platform_selection_summary)
+- Транспортный preset: $(platform_tuning_summary)
+- Метка сравнения: ${ACCEPTANCE_LABEL:-<не задана>}
+- Группа сравнения: ${ACCEPTANCE_MATRIX_GROUP:-<не задана>}
+- Сеть: ${ACCEPTANCE_NETWORK_LABEL:-<не задана>}
+- Оператор/провайдер: ${ACCEPTANCE_OPERATOR_LABEL:-<не задан>}
+- Временное окно: ${ACCEPTANCE_TIME_WINDOW:-<не задано>}
+- Клиент/устройство: ${ACCEPTANCE_CLIENT_DEVICE:-<не задано>}
+- Заметки к сеансу: ${ACCEPTANCE_NOTES:-<нет>}
 - Домен панели: ${domain:-<не определён>}
 - REALITY-домен: ${reality_domain:-<не определён>}
 - Публичный HTTPS-порт: ${public_https_port}
@@ -1143,6 +1393,17 @@ write_acceptance_manual_checklist() {
 6. Если возможно, повторить проверку с другой сети или на другом типе устройства.
 7. Зафиксировать, какой профиль тестировался: \`$(platform_selection_summary)\`.
 8. При деградации записать точное время по Москве, тип сети (\`Wi-Fi/LTE\`), помог ли reconnect и какие сайты перестали открываться.
+
+## Что заполнить после теста
+
+- Итог: `PASS` / `DEGRADED` / `FAIL`
+- Время начала по Москве:
+- Время сбоя по Москве:
+- Симптом:
+- Помог ли reconnect:
+- Наблюдалась ли проблема после смены сети:
+- Что открывалось / что перестало открываться:
+- Фрагмент клиентского лога рядом со сбоем:
 
 ## Полезные URL текущей ноды
 
@@ -1161,16 +1422,18 @@ EOF
 	append_debug_log "Acceptance manual checklist written to ${checklist_file}"
 }
 acceptance_probe_url() {
-	local label="$1" host="$2" path="$3" artifact_name="$4" public_https_port curl_output curl_metrics artifact_base
+	local iteration="$1" label="$2" host="$3" path="$4" artifact_name="$5" public_https_port curl_output curl_metrics artifact_base
 	public_https_port="$(platform_public_https_port)"
 	if [[ -z "$host" || -z "$path" ]]; then
 		record_acceptance_result "FAIL" "${label}: не удалось определить host/path"
+		append_acceptance_probe_result_jsonl "$iteration" "$label" "${host:-}" "${path:-}" "FAIL" "http_code= remote_ip= time_namelookup= time_connect= time_appconnect= time_starttransfer= time_total="
 		return 1
 	fi
 	artifact_base="${artifact_name%.*}"
 	curl_metrics=$(curl -kfsS -o /dev/null -w 'http_code=%{http_code} remote_ip=%{remote_ip} time_namelookup=%{time_namelookup} time_connect=%{time_connect} time_appconnect=%{time_appconnect} time_starttransfer=%{time_starttransfer} time_total=%{time_total}\n' --resolve "${host}:${public_https_port}:127.0.0.1" "https://${host}${path}" 2>&1)
 	if curl_output=$(curl -kfsS --resolve "${host}:${public_https_port}:127.0.0.1" "https://${host}${path}" 2>&1); then
 		record_acceptance_result "PASS" "${label}: HTTPS probe passed"
+		append_acceptance_probe_result_jsonl "$iteration" "$label" "$host" "$path" "PASS" "$curl_metrics"
 		if [[ -n "$DEBUG_DIR" ]]; then
 			printf '%s' "$curl_output" > "$(acceptance_artifact_path "${artifact_name}")"
 			printf '%s' "$curl_metrics" > "$(acceptance_artifact_path "${artifact_base}.metrics.txt")"
@@ -1178,6 +1441,7 @@ acceptance_probe_url() {
 		return 0
 	fi
 	record_acceptance_result "FAIL" "${label}: HTTPS probe failed"
+	append_acceptance_probe_result_jsonl "$iteration" "$label" "$host" "$path" "FAIL" "$curl_metrics"
 	append_debug_log "${label} curl output: ${curl_output}"
 	append_debug_log "${label} curl metrics: ${curl_metrics}"
 	if [[ -n "$DEBUG_DIR" ]]; then
@@ -1220,33 +1484,35 @@ run_stealth_acceptance_stage() {
 	verify_existing_installation || die "Acceptance остановлен: verify не прошёл."
 	capture_acceptance_snapshot
 	write_acceptance_runtime_snapshot
+	write_acceptance_session_metadata
 	write_acceptance_manual_checklist
+	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails"
 
 	while (( iteration <= total_iterations )); do
 		msg_inf "Acceptance iteration ${iteration}/${total_iterations}"
 
-		if acceptance_probe_url "Panel" "${domain}" "/${panel_path}/" "panel-body-${iteration}.html"; then
+		if acceptance_probe_url "$iteration" "Panel" "${domain}" "/${panel_path}/" "panel-body-${iteration}.html"; then
 			panel_passes=$((panel_passes + 1))
 		else
 			panel_fails=$((panel_fails + 1))
 			failures=$((failures + 1))
 		fi
 
-		if acceptance_probe_url "Web-sub" "${domain}" "/${web_path}/" "websub-body-${iteration}.html"; then
+		if acceptance_probe_url "$iteration" "Web-sub" "${domain}" "/${web_path}/" "websub-body-${iteration}.html"; then
 			websub_passes=$((websub_passes + 1))
 		else
 			websub_fails=$((websub_fails + 1))
 			failures=$((failures + 1))
 		fi
 
-		if acceptance_probe_url "sub2sing-box" "${domain}" "/${sub2singbox_path}/" "sub2singbox-body-${iteration}.html"; then
+		if acceptance_probe_url "$iteration" "sub2sing-box" "${domain}" "/${sub2singbox_path}/" "sub2singbox-body-${iteration}.html"; then
 			sub2singbox_passes=$((sub2singbox_passes + 1))
 		else
 			sub2singbox_fails=$((sub2singbox_fails + 1))
 			failures=$((failures + 1))
 		fi
 
-		if acceptance_probe_url "Fallback root" "${reality_domain}" "/" "fallback-root-${iteration}.html"; then
+		if acceptance_probe_url "$iteration" "Fallback root" "${reality_domain}" "/" "fallback-root-${iteration}.html"; then
 			fallback_passes=$((fallback_passes + 1))
 		else
 			fallback_fails=$((fallback_fails + 1))
@@ -1266,6 +1532,13 @@ Acceptance summary
 Timestamp: $(timestamp)
 Selection: $(platform_selection_summary)
 Transport tuning: $(platform_tuning_summary)
+Acceptance label: ${ACCEPTANCE_LABEL:-}
+Acceptance matrix group: ${ACCEPTANCE_MATRIX_GROUP:-}
+Acceptance network: ${ACCEPTANCE_NETWORK_LABEL:-}
+Acceptance operator: ${ACCEPTANCE_OPERATOR_LABEL:-}
+Acceptance time window: ${ACCEPTANCE_TIME_WINDOW:-}
+Acceptance client device: ${ACCEPTANCE_CLIENT_DEVICE:-}
+Acceptance notes: ${ACCEPTANCE_NOTES:-}
 Public HTTPS port: ${public_https_port}
 Iterations: ${total_iterations}
 Interval seconds: ${ACCEPTANCE_INTERVAL_SECONDS}
@@ -1278,6 +1551,8 @@ EOF
 	append_debug_log "Acceptance summary written to ${summary_file}"
 	capture_acceptance_snapshot
 	write_acceptance_runtime_snapshot
+	write_acceptance_session_metadata
+	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails"
 
 	if (( failures > 0 )); then
 		die "Acceptance завершён с ошибками. Подробности: ${summary_file}"
@@ -2125,6 +2400,13 @@ parse_args() {
 	CONFIRM_RESET="n"
 	ACCEPTANCE_MINUTES="${ACCEPTANCE_MINUTES:-5}"
 	ACCEPTANCE_INTERVAL_SECONDS="${ACCEPTANCE_INTERVAL_SECONDS:-30}"
+	ACCEPTANCE_LABEL="${ACCEPTANCE_LABEL:-}"
+	ACCEPTANCE_MATRIX_GROUP="${ACCEPTANCE_MATRIX_GROUP:-}"
+	ACCEPTANCE_NETWORK_LABEL="${ACCEPTANCE_NETWORK_LABEL:-}"
+	ACCEPTANCE_OPERATOR_LABEL="${ACCEPTANCE_OPERATOR_LABEL:-}"
+	ACCEPTANCE_TIME_WINDOW="${ACCEPTANCE_TIME_WINDOW:-}"
+	ACCEPTANCE_CLIENT_DEVICE="${ACCEPTANCE_CLIENT_DEVICE:-}"
+	ACCEPTANCE_NOTES="${ACCEPTANCE_NOTES:-}"
 	PLATFORM_PROFILE="${PLATFORM_PROFILE:-classic}"
 	TRANSPORT_PROFILE="${TRANSPORT_PROFILE:-classic-xray}"
 	PANEL_PROVIDER="${PANEL_PROVIDER:-3x-ui}"
@@ -2152,6 +2434,13 @@ parse_args() {
 			-confirm_reset) CONFIRM_RESET="$2"; shift 2;;
 			-acceptance_minutes) ACCEPTANCE_MINUTES="$2"; shift 2;;
 			-acceptance_interval_seconds) ACCEPTANCE_INTERVAL_SECONDS="$2"; shift 2;;
+			-acceptance_label) ACCEPTANCE_LABEL="$2"; shift 2;;
+			-acceptance_matrix_group) ACCEPTANCE_MATRIX_GROUP="$2"; shift 2;;
+			-acceptance_network) ACCEPTANCE_NETWORK_LABEL="$2"; shift 2;;
+			-acceptance_operator) ACCEPTANCE_OPERATOR_LABEL="$2"; shift 2;;
+			-acceptance_time_window) ACCEPTANCE_TIME_WINDOW="$2"; shift 2;;
+			-acceptance_client) ACCEPTANCE_CLIENT_DEVICE="$2"; shift 2;;
+			-acceptance_notes) ACCEPTANCE_NOTES="$2"; shift 2;;
 			-profile|-platform_profile) PLATFORM_PROFILE="$2"; shift 2;;
 			-transport_profile) TRANSPORT_PROFILE="$2"; shift 2;;
 			-panel_provider) PANEL_PROVIDER="$2"; shift 2;;

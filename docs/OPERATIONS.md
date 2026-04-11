@@ -14,6 +14,7 @@
 - [2026-04-08 04:30:47] Переустановка только web-sub контура: `sudo bash ./x-ui-pro-updated.sh -stage websub -verify yes -debug yes`
 - [2026-04-09 00:30:57] Server-side приёмка stealth-профиля: `sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -acceptance_minutes 5 -acceptance_interval_seconds 30`
 - [2026-04-11 14:40:00] Server-side приёмка с явным preset override: `sudo bash ./x-ui-pro-updated.sh -stage acceptance -debug yes -keep_artifacts yes -profile stealth -transport_profile stealth-xray -reality_tuning_profile aggressive-stealth -acceptance_minutes 5 -acceptance_interval_seconds 30`
+- [2026-04-11 16:05:00] Comparative acceptance теперь поддерживает matrix-метки: `-acceptance_label`, `-acceptance_matrix_group`, `-acceptance_network`, `-acceptance_operator`, `-acceptance_time_window`, `-acceptance_client`, `-acceptance_notes`
 - [2026-04-08 04:30:47] Preview полного reset без изменений: `sudo bash ./x-ui-pro-updated.sh -stage reset -dry_run yes -debug yes -keep_artifacts yes`
 - [2026-04-08 04:30:47] Реальный staging reset: `sudo bash ./x-ui-pro-updated.sh -stage reset -confirm_reset yes -debug yes -keep_artifacts yes`
 - [2026-04-08 04:30:47] Полное удаление через совместимый entrypoint: `sudo bash ./x-ui-pro.sh -uninstall yes`
@@ -31,6 +32,7 @@
 - [2026-04-08 04:30:47] `-stage websub` обновляет только web/UI-контур без полного reinstall.
 - [2026-04-09 00:30:57] `-stage acceptance` запускает server-side stealth acceptance: выполняет строгий `verify`, повторяемые HTTPS-пробы и сохраняет чек-лист ручной клиентской проверки.
 - [2026-04-11 14:40:00] `-reality_tuning_profile` и `-xhttp_tuning_profile` позволяют прогонять comparative acceptance на разных preset'ах без ручной правки metadata или SQL.
+- [2026-04-11 16:05:00] Comparative acceptance теперь дополнительно пишет machine-readable артефакты `acceptance/session-metadata.env`, `acceptance/matrix-row.json` и `acceptance/probe-results.jsonl`, чтобы сравнивать `stealth-xray` и `stealth-xhttp` по единому формату.
 - [2026-04-08 04:30:47] `-stage reset` подготавливает staging к новому чистому прогону.
 - [2026-04-08 04:30:47] `-dry_run yes` используется как безопасный preview действий.
 - [2026-04-08 04:30:47] `-keep_artifacts yes` сохраняет артефакты диагностики даже без полного `-debug yes`.
@@ -42,6 +44,7 @@
 - [2026-04-08 04:30:47] Для `stage=reset` дополнительно сохраняются pre-reset снимки и post-check чистого состояния.
 - [2026-04-09 00:30:57] Для `stage=acceptance` дополнительно сохраняются `acceptance/summary.txt`, повторные HTML-ответы probes и `acceptance/manual-client-checklist.md`.
 - [2026-04-11 14:40:00] Comparative acceptance теперь дополнительно сохраняет `acceptance/runtime-snapshot.env` с profile/preset/runtime state и `acceptance/xui-inbounds-summary.txt` с redacted сводкой по `REALITY/XHTTP` inbound'ам из `x-ui.db`.
+- [2026-04-11 16:05:00] Comparative acceptance теперь также сохраняет `acceptance/session-metadata.env`, `acceptance/matrix-row.json` и `acceptance/probe-results.jsonl`; это канонический артефактный слой для triage блока `C1`.
 - [2026-04-11 15:20:00] Постоянный runtime provenance теперь хранится в `/etc/x-ui/runtime-provenance.env`; `backup.sh` копирует его отдельным `runtime-provenance.env` в каталог backup, а `restore` сначала использует этот sidecar-файл и только потом fallback-эвристику по `x-ui.db`.
 - [2026-04-09 01:32:44] `acceptance/manual-client-checklist.md` теперь должен рассматриваться как основной handoff-файл для ручного теста: он фиксирует актуальные URL ноды после reinstall и transport-specific подсказку, какой узел выбирать в клиенте.
 
