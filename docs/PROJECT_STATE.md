@@ -7,6 +7,9 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-11 20:45:00] Для `stealth-xhttp` подтверждён ещё один product-gap в delivery-слое: даже после фикса `vnext` upstream `3x-ui` по-прежнему не отдавал в JSON-подписке client-side `streamSettings.sockopt`, из-за чего часть low-latency tuning фактически оставалась только на сервере.
+- [2026-04-11 20:45:00] В актуальном rewrite-слое это закрыто: `subjson-rewrite` читает `x-ui.db`, извлекает transport-aware `sockopt` для `XHTTP` и добавляет его в клиентский JSON-контур, так что `v2rayNG/v2rayN` получает уже не урезанный, а синхронизированный outbound-профиль.
+- [2026-04-11 20:45:00] Сам preset `stealth-xhttp low-latency` тоже смягчён под handoff: жёсткие `XMUX` overrides заменены на нулевые штатные значения, чтобы не удерживать одну H2-сессию слишком долго при смене сети `Wi‑Fi <-> LTE`.
 - [2026-04-11 20:05:00] Для user-facing JSON-подписок подтверждён отдельный upstream-дефект `3x-ui`: `XRAY JSON Subscription` для `vless` отдавал невалидный outbound-контракт `settings.address/id/port` вместо `settings.vnext`, из-за чего клиенты вроде `v2rayNG` импортировали такие профили как сломанные `null:null`.
 - [2026-04-11 20:05:00] В актуальном installer-контуре этот дефект закрыт без форка upstream-бинарника: рядом с `x-ui` теперь поднимается локальный `subjson-rewrite` bridge, а публичный JSON endpoint проксируется через него и отдаёт уже нормальные `vnext`-конфиги для `REALITY` и `XHTTP`.
 - [2026-04-11 20:05:00] Staging-проверка на новой переустановке подтвердила новый контракт: strict `verify` видит активный `subjson-rewrite`, а `https://<domain>/<subJsonPath>/first` возвращает валидные `vless` JSON-конфиги, пригодные для повторного импорта в `v2rayNG/v2rayN`.

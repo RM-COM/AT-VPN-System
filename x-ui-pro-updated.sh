@@ -21,6 +21,7 @@ SUB2SINGBOX_SERVICE="/etc/systemd/system/sub2sing-box.service"
 SUBJSON_REWRITE_SERVICE="/etc/systemd/system/subjson-rewrite.service"
 SUBJSON_REWRITE_BIN="/usr/local/bin/subjson-rewrite.py"
 SUBJSON_REWRITE_PORT="${SUBJSON_REWRITE_PORT:-8091}"
+SUBJSON_REWRITE_XUI_DB="${SUBJSON_REWRITE_XUI_DB:-/etc/x-ui/x-ui.db}"
 XUI_REPO_SLUG="${XUI_REPO_SLUG:-MHSanaei/3x-ui}"
 XUI_VERSION="${XUI_VERSION:-v2.8.11}"
 SUB2SINGBOX_REPO_SLUG="${SUB2SINGBOX_REPO_SLUG:-legiz-ru/sub2sing-box}"
@@ -443,20 +444,20 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
 			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
 			TRANSPORT_XHTTP_XMUX_ENABLE="true"
-			TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY="16-32"
+			TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY="0"
 			TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS=0
 			TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES=0
-			TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES="600-900"
-			TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS="1800-3000"
-			TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=10
+			TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES="0"
+			TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS="0"
+			TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=0
 			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
 			TRANSPORT_XHTTP_TCP_MPTCP="false"
 			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
 			TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
 			TRANSPORT_XHTTP_TCP_MAX_SEG=1440
-			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=10
-			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=90
-			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=15000
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=5
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=30
+			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=10000
 			TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
 			TRANSPORT_XHTTP_V6_ONLY="false"
 			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
@@ -2069,6 +2070,15 @@ verify_existing_installation() {
 									((.settings.vnext | type) == "array")
 									and ((.settings | has("address")) | not)
 									and ((.settings.vnext[0].users | type) == "array")
+									and (
+										if .streamSettings.network == "xhttp" then
+											((.streamSettings.sockopt | type) == "object")
+											and (.streamSettings.sockopt | has("tcpNoDelay"))
+											and (.streamSettings.sockopt | has("tcpUserTimeout"))
+										else
+											true
+										end
+									)
 								else
 									true
 								end
@@ -4423,7 +4433,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 ${SUBJSON_REWRITE_BIN} --bind 127.0.0.1 --port ${SUBJSON_REWRITE_PORT} --upstream-port ${sub_port}
+ExecStart=/usr/bin/python3 ${SUBJSON_REWRITE_BIN} --bind 127.0.0.1 --port ${SUBJSON_REWRITE_PORT} --upstream-port ${sub_port} --xui-db-path ${SUBJSON_REWRITE_XUI_DB}
 Restart=always
 RestartSec=3
 

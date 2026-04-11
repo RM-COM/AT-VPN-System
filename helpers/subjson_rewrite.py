@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import sqlite3
 import ssl
 import sys
 import urllib.error
@@ -18,6 +19,20 @@ PASS_HEADERS = (
     "Cache-Control",
     "Etag",
     "Last-Modified",
+)
+
+CLIENT_SOCKOPT_KEYS = (
+    "tcpFastOpen",
+    "tcpMptcp",
+    "tcpNoDelay",
+    "domainStrategy",
+    "tcpMaxSeg",
+    "tcpKeepAliveInterval",
+    "tcpKeepAliveIdle",
+    "tcpUserTimeout",
+    "tcpcongestion",
+    "V6Only",
+    "tcpWindowClamp",
 )
 
 
@@ -66,30 +81,68 @@ def rewrite_outbound(outbound):
     return outbound
 
 
-def rewrite_config(config):
+def build_client_sockopt(sockopt):
+    if not isinstance(sockopt, dict):
+        return None
+    client_sockopt = {}
+    for key in CLIENT_SOCKOPT_KEYS:
+        value = sockopt.get(key)
+        if value in (None, ""):
+            continue
+        client_sockopt[key] = value
+    return client_sockopt or None
+
+
+def maybe_inject_sockopt(outbound, sockopt_map):
+    if not isinstance(outbound, dict):
+        return outbound
+    if outbound.get("protocol") != "vless":
+        return outbound
+    stream_settings = outbound.get("streamSettings")
+    if not isinstance(stream_settings, dict):
+        return outbound
+    network = stream_settings.get("network")
+    security = stream_settings.get("security")
+    if not network or not security:
+        return outbound
+    existing_sockopt = stream_settings.get("sockopt")
+    if isinstance(existing_sockopt, dict) and existing_sockopt:
+        return outbound
+    injected_sockopt = sockopt_map.get((network, security))
+    if injected_sockopt:
+        stream_settings["sockopt"] = injected_sockopt
+    return outbound
+
+
+def rewrite_config(config, sockopt_map):
     if not isinstance(config, dict):
         return config
     outbounds = config.get("outbounds")
     if isinstance(outbounds, list):
-        config["outbounds"] = [rewrite_outbound(outbound) for outbound in outbounds]
+        rewritten_outbounds = []
+        for outbound in outbounds:
+            rewritten_outbound = rewrite_outbound(outbound)
+            rewritten_outbounds.append(maybe_inject_sockopt(rewritten_outbound, sockopt_map))
+        config["outbounds"] = rewritten_outbounds
     return config
 
 
-def rewrite_document(document):
+def rewrite_document(document, sockopt_map):
     if isinstance(document, list):
-        return [rewrite_config(item) for item in document]
+        return [rewrite_config(item, sockopt_map) for item in document]
     if isinstance(document, dict):
-        return rewrite_config(document)
+        return rewrite_config(document, sockopt_map)
     return document
 
 
 class RewriteHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, server_address, handler_cls, upstream_port, timeout):
+    def __init__(self, server_address, handler_cls, upstream_port, timeout, xui_db_path):
         super().__init__(server_address, handler_cls)
         self.upstream_port = upstream_port
         self.timeout = timeout
+        self.xui_db_path = xui_db_path
         self.ssl_context = ssl._create_unverified_context()
 
     def fetch_upstream(self, path, host_header):
@@ -111,6 +164,32 @@ class RewriteHTTPServer(ThreadingHTTPServer):
             body = response.read()
             headers = {key: value for key, value in response.headers.items() if key in PASS_HEADERS}
             return response.getcode(), headers, body
+
+    def load_sockopt_map(self):
+        if not self.xui_db_path:
+            return {}
+        try:
+            connection = sqlite3.connect(f"file:{self.xui_db_path}?mode=ro", uri=True)
+            try:
+                cursor = connection.execute("SELECT stream_settings FROM inbounds")
+                sockopt_map = {}
+                for (stream_settings_raw,) in cursor.fetchall():
+                    if not stream_settings_raw:
+                        continue
+                    try:
+                        stream_settings = json.loads(stream_settings_raw)
+                    except Exception:
+                        continue
+                    network = stream_settings.get("network")
+                    security = stream_settings.get("security")
+                    client_sockopt = build_client_sockopt(stream_settings.get("sockopt"))
+                    if network and security and client_sockopt:
+                        sockopt_map[(network, security)] = client_sockopt
+                return sockopt_map
+            finally:
+                connection.close()
+        except Exception:
+            return {}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -139,7 +218,7 @@ class Handler(BaseHTTPRequestHandler):
         rewritten_body = body
         try:
             parsed = json.loads(body.decode("utf-8"))
-            rewritten = rewrite_document(parsed)
+            rewritten = rewrite_document(parsed, self.server.load_sockopt_map())
             rewritten_body = json.dumps(rewritten, ensure_ascii=False, indent=2).encode("utf-8")
         except Exception:
             pass
@@ -164,9 +243,10 @@ def main():
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--upstream-port", type=int, required=True)
     parser.add_argument("--timeout", type=int, default=15)
+    parser.add_argument("--xui-db-path", default="/etc/x-ui/x-ui.db")
     args = parser.parse_args()
 
-    server = RewriteHTTPServer((args.bind, args.port), Handler, args.upstream_port, args.timeout)
+    server = RewriteHTTPServer((args.bind, args.port), Handler, args.upstream_port, args.timeout, args.xui_db_path)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
