@@ -2,6 +2,9 @@
 
 ## Текущая точка продолжения (актуально)
 
+- [2026-04-11 19:40:00] Новый low-latency шаг для `stealth-xhttp` закрыт кодом и staging-проверкой: `xhttpSettings.xmux` теперь реально доставляется в inbound и в JSON subscription, а `verify` и loopback self-test валидируют этот же контракт.
+- [2026-04-11 19:40:00] Следующий практический шаг уже user-facing: попросить ручной `Wi‑Fi <-> LTE` handoff-тест именно через `XRAY JSON Subscription` / `v2rayNG install-config`, потому что прямой QR/direct URI по-прежнему не переносит `xmux`.
+- [2026-04-11 19:40:00] Ближайшая цель triage не меняется: понять, сокращает ли этот `xmux`-слой handoff-задержку `stealth-xhttp`; если нет, следующим кандидатом будет уже не transport-delivery, а `H2/H3`-класс ограничения и дальнейшее runtime-разделение.
 - [2026-04-11 19:35:00] Новый product-bug закрыт кодом: JSON subscription delivery в `3x-ui` больше не должен silently ломаться из-за отсутствующего `subJsonEnable`; `verify` теперь отдельно проверяет `https://<domain>/<subJsonPath>/first`.
 - [2026-04-11 19:35:00] Следующий практический шаг после выкладки этого фикса на staging: подтвердить, что JSON-sub path реально ожил, затем уже решать второй слой проблемы `XHTTP` — handoff-задержку `Wi‑Fi <-> LTE`, которая сейчас выглядит как H2/XMUX/client-side reuse-поведение, а не как прежний server-side баг.
 - [2026-04-11 18:25:00] Новый triage-вывод подтверждён жёстко: `stealth-xhttp` был сломан не из-за пользователя, не из-за мобильной сети и не из-за самого `nginx grpc_pass`, а из-за server-side `xPaddingBytes` в `x-ui`-generated inbound.

@@ -35,6 +35,8 @@
 - [2026-04-11 16:05:00] Comparative acceptance теперь дополнительно пишет machine-readable артефакты `acceptance/session-metadata.env`, `acceptance/matrix-row.json` и `acceptance/probe-results.jsonl`, чтобы сравнивать `stealth-xray` и `stealth-xhttp` по единому формату.
 - [2026-04-11 17:50:00] `stage=verify` для `stealth-xhttp` больше не ограничивается socket/path-проверками: он поднимает локальный Xray loopback-client и выполняет активный `XHTTP` self-test через публичный ingress, сохраняя `commands/xhttp-selftest.json`, `commands/xhttp-selftest.xray.log` и `commands/xhttp-selftest.curl.log`.
 - [2026-04-11 17:50:00] Базовый runtime-контракт `stealth-xhttp` синхронизирован с официальным `nginx + TLS + XHTTP` направлением: server-side default переведён с `packet-up` на `auto`, а `nginx`-location для `XHTTP` усилен под H2 ingress.
+- [2026-04-11 19:40:00] Для `stealth-xhttp low-latency` installer теперь встраивает `xhttpSettings.xmux` в inbound, `verify` валидирует этот блок по `x-ui.db`, а loopback self-test использует тот же `xmux`, что и JSON-подписка.
+- [2026-04-11 19:40:00] Практический операторский инвариант: handoff/reconnect тесты `stealth-xhttp low-latency` нужно выполнять через `XRAY JSON Subscription` (`v2rayNG install-config` / update subscription), потому что прямой QR/base64 URI формат upstream `3x-ui` не умеет переносить `xmux`.
 - [2026-04-08 04:30:47] `-stage reset` подготавливает staging к новому чистому прогону.
 - [2026-04-08 04:30:47] `-dry_run yes` используется как безопасный preview действий.
 - [2026-04-08 04:30:47] `-keep_artifacts yes` сохраняет артефакты диагностики даже без полного `-debug yes`.

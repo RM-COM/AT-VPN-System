@@ -7,6 +7,9 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-11 19:40:00] Для `stealth-xhttp low-latency` теперь подтверждён ещё один transport-контракт: server-side inbound получает `xhttpSettings.xmux`, strict `verify` валидирует этот блок в `x-ui.db`, а loopback self-test использует тот же `xmux`, который уходит в клиентскую JSON-подписку.
+- [2026-04-11 19:40:00] На staging это уже подтверждено повторной установкой: `xhttpSettings.xmux` присутствует и в `x-ui.db`, и в `https://<domain>/<subJsonPath>/first`, поэтому следующий handoff-тест можно проводить не вслепую, а на реально доставленном low-latency tuning-слое.
+- [2026-04-11 19:40:00] Зафиксировано и эксплуатационное ограничение: direct URI/QR формат upstream `3x-ui` не переносит `xhttpSettings.xmux`, поэтому для сравнения `Wi‑Fi <-> LTE` в `stealth-xhttp low-latency` нужно использовать `XRAY JSON Subscription` или client route, который импортирует именно JSON-конфиг.
 - [2026-04-11 19:35:00] Для subscription delivery подтверждён отдельный installer-регресс: JSON subscription route в `3x-ui` не включался, потому что форк записывал `subJsonPath`, но не записывал `subJsonEnable=true`; это исправлено в актуальном installer-контуре.
 - [2026-04-11 19:35:00] Дополнительно нормализован контракт `subJsonURI`: он снова указывает на реальный JSON endpoint, а `verify` теперь валидирует этот путь отдельной локальной HTTPS-пробой и не пропускает silent `404/HTML` деградацию.
 - [2026-04-11 18:25:00] Для `stealth-xhttp` подтверждён отдельный runtime-риск server-side compatibility: server-side `xPaddingBytes` не может быть уже фактического client-side default padding, иначе inbound начинает отвергать запросы ещё до полноценного proxy traffic.
