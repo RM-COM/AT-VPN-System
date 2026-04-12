@@ -7,6 +7,10 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-12 01:25:00] В живом использовании выявлен новый отдельный сценарий нагрузки: `stealth-xhttp` хорошо держит browsing/video и быстрый `Wi-Fi <-> LTE` handoff, но видеозвонки `Discord` и `Telegram` через него пока ощущаются тяжёлыми по latency/uplink-поведению.
+- [2026-04-12 01:25:00] Это не отменяет текущий успешный baseline `handoff-safe`, но уточняет роль следующего safe-slice: для `XHTTP` нужен отдельный controlled preset под realtime-трафик, а не попытка бесконечно ускорять browsing-профиль вслепую.
+- [2026-04-12 01:25:00] Для этого в код добавлен opt-in preset `realtime-safe`: он фиксирует `XHTTP mode=stream-up`, оставляет `XMUX` выключенным и использует более короткий TCP keepalive/timeout-контур, чтобы проверить, можно ли улучшить `Discord/Telegram calls` без потери текущей скрытности и handoff-качества.
+- [2026-04-12 01:25:00] Если `realtime-safe` не улучшит видеозвонки заметно, это будет считаться уже не tuning-gap, а ограничением самого `XHTTP/H2` профиля для realtime-сценариев; в таком случае `XHTTP` остаётся stealth/browsing-кандидатом, а основной low-latency/call-friendly профиль будет окончательно смещаться в сторону `stealth-xray` и будущего compatibility-класса.
 - [2026-04-12 00:20:00] `stealth-xhttp handoff-safe` получил положительное полевое подтверждение: handoff между `Wi-Fi` и мобильной сетью восстановился до комфортного уровня `0-5` секунд, профиль работает на Android, ПК и Shadowrocket/iPhone.
 - [2026-04-12 00:20:00] Текущий успешный baseline сохраняется без изменений; для следующей итерации скорости введён отдельный XHTTP preset `balanced-speed`. Он увеличивает XHTTP buffering/post-size умеренно, оставляет `XMUX` выключенным и сохраняет короткий keepalive-контур, чтобы не возвращать прежние длинные зависания при смене сети.
 - [2026-04-12 00:20:00] Дополнительно расширен server-side TCP/sysctl слой: сохраняются `fq + bbr`, а также добавлены безопасные сетевые параметры очередей/backlog, `tcp_slow_start_after_idle=0` и `tcp_mtu_probing=1` для более стабильного восстановления и throughput без изменения клиентской сигнатуры XHTTP.
@@ -159,6 +163,7 @@
 
 ## Ближайшая точка продолжения
 
+- [2026-04-12 01:25:00] Следующая ближайшая задача: выложить `stealth-xhttp + XHTTP_TUNING_PROFILE=realtime-safe` на staging, прогнать `verify/acceptance`, затем отдельно сравнить `Discord/Telegram calls`, обычный browsing, `Wi-Fi <-> LTE` handoff и повторяемость результата против `handoff-safe`.
 - [2026-04-10 23:05:05] Текущая ближайшая задача: идти по `PROTOCOL_HARDENING_PLAN.md`, закрыть `Block C1`, различать ordinary DPI / co-tenancy / mobile whitelist и затем зафиксировать production-рекомендацию в формате «основной stealth-профиль + DPI fallback + mobile whitelist fallback».
 
 ## Где смотреть детали

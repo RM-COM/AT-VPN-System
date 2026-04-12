@@ -61,6 +61,7 @@
 - [2026-04-09 00:15:49] Проверять fallback root через публичный `443`.
 - [2026-04-09 00:15:49] Проверять клиентский импорт и подключение через `v2rayN`.
 - [2026-04-09 00:15:49] Проверять типичный браузерный трафик после подключения: страницы, видео, фоновые запросы.
+- [2026-04-12 01:25:00] Для `stealth-xhttp` отдельно проверять realtime-сценарии `Discord/Telegram calls`: старт звонка, стабильность 5-10 минут, двусторонний audio/video и поведение после ручной смены сети.
 
 ### C. Long-running приёмка
 
@@ -91,6 +92,7 @@
 - [2026-04-09 20:50:25] `desktop short-load`: `PASS` для `stealth-xray` и `stealth-xhttp` по сценарию `4K + browsing` около 10 минут.
 - [2026-04-09 20:50:25] `mobile long-run`: `DEGRADED`, потому что `stealth-xhttp` работает, но теряет стабильность в длительном дневном использовании, а старые reality-схемы на mobile internet не подтверждены.
 - [2026-04-09 20:50:25] `time-of-day sensitivity`: `SUSPECTED`, потому что утром `stealth-xhttp` работал лучше, чем позже в тот же день.
+- [2026-04-12 01:25:00] `xhttp realtime-calls`: `DEGRADED`, потому что текущий XHTTP baseline уже хорошо держит browsing/video/handoff, но видеозвонки `Discord` и `Telegram` через него пока идут тяжело; следующий comparison-slice для этого сценария — `handoff-safe` vs `realtime-safe` vs `stealth-xray`.
 - [2026-04-10 08:06:43] `acceptance observability`: `IMPROVED`, потому что `stage=acceptance` теперь снимает не только `ss -lntp/systemctl`, но и `ss -tinp`, `ss -s`, `journalctl` для `nginx/x-ui/sub2sing-box`, а также transport-aware клиентский чек-лист для сравнения `xhttp` и `reality`.
 - [2026-04-11 00:05:00] `network handoff`: `PASS (initial field signal)` для текущего тестового контура `platform-v2`, потому что ручное переключение `Wi‑Fi <-> mobile` прошло без прежней длинной задержки восстановления, а базовый browsing/video трафик остался рабочим вне окна `mobile whitelist`.
 
