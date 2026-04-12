@@ -7,6 +7,9 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-12 19:35:00] Дополнительный полевой тест `stealth-xhttp packet-up-safe` подтвердил, что профиль держит `Discord` voice в хорошем качестве, а значит улучшение по `packet-up` не куплено ценой деградации realtime-path.
+- [2026-04-12 19:35:00] При этом `cold-start` класс проблемы остаётся: первый успешный ping всё ещё занимает около `6` секунд. Практический вывод теперь жёсткий: `packet-up-safe` — лучший текущий XHTTP-кандидат по совокупности `UI latency + browsing + calls`, но дальнейший выигрыш уже не гарантирован простым локальным тюнингом `XHTTP`.
+- [2026-04-12 19:35:00] Следующий правильный шаг по Block C1 теперь смещается с внутренней гонки XHTTP-presets на сравнительный выбор ролей: зафиксировать `packet-up-safe` как ведущий `stealth-xhttp` preset и перейти к прямому сравнению лучшего `XHTTP`-профиля с `stealth-xray` для финальной схемы `primary low-latency` и `primary stealth`.
 - [2026-04-12 19:20:00] Новый живой результат по `stealth-xhttp packet-up-safe` уже лучше предыдущих mode-slice'ов по user-facing UI-path: главная `YouTube` стала загружаться заметно приятнее, а `Instagram` работает стабильнее, чем на `stream-one-safe`.
 - [2026-04-12 19:20:00] Это означает, что гипотеза про `XHTTP mode=packet-up` оказалась продуктивной: текущий выигрыш виден не только на server-side `PASS`, но и в живом browsing-поведении. Следующий шаг теперь не искать новый mode вслепую, а подтвердить, удерживается ли этот выигрыш вместе с `first ping` и realtime-calls.
 - [2026-04-12 18:54:00] Новый preset `packet-up-safe` уже подтверждён на staging по полному server-side контуру: install, strict `verify` и `acceptance (1m/20s)` завершились полным `PASS` с transport tuning `reality=mobile-safe xhttp=packet-up-safe`.
