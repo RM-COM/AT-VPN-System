@@ -222,3 +222,8 @@
 - [2026-04-07 01:16:59] Отдельно нужно решить судьбу оставшихся product-facing внешних ссылок, которые сознательно ещё не зеркалированы.
 - [2026-04-11 17:50:00] Текущая ближайшая точка продолжения изменилась: сначала нужно повторно прогнать зарубежный staging уже на новом `verify`-контуре, потому что старые `PASS` для `stealth-xhttp` оказались недостаточными без реальной transport-пробы.
 - [2026-04-11 17:50:00] Следующий практический шаг теперь такой: обновить сервер до новой ревизии `codex/platform-v2`, запустить `-stage verify -debug yes -keep_artifacts yes`, посмотреть результат `xhttp-selftest`, и только после этого снова выходить в ручной клиентский тест.
+- [2026-04-12 21:35:15] Новый текущий runtime baseline для staging: `stealth-multi`, `REALITY_TUNING_PROFILE=call-safe`, `XHTTP_TUNING_PROFILE=packet-up-safe`; runtime provenance подтверждён в `/etc/x-ui/runtime-provenance.env`.
+- [2026-04-12 21:35:15] Актуальные публичные точки staging: панель `https://fork.aterium.net/oRo0VF8d7f/`, web-sub `https://fork.aterium.net/D2EP3PfEjG/?name=first`, JSON subscription `https://fork.aterium.net/BmsMcF45bn/first`, sub2sing-box `https://fork.aterium.net/8wfarsk9vT/`.
+- [2026-04-12 21:35:15] Актуальные учётные данные панели staging: username `IrNqVF819N`, password `LrnVVB7Pni`.
+- [2026-04-12 21:36:18] Канонический server-side артефакт этого среза: `/root/x-ui-pro-debug/20260412-213531/acceptance/summary.txt`; `install`, `strict verify` и `acceptance` завершились с `PASS`.
+- [2026-04-12 21:36:18] Следующий рабочий шаг: не менять server-side контур вслепую, а добрать клиентскую матрицу именно на `call-safe` и разделить transport issue против client-stack issue (`Shadowrocket` vs `v2rayNG`) перед следующим срезом тюнинга.

@@ -316,7 +316,7 @@ platform_validate_tuning_profile_name() {
 platform_validate_reality_tuning_profile_name() {
 	local profile_name="$1"
 	case "$profile_name" in
-		default|mobile-safe|low-latency|aggressive-stealth) return 0 ;;
+		default|mobile-safe|low-latency|call-safe|aggressive-stealth) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -347,6 +347,20 @@ platform_build_xhttp_xmux_block() {
       "hMaxReusableSecs": "${TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS:-1800-3000}",
       "hKeepAlivePeriod": ${TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD:-0}
     }
+EOF
+}
+
+platform_build_reality_sockopt_block() {
+	[[ -n "${TRANSPORT_REALITY_TCP_NO_DELAY:-}" ]] || return 0
+	cat <<EOF
+,
+  "sockopt": {
+    "tcpNoDelay": ${TRANSPORT_REALITY_TCP_NO_DELAY:-true},
+    "domainStrategy": "${TRANSPORT_REALITY_DOMAIN_STRATEGY:-UseIP}",
+    "tcpKeepAliveInterval": ${TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL:-5},
+    "tcpKeepAliveIdle": ${TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE:-20},
+    "tcpUserTimeout": ${TRANSPORT_REALITY_TCP_USER_TIMEOUT:-15000}
+  }
 EOF
 }
 
@@ -409,24 +423,55 @@ platform_apply_reality_tuning_profile() {
 			TRANSPORT_REALITY_FINGERPRINT="random"
 			TRANSPORT_REALITY_SPIDER_X="/"
 			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			TRANSPORT_REALITY_TCP_NO_DELAY=""
+			TRANSPORT_REALITY_DOMAIN_STRATEGY=""
+			TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL=""
+			TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE=""
+			TRANSPORT_REALITY_TCP_USER_TIMEOUT=""
 			;;
 		mobile-safe)
 			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
 			TRANSPORT_REALITY_FINGERPRINT="chrome"
 			TRANSPORT_REALITY_SPIDER_X="/"
 			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			TRANSPORT_REALITY_TCP_NO_DELAY=""
+			TRANSPORT_REALITY_DOMAIN_STRATEGY=""
+			TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL=""
+			TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE=""
+			TRANSPORT_REALITY_TCP_USER_TIMEOUT=""
 			;;
 		low-latency)
 			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
 			TRANSPORT_REALITY_FINGERPRINT="chrome"
 			TRANSPORT_REALITY_SPIDER_X="/"
 			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			TRANSPORT_REALITY_TCP_NO_DELAY=""
+			TRANSPORT_REALITY_DOMAIN_STRATEGY=""
+			TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL=""
+			TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE=""
+			TRANSPORT_REALITY_TCP_USER_TIMEOUT=""
+			;;
+		call-safe)
+			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+			TRANSPORT_REALITY_FINGERPRINT="chrome"
+			TRANSPORT_REALITY_SPIDER_X="/"
+			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			TRANSPORT_REALITY_TCP_NO_DELAY="true"
+			TRANSPORT_REALITY_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL=5
+			TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE=20
+			TRANSPORT_REALITY_TCP_USER_TIMEOUT=15000
 			;;
 		aggressive-stealth)
 			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
 			TRANSPORT_REALITY_FINGERPRINT="firefox"
 			TRANSPORT_REALITY_SPIDER_X="/"
 			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			TRANSPORT_REALITY_TCP_NO_DELAY=""
+			TRANSPORT_REALITY_DOMAIN_STRATEGY=""
+			TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL=""
+			TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE=""
+			TRANSPORT_REALITY_TCP_USER_TIMEOUT=""
 			;;
 		*)
 			die "Unsupported REALITY tuning profile: ${selected_profile}"
@@ -1005,6 +1050,11 @@ print_runtime_context() {
 	append_debug_log "  transport_reality_client_flow=${TRANSPORT_REALITY_CLIENT_FLOW:-xtls-rprx-vision}"
 	append_debug_log "  transport_reality_fingerprint=${TRANSPORT_REALITY_FINGERPRINT:-random}"
 	append_debug_log "  transport_reality_spider_x=${TRANSPORT_REALITY_SPIDER_X:-/}"
+	append_debug_log "  transport_reality_tcp_no_delay=${TRANSPORT_REALITY_TCP_NO_DELAY:-<unset>}"
+	append_debug_log "  transport_reality_domain_strategy=${TRANSPORT_REALITY_DOMAIN_STRATEGY:-<unset>}"
+	append_debug_log "  transport_reality_tcp_keepalive_interval=${TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL:-<unset>}"
+	append_debug_log "  transport_reality_tcp_keepalive_idle=${TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE:-<unset>}"
+	append_debug_log "  transport_reality_tcp_user_timeout=${TRANSPORT_REALITY_TCP_USER_TIMEOUT:-<unset>}"
 	append_debug_log "  override_reality_tuning_profile=${OVERRIDE_REALITY_TUNING_PROFILE:-<none>}"
 	if [[ -n "${TRANSPORT_XHTTP_MODE:-}" ]]; then
 		append_debug_log "  transport_xhttp_tuning_profile=${TRANSPORT_XHTTP_TUNING_PROFILE:-default}"
@@ -1209,6 +1259,11 @@ transport_reality_tuning_profile=${TRANSPORT_REALITY_TUNING_PROFILE:-default}
 transport_reality_client_flow=${TRANSPORT_REALITY_CLIENT_FLOW:-xtls-rprx-vision}
 transport_reality_fingerprint=${TRANSPORT_REALITY_FINGERPRINT:-random}
 transport_reality_spider_x=${TRANSPORT_REALITY_SPIDER_X:-/}
+transport_reality_tcp_no_delay=${TRANSPORT_REALITY_TCP_NO_DELAY:-}
+transport_reality_domain_strategy=${TRANSPORT_REALITY_DOMAIN_STRATEGY:-}
+transport_reality_tcp_keepalive_interval=${TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL:-}
+transport_reality_tcp_keepalive_idle=${TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE:-}
+transport_reality_tcp_user_timeout=${TRANSPORT_REALITY_TCP_USER_TIMEOUT:-}
 override_reality_tuning_profile=${OVERRIDE_REALITY_TUNING_PROFILE:-}
 transport_xhttp_tuning_profile=${TRANSPORT_XHTTP_TUNING_PROFILE:-}
 transport_xhttp_mode=${TRANSPORT_XHTTP_MODE:-}
@@ -1502,6 +1557,7 @@ platform_normalize_expected_sqlite_value() {
 verify_transport_tuning_contract() {
 	local actual_reality actual_xhttp
 	local actual_fingerprint actual_spider actual_header
+	local actual_reality_no_delay actual_reality_domain_strategy actual_reality_keepalive_interval actual_reality_keepalive_idle actual_reality_user_timeout
 	local actual_mode actual_buffered actual_each_bytes actual_padding
 	local actual_fast_open actual_mptcp actual_keepalive_interval actual_keepalive_idle actual_user_timeout actual_window_clamp
 	local mismatch_count=0
@@ -1514,13 +1570,48 @@ verify_transport_tuning_contract() {
 SELECT
   COALESCE(json_extract(stream_settings, '$.realitySettings.settings.fingerprint'), ''),
   COALESCE(json_extract(stream_settings, '$.realitySettings.settings.spiderX'), ''),
-  COALESCE(json_extract(stream_settings, '$.tcpSettings.header.type'), '')
+  COALESCE(json_extract(stream_settings, '$.tcpSettings.header.type'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpNoDelay'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.domainStrategy'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpKeepAliveInterval'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpKeepAliveIdle'), ''),
+  COALESCE(json_extract(stream_settings, '$.sockopt.tcpUserTimeout'), '')
 FROM inbounds
 WHERE json_extract(stream_settings, '$.security')='reality'
 LIMIT 1;
 " 2>/dev/null)
-	IFS='|' read -r actual_fingerprint actual_spider actual_header <<<"$actual_reality"
-	append_debug_log "verify reality tuning fingerprint=${actual_fingerprint:-<empty>} spiderX=${actual_spider:-<empty>} header=${actual_header:-<empty>}"
+	IFS='|' read -r actual_fingerprint actual_spider actual_header actual_reality_no_delay actual_reality_domain_strategy actual_reality_keepalive_interval actual_reality_keepalive_idle actual_reality_user_timeout <<<"$actual_reality"
+	append_debug_log "verify reality tuning fingerprint=${actual_fingerprint:-<empty>} spiderX=${actual_spider:-<empty>} header=${actual_header:-<empty>} tcpNoDelay=${actual_reality_no_delay:-<empty>} domainStrategy=${actual_reality_domain_strategy:-<empty>} keepalive_interval=${actual_reality_keepalive_interval:-<empty>} keepalive_idle=${actual_reality_keepalive_idle:-<empty>} user_timeout=${actual_reality_user_timeout:-<empty>}"
+	if [[ "${actual_reality_no_delay:-}" == "$(platform_normalize_expected_sqlite_value "${TRANSPORT_REALITY_TCP_NO_DELAY:-}")" ]]; then
+		record_verify_result "PASS" "REALITY tcpNoDelay matches preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+	else
+		record_verify_result "FAIL" "REALITY tcpNoDelay does not match preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+		mismatch_count=$((mismatch_count + 1))
+	fi
+	if [[ "${actual_reality_domain_strategy:-}" == "${TRANSPORT_REALITY_DOMAIN_STRATEGY:-}" ]]; then
+		record_verify_result "PASS" "REALITY domainStrategy matches preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+	else
+		record_verify_result "FAIL" "REALITY domainStrategy does not match preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+		mismatch_count=$((mismatch_count + 1))
+	fi
+	if [[ "${actual_reality_keepalive_interval:-}" == "${TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL:-}" ]]; then
+		record_verify_result "PASS" "REALITY tcpKeepAliveInterval matches preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+	else
+		record_verify_result "FAIL" "REALITY tcpKeepAliveInterval does not match preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+		mismatch_count=$((mismatch_count + 1))
+	fi
+	if [[ "${actual_reality_keepalive_idle:-}" == "${TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE:-}" ]]; then
+		record_verify_result "PASS" "REALITY tcpKeepAliveIdle matches preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+	else
+		record_verify_result "FAIL" "REALITY tcpKeepAliveIdle does not match preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+		mismatch_count=$((mismatch_count + 1))
+	fi
+	if [[ "${actual_reality_user_timeout:-}" == "${TRANSPORT_REALITY_TCP_USER_TIMEOUT:-}" ]]; then
+		record_verify_result "PASS" "REALITY tcpUserTimeout matches preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+	else
+		record_verify_result "FAIL" "REALITY tcpUserTimeout does not match preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
+		mismatch_count=$((mismatch_count + 1))
+	fi
 
 	if [[ "${actual_fingerprint:-}" == "${TRANSPORT_REALITY_FINGERPRINT:-}" ]]; then
 		record_verify_result "PASS" "REALITY fingerprint соответствует preset '${TRANSPORT_REALITY_TUNING_PROFILE:-default}'"
@@ -4271,7 +4362,7 @@ write_transport_inbounds_stealth_xray() {
     "header": {
       "type": "${TRANSPORT_REALITY_TCP_HEADER_TYPE:-none}"
     }
-  }
+  }$(platform_build_reality_sockopt_block)
 }',
              '${reality_inbound_tag}',
 	     '{
@@ -4374,7 +4465,7 @@ write_transport_inbounds_stealth_xhttp() {
     "header": {
       "type": "${TRANSPORT_REALITY_TCP_HEADER_TYPE:-none}"
     }
-  }
+  }$(platform_build_reality_sockopt_block)
 }',
              '${reality_inbound_tag}',
 	     '{
