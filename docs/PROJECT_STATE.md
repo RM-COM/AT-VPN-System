@@ -7,6 +7,8 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-12 19:20:00] Новый живой результат по `stealth-xhttp packet-up-safe` уже лучше предыдущих mode-slice'ов по user-facing UI-path: главная `YouTube` стала загружаться заметно приятнее, а `Instagram` работает стабильнее, чем на `stream-one-safe`.
+- [2026-04-12 19:20:00] Это означает, что гипотеза про `XHTTP mode=packet-up` оказалась продуктивной: текущий выигрыш виден не только на server-side `PASS`, но и в живом browsing-поведении. Следующий шаг теперь не искать новый mode вслепую, а подтвердить, удерживается ли этот выигрыш вместе с `first ping` и realtime-calls.
 - [2026-04-12 18:54:00] Новый preset `packet-up-safe` уже подтверждён на staging по полному server-side контуру: install, strict `verify` и `acceptance (1m/20s)` завершились полным `PASS` с transport tuning `reality=mobile-safe xhttp=packet-up-safe`.
 - [2026-04-12 18:54:00] Значит, следующий шаг для `packet-up-safe` уже не инфраструктурный, а чисто полевой: сравнить его с `stream-one-safe` по `first ping`, `Instagram/YouTube` лентам, обычному browsing и `Telegram/Discord` calls, чтобы понять, даёт ли `packet-up` реальный выигрыш по `cold-start`.
 - [2026-04-12 16:05:00] Новый живой результат по `stealth-xhttp stream-one-safe` подтвердил устойчивость текущего направления, но не снял сам класс `cold-start`: первый успешный ping по-прежнему может занимать около `6` секунд, хотя voice/video связь уже ощущается стабильной, а обычный browsing остаётся нормальным.
