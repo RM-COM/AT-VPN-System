@@ -273,7 +273,7 @@ platform_panel_control_bin() {
 platform_validate_tuning_profile_name() {
 	local profile_name="$1"
 	case "$profile_name" in
-		default|mobile-safe|low-latency|handoff-safe|balanced-speed|realtime-safe|api-latency-safe|aggressive-stealth) return 0 ;;
+		default|mobile-safe|low-latency|handoff-safe|balanced-speed|realtime-safe|api-latency-safe|stream-one-safe|aggressive-stealth) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -289,7 +289,7 @@ platform_validate_reality_tuning_profile_name() {
 platform_validate_xhttp_tuning_profile_name() {
 	local profile_name="$1"
 	case "$profile_name" in
-		default|mobile-safe|low-latency|handoff-safe|balanced-speed|realtime-safe|api-latency-safe|aggressive-stealth) return 0 ;;
+		default|mobile-safe|low-latency|handoff-safe|balanced-speed|realtime-safe|api-latency-safe|stream-one-safe|aggressive-stealth) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -555,6 +555,31 @@ platform_apply_xhttp_tuning_profile() {
 			;;
 		api-latency-safe)
 			TRANSPORT_XHTTP_MODE="stream-up"
+			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=4
+			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="65536"
+			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+			TRANSPORT_XHTTP_XMUX_ENABLE="false"
+			TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY=""
+			TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS=0
+			TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES=0
+			TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES=""
+			TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS=""
+			TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=0
+			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
+			TRANSPORT_XHTTP_TCP_MPTCP="false"
+			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+			TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=2
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=10
+			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=5000
+			TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+			TRANSPORT_XHTTP_V6_ONLY="false"
+			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
+			;;
+		stream-one-safe)
+			TRANSPORT_XHTTP_MODE="stream-one"
 			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=4
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="65536"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
