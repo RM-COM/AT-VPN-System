@@ -178,6 +178,41 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_XHTTP_V6_ONLY="false"
 				TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
 				;;
+			stealth-multi)
+				TRANSPORT_PROFILE_LABEL="Stealth Multi"
+				TRANSPORT_PROFILE_DESCRIPTION="Unified stealth baseline with REALITY shield and XHTTP in one install contour"
+				TRANSPORT_IMPLEMENTATION_STATE="ready"
+				TRANSPORT_STREAM_MODE="disabled"
+				TRANSPORT_WEB_TLS_PORT=7443
+				TRANSPORT_REALITY_SITE_TLS_PORT=7443
+				TRANSPORT_REALITY_INBOUND_PORT=443
+				TRANSPORT_REALITY_XVER=1
+				TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
+				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
+				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
+				TRANSPORT_REALITY_TUNING_PROFILE="mobile-safe"
+				TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+				TRANSPORT_REALITY_FINGERPRINT="chrome"
+				TRANSPORT_REALITY_SPIDER_X="/"
+				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+				TRANSPORT_XHTTP_TUNING_PROFILE="packet-up-safe"
+				TRANSPORT_XHTTP_MODE="packet-up"
+				TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=4
+				TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="65536"
+				TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+				TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+				TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
+				TRANSPORT_XHTTP_TCP_MPTCP="false"
+				TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+				TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+				TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+				TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=2
+				TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=10
+				TRANSPORT_XHTTP_TCP_USER_TIMEOUT=5000
+				TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+				TRANSPORT_XHTTP_V6_ONLY="false"
+				TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
+				;;
 			*)
 				printf 'Unsupported TRANSPORT_PROFILE: %s\n' "$TRANSPORT_PROFILE" >&2
 				return 1
@@ -185,7 +220,7 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 		esac
 
 		case "$PLATFORM_PROFILE:$TRANSPORT_PROFILE" in
-			classic:classic-xray|stealth:stealth-xray|stealth:stealth-xhttp) ;;
+			classic:classic-xray|stealth:stealth-xray|stealth:stealth-xhttp|stealth:stealth-multi) ;;
 			*)
 				printf 'Unsupported PLATFORM_PROFILE/TRANSPORT_PROFILE combination: %s/%s\n' "$PLATFORM_PROFILE" "$TRANSPORT_PROFILE" >&2
 				return 1
@@ -352,7 +387,7 @@ load_platform_runtime_provenance_defaults() {
 	if [[ -z "${OVERRIDE_REALITY_TUNING_PROFILE:-}" && -n "${RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE:-}" ]]; then
 		TRANSPORT_REALITY_TUNING_PROFILE="$RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE"
 	fi
-	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" && -z "${OVERRIDE_XHTTP_TUNING_PROFILE:-}" && -n "${RUNTIME_PROVENANCE_XHTTP_TUNING_PROFILE:-}" ]]; then
+	if [[ ( "$TRANSPORT_PROFILE" == "stealth-xhttp" || "$TRANSPORT_PROFILE" == "stealth-multi" ) && -z "${OVERRIDE_XHTTP_TUNING_PROFILE:-}" && -n "${RUNTIME_PROVENANCE_XHTTP_TUNING_PROFILE:-}" ]]; then
 		TRANSPORT_XHTTP_TUNING_PROFILE="$RUNTIME_PROVENANCE_XHTTP_TUNING_PROFILE"
 	fi
 	[[ -z "$domain" && -n "${RUNTIME_PROVENANCE_DOMAIN:-}" ]] && domain="$RUNTIME_PROVENANCE_DOMAIN"
@@ -670,13 +705,13 @@ platform_apply_requested_tuning_profiles() {
 	fi
 	platform_apply_reality_tuning_profile "$requested_reality"
 
-	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]]; then
+	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" || "$TRANSPORT_PROFILE" == "stealth-multi" ]]; then
 		if ! platform_validate_xhttp_tuning_profile_name "$requested_xhttp"; then
 			die "Unsupported XHTTP tuning profile: ${requested_xhttp}"
 		fi
 		platform_apply_xhttp_tuning_profile "$requested_xhttp"
 	elif [[ -n "${OVERRIDE_XHTTP_TUNING_PROFILE:-}" ]]; then
-		die "XHTTP tuning profile override is supported only for transport profile stealth-xhttp. Current transport: ${TRANSPORT_PROFILE}"
+		die "XHTTP tuning profile override is supported only for XHTTP-capable transport profiles. Current transport: ${TRANSPORT_PROFILE}"
 	fi
 }
 
@@ -1506,7 +1541,7 @@ LIMIT 1;
 		mismatch_count=$((mismatch_count + 1))
 	fi
 
-	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]]; then
+	if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" || "$TRANSPORT_PROFILE" == "stealth-multi" ]]; then
 		actual_xhttp=$(sqlite3 -separator '|' -list "$XUIDB" "
 SELECT
   COALESCE(json_extract(stream_settings, '$.xhttpSettings.mode'), ''),
@@ -1653,7 +1688,7 @@ xhttp_transport_self_test() {
 	local test_dir="" config_file="" xray_log="" curl_log="" curl_output="" curl_rc=0
 	local curl_target="https://www.gstatic.com/generate_204" xray_pid="" failure_hint=""
 
-	[[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]] || return 0
+	[[ "$TRANSPORT_PROFILE" == "stealth-xhttp" || "$TRANSPORT_PROFILE" == "stealth-multi" ]] || return 0
 
 	if ! command -v sqlite3 >/dev/null 2>&1 || [[ ! -f "$XUIDB" ]]; then
 		record_verify_result "FAIL" "XHTTP self-test cannot start without sqlite3 and ${XUIDB}"
@@ -1787,6 +1822,12 @@ write_acceptance_manual_checklist() {
 			client_log_hint="Если в логе \`v2rayN\` видны строки \`REALITY ... DialTLSContext\`, значит выбран shield-профиль, а не \`xhttp\`."
 			transport_extra_url="- XHTTP path: https://${domain:-<domain>}/${xhttp_path:-<xhttp_path>}"
 			secondary_target_hint="- Дополнительный контроль: отдельно прогоните \`🇷🇺 reality-shield\` как reality-only узел в той же мобильной сети."
+			;;
+		stealth-multi)
+			client_target_hint="Для client-load проверки сравнивайте оба узла из одной установки: \`🇷🇺 reality-shield\` как low-latency профиль и \`🇷🇺 xhttp\` как stealth-профиль."
+			client_log_hint="Для \`reality-shield\` строки \`REALITY ... DialTLSContext\` ожидаемы; для \`xhttp\` ориентируйтесь на импортированный JSON/XHTTP-профиль."
+			transport_extra_url="- XHTTP path: https://${domain:-<domain>}/${xhttp_path:-<xhttp_path>}"
+			secondary_target_hint="- Основная цель: сравнить роли \`primary low-latency\` и \`primary stealth\` внутри одного baseline, а не искать один универсальный transport."
 			;;
 		stealth-xray)
 			client_target_hint="Для client-load проверки выбирайте узел remark \`🇷🇺 reality-shield\` / обычный \`VLESS REALITY TCP\`."
@@ -2173,7 +2214,7 @@ verify_existing_installation() {
 			fi
 		fi
 
-		if [[ "$TRANSPORT_PROFILE" == "stealth-xhttp" ]] && command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
+		if [[ ( "$TRANSPORT_PROFILE" == "stealth-xhttp" || "$TRANSPORT_PROFILE" == "stealth-multi" ) ]] && command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
 			stealth_xhttp_inbound_count=$(sqlite3 -list "$XUIDB" "SELECT COUNT(*) FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp';" 2>/dev/null | tr -d '[:space:]')
 			append_debug_log "stealth xhttp inbound count: ${stealth_xhttp_inbound_count}"
 			if [[ "$stealth_xhttp_inbound_count" =~ ^[1-9][0-9]*$ ]]; then
@@ -2292,7 +2333,7 @@ SELECT
 						(outbounds | any(.protocol == "vless"))
 						and (outbounds | all(if .protocol == "vless" then valid_vless else true end))
 						and (
-							if $expectedTransportProfile == "stealth-xhttp" then
+							if ($expectedTransportProfile == "stealth-xhttp" or $expectedTransportProfile == "stealth-multi") then
 								(outbounds | any(.protocol == "vless" and valid_xhttp_sockopt))
 							else
 								true
@@ -4469,7 +4510,7 @@ if [[ -f "$XUIDB" ]]; then
 			stealth-xray)
 				write_transport_inbounds_stealth_xray
 				;;
-			stealth-xhttp)
+			stealth-xhttp|stealth-multi)
 				write_transport_inbounds_stealth_xhttp
 				;;
 			*)
@@ -4843,7 +4884,7 @@ platform_install_panel_provider() {
 
 platform_apply_transport_profile() {
 	case "$TRANSPORT_PROFILE" in
-		classic-xray|stealth-xray|stealth-xhttp)
+		classic-xray|stealth-xray|stealth-xhttp|stealth-multi)
 			update_xui_db
 			;;
 		*)
