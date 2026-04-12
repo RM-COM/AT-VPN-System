@@ -188,6 +188,9 @@
 - [2026-04-12 21:35:15] Для unified baseline `stealth-multi` открыт новый `REALITY` preset `call-safe`: client-side `sockopt` (`tcpNoDelay`, `domainStrategy=UseIP`, короткий keepalive и `tcpUserTimeout`) теперь записываются в `REALITY` inbound, автоматически попадают в JSON subscription через `subjson_rewrite` и проходят strict `verify` по `x-ui.db`.
 - [2026-04-12 21:36:18] На staging `2.27.11.162` связка `stealth-multi + REALITY=call-safe + XHTTP=packet-up-safe` подтверждена полным циклом `install -> strict verify -> acceptance (1m/20s)` с `PASS`; acceptance summary: `/root/x-ui-pro-debug/20260412-213531/acceptance/summary.txt`.
 - [2026-04-12 21:36:18] Полевой контекст уточнён: на одном и том же сервере `Shadowrocket` на iPhone 12 Pro Max ведёт `REALITY` и `XHTTP` заметно стабильнее, чем `v2rayNG` на Pixel 7, поэтому остаточные проблемы Telegram/media на Android теперь считаются не только transport-задачей, но и client-stack-specific фактором блока `C1`.
+- [2026-04-13 00:15:31] На основе нового длинного пользовательского прогона уточнено разделение ролей: `REALITY` остаётся быстрее по `ping` и холодному старту, но всё ещё может давать редкие замирания камеры в звонках; `XHTTP` в Telegram работает приемлемо, но по-прежнему ловит краткие заметные realtime-просадки, особенно на Android.
+- [2026-04-13 00:15:31] Для следующего controlled среза добавлен новый `XHTTP` preset `realtime-media-safe`: он использует `mode=stream-up`, уменьшенный batching как у `packet-up-safe`, но более мягкий keepalive/user-timeout контур для Telegram/media сценариев.
+- [2026-04-13 00:15:31] На staging `2.27.11.162` связка `stealth-multi + REALITY=call-safe + XHTTP=realtime-media-safe` подтверждена циклами `install -> strict verify -> acceptance (1m/20s)` с `PASS`; acceptance summary: `/root/x-ui-pro-debug/20260413-001550/acceptance/summary.txt`.
 
 ## Ближайшая точка продолжения
 
@@ -197,6 +200,7 @@
 - [2026-04-12 01:25:00] Следующая ближайшая задача: выложить `stealth-xhttp + XHTTP_TUNING_PROFILE=realtime-safe` на staging, прогнать `verify/acceptance`, затем отдельно сравнить `Discord/Telegram calls`, обычный browsing, `Wi-Fi <-> LTE` handoff и повторяемость результата против `handoff-safe`.
 - [2026-04-10 23:05:05] Текущая ближайшая задача: идти по `PROTOCOL_HARDENING_PLAN.md`, закрыть `Block C1`, различать ordinary DPI / co-tenancy / mobile whitelist и затем зафиксировать production-рекомендацию в формате «основной stealth-профиль + DPI fallback + mobile whitelist fallback».
 - [2026-04-12 21:36:18] Текущая ближайшая задача уточнена: провести живой client-side retest `stealth-multi` уже на `REALITY=call-safe`, сравнить `reality-shield` и `xhttp` внутри одной подписки на Android и iPhone, затем решить, является ли следующий safe-slice server-side further tuning для `REALITY` или отдельный client guidance/compatibility слой для `v2rayNG`.
+- [2026-04-13 00:15:31] Текущая ближайшая задача уточнена ещё раз: провести прямой полевой retest `XHTTP=realtime-media-safe` против предыдущего `packet-up-safe` именно по Telegram/media, затем принять одно из трёх решений: оставить `packet-up-safe` как browsing-ветку, поднять `realtime-media-safe` как новый основной `XHTTP`, либо признать, что следующая прибавка уже лежит в client guidance для `v2rayNG`, а не в server-side transport tuning.
 
 ## Где смотреть детали
 

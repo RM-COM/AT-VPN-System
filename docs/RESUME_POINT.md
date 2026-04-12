@@ -227,3 +227,8 @@
 - [2026-04-12 21:35:15] Актуальные учётные данные панели staging: username `IrNqVF819N`, password `LrnVVB7Pni`.
 - [2026-04-12 21:36:18] Канонический server-side артефакт этого среза: `/root/x-ui-pro-debug/20260412-213531/acceptance/summary.txt`; `install`, `strict verify` и `acceptance` завершились с `PASS`.
 - [2026-04-12 21:36:18] Следующий рабочий шаг: не менять server-side контур вслепую, а добрать клиентскую матрицу именно на `call-safe` и разделить transport issue против client-stack issue (`Shadowrocket` vs `v2rayNG`) перед следующим срезом тюнинга.
+- [2026-04-13 00:15:31] Новый текущий runtime baseline для staging: `stealth-multi`, `REALITY_TUNING_PROFILE=call-safe`, `XHTTP_TUNING_PROFILE=realtime-media-safe`; runtime provenance подтверждён в `/etc/x-ui/runtime-provenance.env`.
+- [2026-04-13 00:15:31] Актуальные публичные точки staging: панель `https://fork.aterium.net/zJD4XOgd8u/`, web-sub `https://fork.aterium.net/CqBhRP710I/?name=first`, JSON subscription `https://fork.aterium.net/mtVj9gl44Y/first`, sub2sing-box `https://fork.aterium.net/leZp6cyPYt/`.
+- [2026-04-13 00:15:31] Актуальные учётные данные панели staging: username `9hDBjwDXjC`, password `fxoesIfogS`.
+- [2026-04-13 00:15:50] Канонический server-side артефакт этого среза: `/root/x-ui-pro-debug/20260413-001550/acceptance/summary.txt`; `install`, `strict verify` и `acceptance` завершились с `PASS`.
+- [2026-04-13 00:15:50] Следующий рабочий шаг: провести живой retest именно Telegram/media на `XHTTP=realtime-media-safe` и решить, является ли он лучше `packet-up-safe` или дальнейший выигрыш уже упирается в `v2rayNG` client stack.
