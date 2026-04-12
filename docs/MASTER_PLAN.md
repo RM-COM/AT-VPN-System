@@ -58,9 +58,9 @@
 
 ## Текущая активная задача
 
-- [2026-04-12 19:25:00] `[В РАБОТЕ]` Внутри `Block C1` уже выбран лучший текущий XHTTP-кандидат: `stealth-xhttp packet-up-safe` подтвердил улучшение по `YouTube/Instagram` и хороший `Discord` voice, но всё ещё держит `cold-start` около `6` секунд.
-- [2026-04-12 19:25:00] `[В РАБОТЕ]` Следующий активный шаг теперь не во внутреннем подборе XHTTP-presets, а в прямом сравнении `stealth-xhttp packet-up-safe` против `stealth-xray mobile-safe` на одном и том же staging и в тех же живых сценариях.
-- [2026-04-12 19:25:00] `[ДАЛЕЕ]` По итогам этого сравнения нужно формально закрепить роли `primary low-latency` и `primary stealth`; только после этого корректно открывать следующий compatibility/fallback слой.
+- [2026-04-12 20:46:00] `[СДЕЛАНО]` Внутри `Block C1` уже собран первый runnable unified stealth baseline: новый transport profile `stealth-multi` поднимает `reality-shield` и `xhttp` вместе в одной установке и проходит staging `install -> verify -> acceptance`.
+- [2026-04-12 20:46:00] `[В РАБОТЕ]` Следующий активный шаг теперь user-facing: проверить `stealth-multi` как единый baseline в живой сети, сравнить внутри одной подписки роли `reality-shield` и `xhttp` и подтвердить product-модель `primary low-latency + primary stealth`.
+- [2026-04-12 20:46:00] `[ДАЛЕЕ]` После этого можно переходить к следующему слою roadmap: admin/subscription hardening для unified baseline, а затем уже к compatibility/fallback классу и `AWG`.
 - [2026-04-08 04:48:10] `[В РАБОТЕ]` Начать первый безопасный implementation-срез в `codex/platform-v2`: ввести абстракцию профилей и провайдеров без изменения runtime-поведения текущего `classic` baseline.
 - [2026-04-08 04:48:10] `[В РАБОТЕ]` Сохранить при этом стабильный install-source в `main` и не смешивать новый платформенный код с историческими `codex/*` ветками.
 - [2026-04-08 05:09:48] `[СДЕЛАНО]` Первый безопасный code-slice `platform-v2` уже выполнен: добавлен минимальный модульный каркас `core/modules/providers` и зарезервированные selection-переменные без изменения поведения `classic`.

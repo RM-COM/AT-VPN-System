@@ -7,6 +7,9 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-12 20:46:00] Следующий архитектурный шаг уже материализован в коде: введён новый transport profile `stealth-multi`, который оформляет текущий unified stealth baseline как одну установку с двумя ролями внутри — `reality-shield` (`REALITY mobile-safe`) и `xhttp` (`XHTTP packet-up-safe`).
+- [2026-04-12 20:46:00] Этот профиль уже подтверждён на staging по полному server-side контуру: `install -> strict verify -> acceptance (1m/20s)` завершились полным `PASS`, а runtime provenance явно фиксирует `transport=stealth-multi`, `reality=mobile-safe`, `xhttp=packet-up-safe`.
+- [2026-04-12 20:46:00] Значит, следующий шаг по плану теперь уже user-facing и продуктовый: тестировать не разрозненные инсталляции `stealth-xray` и `stealth-xhttp`, а единый baseline `stealth-multi`, где оба узла приезжают в одной подписке и могут использоваться как `primary low-latency` и `primary stealth`.
 - [2026-04-12 19:45:00] Первый прямой живой сравнительный прогон `stealth-xray mobile-safe` против лучшего текущего `stealth-xhttp packet-up-safe` уже дал полезное разделение ролей: `stealth-xray` подключается примерно за `1` секунду и в целом ощущается быстрее по `cold-start`, но `Telegram` calls на нём пока нестабильны, тогда как `Discord` держится заметно лучше.
 - [2026-04-12 19:45:00] Это усиливает продуктовую гипотезу о complementary baseline, а не о победе одного transport над другим: `stealth-xray` выглядит сильнее как кандидат на `primary low-latency`, а `stealth-xhttp packet-up-safe` остаётся сильным кандидатом на `primary stealth/realtime-browsing` для более тяжёлых сетей.
 - [2026-04-12 19:45:00] Архитектурный вывод тоже зафиксирован явно: эти профили не нужно «склеивать» в один hybrid transport. Правильная интеграция — один installer, один baseline, одна подписка и несколько отдельных узлов/ролей внутри продукта, чтобы каждый профиль можно было тюнить, проверять и переключать независимо.
