@@ -7,6 +7,9 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-12 04:20:00] Новый полевой тест `stealth-xhttp realtime-safe` подтвердил рабочий компромисс: звонки, browsing и media-path в целом работают хорошо, но остаётся отдельный `cold-start / small-request latency` симптом. Первое установление соединения и первый успешный ping могут занимать около `5` секунд, после чего канал стабилизируется.
+- [2026-04-12 04:20:00] Этот симптом проявляется не как слабый throughput, а как замедление мелких API/ленточных запросов: media-content (`Instagram` картинки/видео, `YouTube` видео) грузится хорошо, но сама лента/дозагрузка списков и часть мелких запросов ощущаются тяжелее именно на `XHTTP`.
+- [2026-04-12 04:20:00] Практический вывод по `realtime-safe`: preset не провалился и подтверждает жизнеспособность `stealth-xhttp` как stealth/browsing/realtime-компромисса, но следующий controlled tuning уже должен быть направлен не на handoff и не на raw throughput, а на уменьшение `cold-start` и ускорение мелких HTTP/API запросов.
 - [2026-04-12 01:25:00] В живом использовании выявлен новый отдельный сценарий нагрузки: `stealth-xhttp` хорошо держит browsing/video и быстрый `Wi-Fi <-> LTE` handoff, но видеозвонки `Discord` и `Telegram` через него пока ощущаются тяжёлыми по latency/uplink-поведению.
 - [2026-04-12 01:25:00] Это не отменяет текущий успешный baseline `handoff-safe`, но уточняет роль следующего safe-slice: для `XHTTP` нужен отдельный controlled preset под realtime-трафик, а не попытка бесконечно ускорять browsing-профиль вслепую.
 - [2026-04-12 01:25:00] Для этого в код добавлен opt-in preset `realtime-safe`: он фиксирует `XHTTP mode=stream-up`, оставляет `XMUX` выключенным и использует более короткий TCP keepalive/timeout-контур, чтобы проверить, можно ли улучшить `Discord/Telegram calls` без потери текущей скрытности и handoff-качества.
@@ -163,6 +166,7 @@
 
 ## Ближайшая точка продолжения
 
+- [2026-04-12 04:20:00] Следующая ближайшая задача: не трогая успешный `realtime-safe`, подготовить отдельный speed/latency safe-slice именно под `cold-start` и мелкие API-запросы `XHTTP`, затем сравнить его с текущим preset по сценариям `first ping`, `Instagram feed`, `YouTube thumbnails/feed`, обычный web и звонки.
 - [2026-04-12 01:25:00] Следующая ближайшая задача: выложить `stealth-xhttp + XHTTP_TUNING_PROFILE=realtime-safe` на staging, прогнать `verify/acceptance`, затем отдельно сравнить `Discord/Telegram calls`, обычный browsing, `Wi-Fi <-> LTE` handoff и повторяемость результата против `handoff-safe`.
 - [2026-04-10 23:05:05] Текущая ближайшая задача: идти по `PROTOCOL_HARDENING_PLAN.md`, закрыть `Block C1`, различать ordinary DPI / co-tenancy / mobile whitelist и затем зафиксировать production-рекомендацию в формате «основной stealth-профиль + DPI fallback + mobile whitelist fallback».
 
