@@ -148,6 +148,41 @@ platform_apply_builtin_metadata() {
 			TRANSPORT_XHTTP_V6_ONLY="false"
 			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
 			;;
+		stealth-multi)
+			TRANSPORT_PROFILE_LABEL="Stealth Multi"
+			TRANSPORT_PROFILE_DESCRIPTION="Unified stealth baseline with REALITY shield and XHTTP in one install contour"
+			TRANSPORT_IMPLEMENTATION_STATE="ready"
+			TRANSPORT_STREAM_MODE="disabled"
+			TRANSPORT_WEB_TLS_PORT=7443
+			TRANSPORT_REALITY_SITE_TLS_PORT=7443
+			TRANSPORT_REALITY_INBOUND_PORT=443
+			TRANSPORT_REALITY_XVER=1
+			TRANSPORT_REALITY_ACCEPT_PROXY_PROTOCOL="false"
+			TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
+			TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
+			TRANSPORT_REALITY_TUNING_PROFILE="mobile-safe"
+			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+			TRANSPORT_REALITY_FINGERPRINT="chrome"
+			TRANSPORT_REALITY_SPIDER_X="/"
+			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			TRANSPORT_XHTTP_TUNING_PROFILE="packet-up-safe"
+			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=4
+			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="65536"
+			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
+			TRANSPORT_XHTTP_TCP_MPTCP="false"
+			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+			TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=2
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=10
+			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=5000
+			TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+			TRANSPORT_XHTTP_V6_ONLY="false"
+			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
+			;;
 	esac
 
 	case "$PANEL_PROVIDER" in
@@ -229,7 +264,7 @@ platform_validate_selection() {
 	esac
 
 	case "$TRANSPORT_PROFILE" in
-		classic-xray|stealth-xray|stealth-xhttp) ;;
+		classic-xray|stealth-xray|stealth-xhttp|stealth-multi) ;;
 		*)
 			printf 'Unsupported TRANSPORT_PROFILE: %s\n' "$TRANSPORT_PROFILE" >&2
 			return 1
@@ -237,7 +272,7 @@ platform_validate_selection() {
 	esac
 
 	case "$PLATFORM_PROFILE:$TRANSPORT_PROFILE" in
-		classic:classic-xray|stealth:stealth-xray|stealth:stealth-xhttp) ;;
+		classic:classic-xray|stealth:stealth-xray|stealth:stealth-xhttp|stealth:stealth-multi) ;;
 		*)
 			printf 'Unsupported PLATFORM_PROFILE/TRANSPORT_PROFILE combination: %s/%s\n' "$PLATFORM_PROFILE" "$TRANSPORT_PROFILE" >&2
 			return 1
