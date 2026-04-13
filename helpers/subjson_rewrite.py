@@ -32,8 +32,8 @@ CLIENT_SOCKOPT_KEYS = (
 )
 
 DEFAULT_DNS_SERVERS = (
-    "https://1.1.1.1/dns-query",
-    "https://8.8.8.8/dns-query",
+    "https+local://1.1.1.1/dns-query",
+    "https+local://8.8.8.8/dns-query",
 )
 DEFAULT_DNS_QUERY_STRATEGY = "UseIP"
 DEFAULT_DNS_TAG = "dns_out"

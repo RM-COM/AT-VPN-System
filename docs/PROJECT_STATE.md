@@ -7,6 +7,10 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-13 04:20:00] DNS/feed-срез сразу дал и полезный регресс-урок: `remote DoH` в формате `https://...` оказался плохим выбором для текущего client baseline. На Android это проявилось как длинный `cold-start`, многократные ручные reconnect и задержка первого успешного ping одновременно для `REALITY` и `XHTTP`.
+- [2026-04-13 04:20:00] Причина локализована в самом DNS-контракте: для Xray такой `DoH` идёт как удалённый DNS-транспорт, а не как локальный bootstrap-резолвер. В нашем контуре это создаёт лишнюю задержку на раннем разрешении имён и ломает user-facing ощущение «подключился и сразу поехал».
+- [2026-04-13 04:20:00] Hotfix уже применён: JSON subscription переведён с `https://1.1.1.1/dns-query, https://8.8.8.8/dns-query` на `https+local://1.1.1.1/dns-query, https+local://8.8.8.8/dns-query`, при этом правило `53/tcp,udp -> proxy` сохранено, а `stage=websub` теперь корректно восстанавливает `subPort` из `x-ui.db` и не ломает `subjson-rewrite.service`.
+- [2026-04-13 04:20:00] После hotfix staging снова подтверждён: `stage=websub -verify` дал полный `PASS`, а отдельный `acceptance (1m/20s)` с меткой `dns-hotfix-local-doh` тоже завершился полным `PASS`; acceptance summary: `/root/x-ui-pro-debug/20260413-042008/acceptance/summary.txt`.
 - [2026-04-13 03:50:00] Следующий safe-slice блока `C1` переведён с грубого transport-tuning на `DNS/feed` слой: `subjson-rewrite` теперь принудительно переписывает клиентский JSON-контур на `DoH`-серверы `https://1.1.1.1/dns-query` и `https://8.8.8.8/dns-query`, сохраняя `queryStrategy=UseIP`.
 - [2026-04-13 03:50:00] В тот же rewrite-слой добавлено явное правило `routing: 53/tcp,udp -> proxy`, чтобы DNS-трафик из клиентского Xray-конфига не оставался на неявном catch-all и был зафиксирован как отдельный контракт baseline.
 - [2026-04-13 03:50:00] На staging `2.27.11.162` этот DNS/feed-срез уже подтверждён: live JSON subscription реально отдаёт оба `DoH`-адреса и явное DNS-правило, а server-side контур `strict verify -> acceptance (1m/20s)` завершился полным `PASS` без смены текущих transport-presets `REALITY=call-safe` и `XHTTP=realtime-media-safe`.

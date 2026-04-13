@@ -22,7 +22,7 @@ SUBJSON_REWRITE_SERVICE="/etc/systemd/system/subjson-rewrite.service"
 SUBJSON_REWRITE_BIN="/usr/local/bin/subjson-rewrite.py"
 SUBJSON_REWRITE_PORT="${SUBJSON_REWRITE_PORT:-8091}"
 SUBJSON_REWRITE_XUI_DB="${SUBJSON_REWRITE_XUI_DB:-/etc/x-ui/x-ui.db}"
-SUBJSON_REWRITE_DNS_SERVERS="${SUBJSON_REWRITE_DNS_SERVERS:-https://1.1.1.1/dns-query,https://8.8.8.8/dns-query}"
+SUBJSON_REWRITE_DNS_SERVERS="${SUBJSON_REWRITE_DNS_SERVERS:-https+local://1.1.1.1/dns-query,https+local://8.8.8.8/dns-query}"
 SUBJSON_REWRITE_DNS_QUERY_STRATEGY="${SUBJSON_REWRITE_DNS_QUERY_STRATEGY:-UseIP}"
 XUI_REPO_SLUG="${XUI_REPO_SLUG:-MHSanaei/3x-ui}"
 XUI_VERSION="${XUI_VERSION:-v2.8.11}"
@@ -1186,6 +1186,7 @@ load_existing_runtime_context() {
 	platform_apply_requested_tuning_profiles >/dev/null 2>&1 || true
 	if [[ -f "$XUIDB" ]]; then
 		panel_port=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webPort" LIMIT 1;' 2>/dev/null)
+		sub_port=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subPort" LIMIT 1;' 2>/dev/null)
 		panel_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webBasePath" LIMIT 1;' 2>/dev/null)")
 		sub_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subPath" LIMIT 1;' 2>/dev/null)")
 		json_path=$(trim_slashes "$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subJsonPath" LIMIT 1;' 2>/dev/null)")
@@ -4839,6 +4840,12 @@ EOF
 }
 
 write_subjson_rewrite_service() {
+	local subjson_upstream_port
+	subjson_upstream_port="${sub_port:-}"
+	if [[ -z "$subjson_upstream_port" && -f "$XUIDB" ]]; then
+		subjson_upstream_port=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subPort" LIMIT 1;' 2>/dev/null)
+	fi
+	[[ -n "$subjson_upstream_port" ]] || die "Unable to determine subjson upstream port."
 	cat > "$SUBJSON_REWRITE_SERVICE" <<EOF
 [Unit]
 Description=Local JSON subscription rewrite bridge
@@ -4849,7 +4856,7 @@ Wants=network-online.target
 Type=simple
 Environment="SUBJSON_REWRITE_DNS_SERVERS=${SUBJSON_REWRITE_DNS_SERVERS}"
 Environment="SUBJSON_REWRITE_DNS_QUERY_STRATEGY=${SUBJSON_REWRITE_DNS_QUERY_STRATEGY}"
-ExecStart=/usr/bin/python3 ${SUBJSON_REWRITE_BIN} --bind 127.0.0.1 --port ${SUBJSON_REWRITE_PORT} --upstream-port ${sub_port} --xui-db-path ${SUBJSON_REWRITE_XUI_DB}
+ExecStart=/usr/bin/python3 ${SUBJSON_REWRITE_BIN} --bind 127.0.0.1 --port ${SUBJSON_REWRITE_PORT} --upstream-port ${subjson_upstream_port} --xui-db-path ${SUBJSON_REWRITE_XUI_DB}
 Restart=always
 RestartSec=3
 
