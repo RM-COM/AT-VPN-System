@@ -326,7 +326,7 @@ platform_validate_reality_tuning_profile_name() {
 platform_validate_xhttp_tuning_profile_name() {
 	local profile_name="$1"
 	case "$profile_name" in
-		default|mobile-safe|low-latency|handoff-safe|balanced-speed|realtime-safe|realtime-media-safe|packet-media-safe|api-latency-safe|stream-one-safe|packet-up-safe|aggressive-stealth) return 0 ;;
+		default|mobile-safe|low-latency|handoff-safe|balanced-speed|realtime-safe|realtime-media-safe|packet-media-safe|packet-feed-safe|api-latency-safe|stream-one-safe|packet-up-safe|aggressive-stealth) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -670,6 +670,31 @@ platform_apply_xhttp_tuning_profile() {
 			TRANSPORT_XHTTP_MODE="packet-up"
 			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=4
 			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="65536"
+			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
+			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
+			TRANSPORT_XHTTP_XMUX_ENABLE="false"
+			TRANSPORT_XHTTP_XMUX_MAX_CONCURRENCY=""
+			TRANSPORT_XHTTP_XMUX_MAX_CONNECTIONS=0
+			TRANSPORT_XHTTP_XMUX_C_MAX_REUSE_TIMES=0
+			TRANSPORT_XHTTP_XMUX_H_MAX_REQUEST_TIMES=""
+			TRANSPORT_XHTTP_XMUX_H_MAX_REUSABLE_SECS=""
+			TRANSPORT_XHTTP_XMUX_H_KEEPALIVE_PERIOD=0
+			TRANSPORT_XHTTP_TCP_FAST_OPEN="false"
+			TRANSPORT_XHTTP_TCP_MPTCP="false"
+			TRANSPORT_XHTTP_TCP_NO_DELAY="true"
+			TRANSPORT_XHTTP_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_XHTTP_TCP_MAX_SEG=1440
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_INTERVAL=3
+			TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE=15
+			TRANSPORT_XHTTP_TCP_USER_TIMEOUT=9000
+			TRANSPORT_XHTTP_TCP_CONGESTION="bbr"
+			TRANSPORT_XHTTP_V6_ONLY="false"
+			TRANSPORT_XHTTP_TCP_WINDOW_CLAMP=0
+			;;
+		packet-feed-safe)
+			TRANSPORT_XHTTP_MODE="packet-up"
+			TRANSPORT_XHTTP_SC_MAX_BUFFERED_POSTS=8
+			TRANSPORT_XHTTP_SC_MAX_EACH_POST_BYTES="131072"
 			TRANSPORT_XHTTP_NO_SSE_HEADER="false"
 			TRANSPORT_XHTTP_X_PADDING_BYTES="100-1000"
 			TRANSPORT_XHTTP_XMUX_ENABLE="false"
