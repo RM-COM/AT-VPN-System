@@ -2,6 +2,9 @@
 
 ## Текущая точка продолжения (актуально)
 
+- [2026-04-13 05:10:00] Server-side hardening по `acceptance` и JSON delivery уже закрыт: новый batch добавил transport-aware data-plane probes, убрал зависимость `XHTTP` verify от внешнего `gstatic` и усилил сам JSON-контракт `REALITY/XHTTP` на уровне `subjson-rewrite`.
+- [2026-04-13 05:10:00] Staging после этого зелёный: `stage=websub -verify` и `stage=acceptance (1m/20s)` прошли успешно, а отдельный `stage=verify -profile stealth -transport_profile stealth-multi` подтвердил loopback self-test сразу для обоих transport-ролей.
+- [2026-04-13 05:10:00] Значит, ближайшая практическая задача снова user-facing: обновить JSON-подписку и проверить, исчезли ли остаточные `cold-start/feed/API` проблемы в живых сценариях `YouTube`, `Telegram`, `Discord`, Android и iPhone уже на усиленном delivery/acceptance baseline.
 - [2026-04-13 04:20:00] После первого DNS/feed-среза подтверждён реальный регресс: `remote DoH` в формате `https://...` дал на Android длинный старт соединения и повторные reconnect уже на этапе первого ping. Это больше не гипотеза, а зафиксированный anti-pattern для нашего baseline.
 - [2026-04-13 04:20:00] Hotfix уже применён и подтверждён server-side: JSON subscription переведён на `https+local://...`, `stage=websub` дополнительно починен по `subPort`, а `verify` и `acceptance` снова зелёные. Значит, ближайшая практическая задача теперь простая: попросить пользователя обновить JSON-подписку и заново проверить `cold-start`, первый ping и стабильность reconnect.
 - [2026-04-13 04:20:00] Следующее решение по DNS/feed теперь должно приниматься только после этого живого retest. Возвращаться к transport-tuning раньше времени не нужно, пока не станет ясно, ушёл ли user-facing регресс после перехода на `https+local://`.

@@ -7,6 +7,10 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-13 05:10:00] Следующий hardening batch блока `C1` уже закрыт кодом и staging-проверкой: `stage=verify` и `stage=acceptance` теперь имеют transport-aware data-plane probes, а значит зелёный server-side прогон больше не означает только «панель и web-sub живы».
+- [2026-04-13 05:10:00] Для `XHTTP` и `REALITY` теперь используется один и тот же принцип loopback triage: локальный Xray client проходит через публичный ingress и проверяет живой transport-path на локальный HTTPS target проекта. Это убирает ложную зависимость verify от внешнего `gstatic`.
+- [2026-04-13 05:10:00] JSON delivery-контракт тоже усилен: `subjson-rewrite` динамически выбирает proxy-like outbound tag, аккуратнее merge'ит `dns` и достраивает недостающие поля `REALITY/XHTTP` из `x-ui.db` прямо в публичной JSON-подписке.
+- [2026-04-13 05:10:00] На staging `2.27.11.162` этот batch уже подтверждён: `stage=websub -verify` дал полный `PASS`, `stage=acceptance (1m/20s)` с новым `Data-plane XHTTP` probe завершился `PASS`, а отдельный `stage=verify` с `transport_profile=stealth-multi` подтвердил, что loopback self-test проходит и для `REALITY`, и для `XHTTP`.
 - [2026-04-13 04:20:00] DNS/feed-срез сразу дал и полезный регресс-урок: `remote DoH` в формате `https://...` оказался плохим выбором для текущего client baseline. На Android это проявилось как длинный `cold-start`, многократные ручные reconnect и задержка первого успешного ping одновременно для `REALITY` и `XHTTP`.
 - [2026-04-13 04:20:00] Причина локализована в самом DNS-контракте: для Xray такой `DoH` идёт как удалённый DNS-транспорт, а не как локальный bootstrap-резолвер. В нашем контуре это создаёт лишнюю задержку на раннем разрешении имён и ломает user-facing ощущение «подключился и сразу поехал».
 - [2026-04-13 04:20:00] Hotfix уже применён: JSON subscription переведён с `https://1.1.1.1/dns-query, https://8.8.8.8/dns-query` на `https+local://1.1.1.1/dns-query, https+local://8.8.8.8/dns-query`, при этом правило `53/tcp,udp -> proxy` сохранено, а `stage=websub` теперь корректно восстанавливает `subPort` из `x-ui.db` и не ломает `subjson-rewrite.service`.

@@ -37,11 +37,22 @@ DEFAULT_DNS_SERVERS = (
 )
 DEFAULT_DNS_QUERY_STRATEGY = "UseIP"
 DEFAULT_DNS_TAG = "dns_out"
+DEFAULT_PROXY_OUTBOUND_TAG = "proxy"
+PROXY_OUTBOUND_PROTOCOLS = {
+    "vless",
+    "vmess",
+    "trojan",
+    "shadowsocks",
+    "socks",
+    "http",
+    "wireguard",
+    "hysteria2",
+}
 FORCED_DNS_PROXY_RULE = {
     "type": "field",
     "network": "tcp,udp",
     "port": "53",
-    "outboundTag": "proxy",
+    "outboundTag": DEFAULT_PROXY_OUTBOUND_TAG,
 }
 
 
@@ -105,6 +116,92 @@ def build_client_sockopt(sockopt):
     return client_sockopt or None
 
 
+def build_xhttp_client_contract(stream_settings):
+    if not isinstance(stream_settings, dict):
+        return None
+    xhttp_settings = stream_settings.get("xhttpSettings")
+    if not isinstance(xhttp_settings, dict):
+        return None
+    client_xhttp = {}
+    for key in (
+        "path",
+        "mode",
+        "host",
+        "noSSEHeader",
+        "scMaxBufferedPosts",
+        "scMaxEachPostBytes",
+        "xPaddingBytes",
+    ):
+        value = xhttp_settings.get(key)
+        if value in (None, ""):
+            continue
+        client_xhttp[key] = value
+    headers = xhttp_settings.get("headers")
+    if isinstance(headers, dict) and headers:
+        client_xhttp["headers"] = headers
+    xmux = xhttp_settings.get("xmux")
+    if isinstance(xmux, dict) and xmux:
+        client_xhttp["xmux"] = xmux
+    if not client_xhttp:
+        return None
+    return {"xhttpSettings": client_xhttp}
+
+
+def build_reality_client_contract(stream_settings, inbound_settings):
+    if not isinstance(stream_settings, dict):
+        return None
+    reality_settings = stream_settings.get("realitySettings")
+    if not isinstance(reality_settings, dict):
+        return None
+    server_names = reality_settings.get("serverNames")
+    short_ids = reality_settings.get("shortIds")
+    settings_block = reality_settings.get("settings")
+    if not isinstance(settings_block, dict):
+        settings_block = {}
+
+    client_reality = {}
+    public_key = (
+        settings_block.get("publicKey")
+        or reality_settings.get("publicKey")
+        or reality_settings.get("password")
+    )
+    if public_key:
+        client_reality["publicKey"] = public_key
+    server_name = ""
+    if isinstance(server_names, list):
+        server_name = next((item for item in server_names if item), "")
+    if not server_name:
+        server_name = settings_block.get("serverName") or ""
+    if server_name:
+        client_reality["serverName"] = server_name
+    fingerprint = settings_block.get("fingerprint")
+    if fingerprint:
+        client_reality["fingerprint"] = fingerprint
+    short_id = ""
+    if isinstance(short_ids, list):
+        short_id = next((item for item in short_ids if item), "")
+    if short_id:
+        client_reality["shortId"] = short_id
+    spider_x = settings_block.get("spiderX")
+    if spider_x:
+        client_reality["spiderX"] = spider_x
+
+    contract = {}
+    if client_reality:
+        contract["realitySettings"] = client_reality
+
+    if isinstance(inbound_settings, dict):
+        clients = inbound_settings.get("clients")
+        if isinstance(clients, list) and clients:
+            first_client = clients[0]
+            if isinstance(first_client, dict):
+                user_flow = first_client.get("flow")
+                if user_flow:
+                    contract["userFlow"] = user_flow
+
+    return contract or None
+
+
 def split_csv(value):
     if not value:
         return []
@@ -131,9 +228,11 @@ def rewrite_dns(config, dns_servers, dns_query_strategy):
     existing_dns = config.get("dns")
     rewritten_dns = {}
     if isinstance(existing_dns, dict):
-        for key in ("hosts", "clientIp", "disableCache", "disableFallback", "disableFallbackIfMatch"):
-            if key in existing_dns:
-                rewritten_dns[key] = existing_dns[key]
+        rewritten_dns = {
+            key: value
+            for key, value in existing_dns.items()
+            if key not in ("servers", "queryStrategy", "tag")
+        }
     rewritten_dns["queryStrategy"] = dns_query_strategy or DEFAULT_DNS_QUERY_STRATEGY
     rewritten_dns["servers"] = build_dns_servers(dns_servers)
     rewritten_dns["tag"] = DEFAULT_DNS_TAG
@@ -141,15 +240,29 @@ def rewrite_dns(config, dns_servers, dns_query_strategy):
     return config
 
 
-def has_dns_proxy_rule(rules):
+def preferred_proxy_outbound_tag(config):
+    if not isinstance(config, dict):
+        return DEFAULT_PROXY_OUTBOUND_TAG
+    outbounds = config.get("outbounds")
+    if not isinstance(outbounds, list):
+        return DEFAULT_PROXY_OUTBOUND_TAG
+    for outbound in outbounds:
+        if not isinstance(outbound, dict):
+            continue
+        protocol = outbound.get("protocol")
+        tag = outbound.get("tag")
+        if protocol in PROXY_OUTBOUND_PROTOCOLS and tag:
+            return tag
+    return DEFAULT_PROXY_OUTBOUND_TAG
+
+
+def find_dns_proxy_rule(rules):
     if not isinstance(rules, list):
-        return False
-    for rule in rules:
+        return None
+    for index, rule in enumerate(rules):
         if not isinstance(rule, dict):
             continue
         if rule.get("type") != FORCED_DNS_PROXY_RULE["type"]:
-            continue
-        if rule.get("outboundTag") != FORCED_DNS_PROXY_RULE["outboundTag"]:
             continue
         port_value = str(rule.get("port", ""))
         if port_value != FORCED_DNS_PROXY_RULE["port"]:
@@ -157,8 +270,8 @@ def has_dns_proxy_rule(rules):
         network_value = str(rule.get("network", ""))
         if network_value != FORCED_DNS_PROXY_RULE["network"]:
             continue
-        return True
-    return False
+        return index
+    return None
 
 
 def rewrite_routing(config):
@@ -172,9 +285,70 @@ def rewrite_routing(config):
     if not isinstance(rules, list):
         rules = []
         routing["rules"] = rules
-    if not has_dns_proxy_rule(rules):
-        rules.insert(0, dict(FORCED_DNS_PROXY_RULE))
+    outbound_tag = preferred_proxy_outbound_tag(config)
+    rule = dict(FORCED_DNS_PROXY_RULE)
+    rule["outboundTag"] = outbound_tag
+    existing_rule_index = find_dns_proxy_rule(rules)
+    if existing_rule_index is None:
+        rules.insert(0, rule)
+    else:
+        rules[existing_rule_index] = rule
     return config
+
+
+def maybe_inject_transport_contract(outbound, transport_contract_map):
+    if not isinstance(outbound, dict):
+        return outbound
+    if outbound.get("protocol") != "vless":
+        return outbound
+    stream_settings = outbound.get("streamSettings")
+    if not isinstance(stream_settings, dict):
+        return outbound
+    network = stream_settings.get("network")
+    security = stream_settings.get("security")
+    if not network:
+        return outbound
+    contract = transport_contract_map.get((network, security))
+    if not contract:
+        contract = transport_contract_map.get((network, None))
+    if not isinstance(contract, dict):
+        return outbound
+
+    xhttp_contract = contract.get("xhttpSettings")
+    if isinstance(xhttp_contract, dict):
+        stream_xhttp = stream_settings.get("xhttpSettings")
+        if not isinstance(stream_xhttp, dict):
+            stream_xhttp = {}
+            stream_settings["xhttpSettings"] = stream_xhttp
+        for key, value in xhttp_contract.items():
+            if key not in stream_xhttp or stream_xhttp.get(key) in (None, "", {}, []):
+                stream_xhttp[key] = value
+
+    reality_contract = contract.get("realitySettings")
+    if isinstance(reality_contract, dict):
+        stream_reality = stream_settings.get("realitySettings")
+        if not isinstance(stream_reality, dict):
+            stream_reality = {}
+            stream_settings["realitySettings"] = stream_reality
+        for key, value in reality_contract.items():
+            if key not in stream_reality or stream_reality.get(key) in (None, ""):
+                stream_reality[key] = value
+
+    user_flow = contract.get("userFlow")
+    if user_flow:
+        settings = outbound.get("settings")
+        if isinstance(settings, dict):
+            vnext = settings.get("vnext")
+            if isinstance(vnext, list) and vnext:
+                first_server = vnext[0]
+                if isinstance(first_server, dict):
+                    users = first_server.get("users")
+                    if isinstance(users, list) and users:
+                        first_user = users[0]
+                        if isinstance(first_user, dict) and not first_user.get("flow"):
+                            first_user["flow"] = user_flow
+
+    return outbound
 
 
 def maybe_inject_sockopt(outbound, sockopt_map):
@@ -201,7 +375,7 @@ def maybe_inject_sockopt(outbound, sockopt_map):
     return outbound
 
 
-def rewrite_config(config, sockopt_map, dns_servers, dns_query_strategy):
+def rewrite_config(config, sockopt_map, transport_contract_map, dns_servers, dns_query_strategy):
     if not isinstance(config, dict):
         return config
     rewrite_dns(config, dns_servers, dns_query_strategy)
@@ -211,16 +385,17 @@ def rewrite_config(config, sockopt_map, dns_servers, dns_query_strategy):
         rewritten_outbounds = []
         for outbound in outbounds:
             rewritten_outbound = rewrite_outbound(outbound)
+            rewritten_outbound = maybe_inject_transport_contract(rewritten_outbound, transport_contract_map)
             rewritten_outbounds.append(maybe_inject_sockopt(rewritten_outbound, sockopt_map))
         config["outbounds"] = rewritten_outbounds
     return config
 
 
-def rewrite_document(document, sockopt_map, dns_servers, dns_query_strategy):
+def rewrite_document(document, sockopt_map, transport_contract_map, dns_servers, dns_query_strategy):
     if isinstance(document, list):
-        return [rewrite_config(item, sockopt_map, dns_servers, dns_query_strategy) for item in document]
+        return [rewrite_config(item, sockopt_map, transport_contract_map, dns_servers, dns_query_strategy) for item in document]
     if isinstance(document, dict):
-        return rewrite_config(document, sockopt_map, dns_servers, dns_query_strategy)
+        return rewrite_config(document, sockopt_map, transport_contract_map, dns_servers, dns_query_strategy)
     return document
 
 
@@ -274,7 +449,7 @@ class RewriteHTTPServer(ThreadingHTTPServer):
                     network = stream_settings.get("network")
                     security = stream_settings.get("security")
                     client_sockopt = build_client_sockopt(stream_settings.get("sockopt"))
-                    if network and security and client_sockopt:
+                    if network and security and client_sockopt and (network, security) not in sockopt_map:
                         sockopt_map[(network, security)] = client_sockopt
                     if network and client_sockopt and (network, None) not in sockopt_map:
                         sockopt_map[(network, None)] = client_sockopt
@@ -283,6 +458,49 @@ class RewriteHTTPServer(ThreadingHTTPServer):
                 connection.close()
         except Exception as exc:
             sys.stderr.write(f"sockopt map load failed: {exc}\n")
+            return {}
+
+    def load_transport_contract_map(self):
+        if not self.xui_db_path:
+            return {}
+        try:
+            connection = sqlite3.connect(f"file:{self.xui_db_path}?mode=ro", uri=True)
+            try:
+                cursor = connection.execute("SELECT stream_settings, settings FROM inbounds")
+                transport_contract_map = {}
+                for stream_settings_raw, inbound_settings_raw in cursor.fetchall():
+                    if not stream_settings_raw:
+                        continue
+                    try:
+                        stream_settings = json.loads(stream_settings_raw)
+                    except Exception:
+                        continue
+                    try:
+                        inbound_settings = json.loads(inbound_settings_raw) if inbound_settings_raw else {}
+                    except Exception:
+                        inbound_settings = {}
+                    network = stream_settings.get("network")
+                    security = stream_settings.get("security")
+                    if not network:
+                        continue
+
+                    contract = None
+                    if network == "xhttp":
+                        contract = build_xhttp_client_contract(stream_settings)
+                    elif security == "reality":
+                        contract = build_reality_client_contract(stream_settings, inbound_settings)
+
+                    if not contract:
+                        continue
+                    if security and (network, security) not in transport_contract_map:
+                        transport_contract_map[(network, security)] = contract
+                    if (network, None) not in transport_contract_map:
+                        transport_contract_map[(network, None)] = contract
+                return transport_contract_map
+            finally:
+                connection.close()
+        except Exception as exc:
+            sys.stderr.write(f"transport contract map load failed: {exc}\n")
             return {}
 
 
@@ -314,6 +532,7 @@ class Handler(BaseHTTPRequestHandler):
             rewritten = rewrite_document(
                 parsed,
                 self.server.load_sockopt_map(),
+                self.server.load_transport_contract_map(),
                 self.server.dns_servers,
                 self.server.dns_query_strategy,
             )

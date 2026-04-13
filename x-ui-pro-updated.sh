@@ -1494,7 +1494,8 @@ append_acceptance_probe_result_jsonl() {
 write_acceptance_matrix_row_json() {
 	local failures="${1:-0}" panel_passes="${2:-0}" panel_fails="${3:-0}" websub_passes="${4:-0}" websub_fails="${5:-0}"
 	local sub2singbox_passes="${6:-0}" sub2singbox_fails="${7:-0}" fallback_passes="${8:-0}" fallback_fails="${9:-0}"
-	local json_passes="${10:-0}" json_fails="${11:-0}"
+	local json_passes="${10:-0}" json_fails="${11:-0}" transport_reality_passes="${12:-0}" transport_reality_fails="${13:-0}"
+	local transport_xhttp_passes="${14:-0}" transport_xhttp_fails="${15:-0}"
 	local matrix_file
 	[[ -n "$DEBUG_DIR" ]] || return 0
 	command -v jq >/dev/null 2>&1 || return 0
@@ -1545,6 +1546,10 @@ write_acceptance_matrix_row_json() {
 		--argjson fallback_fails "${fallback_fails}" \
 		--argjson json_passes "${json_passes}" \
 		--argjson json_fails "${json_fails}" \
+		--argjson transport_reality_passes "${transport_reality_passes}" \
+		--argjson transport_reality_fails "${transport_reality_fails}" \
+		--argjson transport_xhttp_passes "${transport_xhttp_passes}" \
+		--argjson transport_xhttp_fails "${transport_xhttp_fails}" \
 		'{
 			generated_at: $generated_at,
 			selection: {
@@ -1588,7 +1593,9 @@ write_acceptance_matrix_row_json() {
 				web_sub: { pass: $websub_passes, fail: $websub_fails },
 				sub2sing_box: { pass: $sub2singbox_passes, fail: $sub2singbox_fails },
 				fallback_root: { pass: $fallback_passes, fail: $fallback_fails },
-				subscription_json: { pass: $json_passes, fail: $json_fails }
+				subscription_json: { pass: $json_passes, fail: $json_fails },
+				transport_reality: { pass: $transport_reality_passes, fail: $transport_reality_fails },
+				transport_xhttp: { pass: $transport_xhttp_passes, fail: $transport_xhttp_fails }
 			},
 			manual_fields: {
 				result: "",
@@ -1839,19 +1846,53 @@ LIMIT 1;
 
 	return "$mismatch_count"
 }
-xhttp_transport_self_test() {
-	local xray_bin="" xhttp_client_id="" xhttp_mode="" xhttp_host="" xhttp_path_db="" xhttp_xmux_json=""
-	local test_dir="" config_file="" xray_log="" curl_log="" curl_output="" curl_rc=0
-	local curl_target="https://www.gstatic.com/generate_204" xray_pid="" failure_hint=""
+transport_profile_has_xhttp() {
+	case "$TRANSPORT_PROFILE" in
+		stealth-xhttp|stealth-multi) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+transport_profile_has_reality() {
+	case "$TRANSPORT_PROFILE" in
+		stealth-xray|stealth-multi) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+transport_probe_reset_state() {
+	TRANSPORT_PROBE_LAST_METRICS=""
+	TRANSPORT_PROBE_LAST_FAILURE_HINT=""
+	TRANSPORT_PROBE_LAST_TARGET_URL=""
+	TRANSPORT_PROBE_LAST_TARGET_HOST=""
+	TRANSPORT_PROBE_LAST_TARGET_PATH=""
+}
+transport_probe_target_url() {
+	if [[ -n "$domain" && -n "$web_path" ]]; then
+		printf 'https://%s/%s/' "$domain" "$web_path"
+		return 0
+	fi
+	if [[ -n "$domain" ]]; then
+		printf 'https://%s/' "$domain"
+		return 0
+	fi
+	return 1
+}
+run_local_transport_probe() {
+	local transport_kind="$1" artifact_prefix="$2"
+	local xray_bin="" test_dir="" config_file="" xray_log="" curl_log="" body_file="" headers_file=""
+	local curl_metrics="" curl_output="" curl_rc=0 xray_pid="" failure_hint=""
+	local target_url="" target_host="" target_path="" public_https_port=""
+	local probe_client_id="" probe_flow="" probe_address="" probe_server_name="" probe_public_key=""
+	local probe_short_id="" probe_fingerprint="" probe_spider_x="" probe_mode="" probe_host=""
+	local probe_path_db="" probe_xmux_json=""
 
-	[[ "$TRANSPORT_PROFILE" == "stealth-xhttp" || "$TRANSPORT_PROFILE" == "stealth-multi" ]] || return 0
+	transport_probe_reset_state
 
 	if ! command -v sqlite3 >/dev/null 2>&1 || [[ ! -f "$XUIDB" ]]; then
-		record_verify_result "FAIL" "XHTTP self-test cannot start without sqlite3 and ${XUIDB}"
+		append_debug_log "${transport_kind} transport probe cannot start without sqlite3 and ${XUIDB}"
 		return 1
 	fi
 	if ! command -v jq >/dev/null 2>&1; then
-		record_verify_result "FAIL" "XHTTP self-test cannot start without jq"
+		append_debug_log "${transport_kind} transport probe cannot start without jq"
 		return 1
 	fi
 
@@ -1861,109 +1902,236 @@ xhttp_transport_self_test() {
 		xray_bin="$(command -v xray 2>/dev/null || true)"
 	fi
 	if [[ -z "$xray_bin" || ! -x "$xray_bin" ]]; then
-		record_verify_result "FAIL" "XHTTP self-test cannot find an executable Xray binary"
+		append_debug_log "${transport_kind} transport probe cannot find an executable Xray binary"
 		return 1
 	fi
 
-	xhttp_client_id=$(sqlite3 -list "$XUIDB" "SELECT json_extract(settings, '$.clients[0].id') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
-	xhttp_path_db=$(sqlite3 -list "$XUIDB" "SELECT json_extract(stream_settings, '$.xhttpSettings.path') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
-	xhttp_host=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.host'), '') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
-	xhttp_mode=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.mode'), '') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
-	xhttp_xmux_json=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux'), 'null') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
-	xhttp_path_db="$(trim_slashes "$xhttp_path_db")"
-	[[ -z "$xhttp_mode" ]] && xhttp_mode="${TRANSPORT_XHTTP_MODE:-auto}"
-	[[ -z "$xhttp_xmux_json" ]] && xhttp_xmux_json='null'
-
-	append_debug_log "xhttp self-test target domain=${domain:-<empty>} path=${xhttp_path_db:-<empty>} mode=${xhttp_mode:-<empty>} host=${xhttp_host:-<empty>} xmux=${xhttp_xmux_json:-null} xray_bin=${xray_bin}"
-
-	if [[ -z "$domain" || -z "$xhttp_path_db" || -z "$xhttp_client_id" ]]; then
-		record_verify_result "FAIL" "XHTTP self-test cannot resolve domain/path/client id from the current installation"
+	if ! target_url="$(transport_probe_target_url)"; then
+		append_debug_log "${transport_kind} transport probe cannot resolve target URL"
 		return 1
 	fi
+	target_host="${target_url#https://}"
+	target_host="${target_host%%/*}"
+	if [[ "$target_url" == "https://${target_host}" || "$target_url" == "https://${target_host}/" ]]; then
+		target_path="/"
+	else
+		target_path="/${target_url#https://${target_host}/}"
+	fi
+	public_https_port="$(platform_public_https_port)"
+
+	case "$transport_kind" in
+		xhttp)
+			probe_client_id=$(sqlite3 -list "$XUIDB" "SELECT json_extract(settings, '$.clients[0].id') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+			probe_path_db=$(sqlite3 -list "$XUIDB" "SELECT json_extract(stream_settings, '$.xhttpSettings.path') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+			probe_host=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.host'), '') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+			probe_mode=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.mode'), '') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+			probe_xmux_json=$(sqlite3 -list "$XUIDB" "SELECT COALESCE(json_extract(stream_settings, '$.xhttpSettings.xmux'), 'null') FROM inbounds WHERE json_extract(stream_settings, '$.network')='xhttp' LIMIT 1;" 2>/dev/null | tr -d '\r')
+			probe_path_db="$(trim_slashes "$probe_path_db")"
+			[[ -z "$probe_mode" ]] && probe_mode="${TRANSPORT_XHTTP_MODE:-auto}"
+			[[ -z "$probe_xmux_json" ]] && probe_xmux_json='null'
+			if [[ -z "$domain" || -z "$probe_path_db" || -z "$probe_client_id" ]]; then
+				append_debug_log "xhttp transport probe cannot resolve domain/path/client id from the current installation"
+				return 1
+			fi
+			;;
+		reality)
+			local reality_row=""
+			reality_row=$(sqlite3 -separator '|' -list "$XUIDB" "
+SELECT
+  COALESCE(json_extract(settings, '$.clients[0].id'), ''),
+  COALESCE(json_extract(settings, '$.clients[0].flow'), ''),
+  COALESCE(json_extract(stream_settings, '$.realitySettings.settings.publicKey'), json_extract(stream_settings, '$.realitySettings.publicKey'), json_extract(stream_settings, '$.realitySettings.password'), ''),
+  COALESCE(json_extract(stream_settings, '$.realitySettings.serverNames[0]'), ''),
+  COALESCE(json_extract(stream_settings, '$.realitySettings.shortIds[0]'), ''),
+  COALESCE(json_extract(stream_settings, '$.realitySettings.settings.fingerprint'), 'chrome'),
+  COALESCE(json_extract(stream_settings, '$.realitySettings.settings.spiderX'), '/')
+FROM inbounds
+WHERE json_extract(stream_settings, '$.security')='reality'
+LIMIT 1;
+" 2>/dev/null)
+			IFS='|' read -r probe_client_id probe_flow probe_public_key probe_server_name probe_short_id probe_fingerprint probe_spider_x <<<"$reality_row"
+			[[ -z "$probe_server_name" ]] && probe_server_name="${reality_domain:-$domain}"
+			probe_address="$probe_server_name"
+			if [[ -z "$probe_client_id" || -z "$probe_public_key" || -z "$probe_server_name" || -z "$probe_short_id" ]]; then
+				append_debug_log "reality transport probe cannot resolve public key/serverName/shortId/client id from the current installation"
+				return 1
+			fi
+			;;
+		*)
+			append_debug_log "unsupported transport probe kind: ${transport_kind}"
+			return 1
+			;;
+	esac
 
 	test_dir="$(mktemp -d)"
-	config_file="${test_dir}/xhttp-selftest.json"
-	xray_log="${test_dir}/xhttp-selftest.xray.log"
-	curl_log="${test_dir}/xhttp-selftest.curl.log"
+	config_file="${test_dir}/${transport_kind}-selftest.json"
+	xray_log="${test_dir}/${transport_kind}-selftest.xray.log"
+	curl_log="${test_dir}/${transport_kind}-selftest.curl.log"
+	body_file="${test_dir}/${transport_kind}-selftest.body"
+	headers_file="${test_dir}/${transport_kind}-selftest.headers"
 
-	jq -n \
-		--arg uuid "$xhttp_client_id" \
-		--arg domain "$domain" \
-		--arg path "/${xhttp_path_db}" \
-		--arg mode "$xhttp_mode" \
-		--arg host "$xhttp_host" \
-		--argjson xmux "$xhttp_xmux_json" \
-		'{
-			log: { loglevel: "info" },
-			inbounds: [
-				{
-					tag: "socks-in",
-					port: 10881,
-					listen: "127.0.0.1",
-					protocol: "socks",
-					settings: { udp: false }
-				}
-			],
-			outbounds: [
-				{
-					tag: "xhttp-selftest",
-					protocol: "vless",
-					settings: {
-						vnext: [
-							{
-								address: $domain,
-								port: 443,
-								users: [
+	case "$transport_kind" in
+		xhttp)
+			jq -n \
+				--arg uuid "$probe_client_id" \
+				--arg domain "$domain" \
+				--arg path "/${probe_path_db}" \
+				--arg mode "$probe_mode" \
+				--arg host "$probe_host" \
+				--argjson xmux "$probe_xmux_json" \
+				'{
+					log: { loglevel: "info" },
+					inbounds: [
+						{
+							tag: "socks-in",
+							port: 10881,
+							listen: "127.0.0.1",
+							protocol: "socks",
+							settings: { udp: false }
+						}
+					],
+					outbounds: [
+						{
+							tag: "xhttp-selftest",
+							protocol: "vless",
+							settings: {
+								vnext: [
 									{
-										id: $uuid,
-										encryption: "none"
+										address: $domain,
+										port: 443,
+										users: [
+											{
+												id: $uuid,
+												encryption: "none"
+											}
+										]
 									}
 								]
+							},
+							streamSettings: {
+								network: "xhttp",
+								security: "tls",
+								tlsSettings: {
+									serverName: $domain,
+									fingerprint: "chrome",
+									alpn: ["h2"]
+								},
+								xhttpSettings: (
+									{ path: $path, mode: $mode } +
+									(if $host != "" then { host: $host } else {} end) +
+									(if $xmux != null then { xmux: $xmux } else {} end)
+								)
 							}
-						]
-					},
-					streamSettings: {
-						network: "xhttp",
-						security: "tls",
-						tlsSettings: {
-							serverName: $domain,
-							fingerprint: "chrome",
-							alpn: ["h2"]
-						},
-						xhttpSettings: (
-							{ path: $path, mode: $mode } +
-							(if $host != "" then { host: $host } else {} end) +
-							(if $xmux != null then { xmux: $xmux } else {} end)
-						)
-					}
-				}
-			]
-		}' > "$config_file"
+						}
+					]
+				}' > "$config_file"
+			;;
+		reality)
+			jq -n \
+				--arg uuid "$probe_client_id" \
+				--arg flow "$probe_flow" \
+				--arg address "$probe_address" \
+				--argjson port "$public_https_port" \
+				--arg serverName "$probe_server_name" \
+				--arg publicKey "$probe_public_key" \
+				--arg shortId "$probe_short_id" \
+				--arg fingerprint "$probe_fingerprint" \
+				--arg spiderX "$probe_spider_x" \
+				'{
+					log: { loglevel: "info" },
+					inbounds: [
+						{
+							tag: "socks-in",
+							port: 10881,
+							listen: "127.0.0.1",
+							protocol: "socks",
+							settings: { udp: false }
+						}
+					],
+					outbounds: [
+						{
+							tag: "reality-selftest",
+							protocol: "vless",
+							settings: {
+								vnext: [
+									{
+										address: $address,
+										port: $port,
+										users: [
+											(
+												{ id: $uuid, encryption: "none" } +
+												(if $flow != "" then { flow: $flow } else {} end)
+											)
+										]
+									}
+								]
+							},
+							streamSettings: {
+								network: "tcp",
+								security: "reality",
+								realitySettings: {
+									serverName: $serverName,
+									publicKey: $publicKey,
+									shortId: $shortId,
+									fingerprint: $fingerprint,
+									spiderX: $spiderX
+								}
+							}
+						}
+					]
+				}' > "$config_file"
+			;;
+	esac
 
+	append_debug_log "${transport_kind} transport probe target_url=${target_url} target_host=${target_host} target_path=${target_path} config=${config_file}"
 	"$xray_bin" run -c "$config_file" > "$xray_log" 2>&1 &
 	xray_pid=$!
 	sleep 2
-	curl_output=$(curl --max-time 15 --socks5 127.0.0.1:10881 -I "$curl_target" 2>&1)
+	curl_metrics=$(curl --max-time 20 --socks5 127.0.0.1:10881 -kfsS -D "$headers_file" -o "$body_file" -w 'http_code=%{http_code} remote_ip=%{remote_ip} time_namelookup=%{time_namelookup} time_connect=%{time_connect} time_appconnect=%{time_appconnect} time_starttransfer=%{time_starttransfer} time_total=%{time_total}\n' "$target_url" 2>"$curl_log")
 	curl_rc=$?
-	printf '%s\n' "$curl_output" > "$curl_log"
+	curl_output="$(cat "$curl_log" 2>/dev/null)"
 	kill "$xray_pid" >/dev/null 2>&1 || true
 	wait "$xray_pid" 2>/dev/null || true
 
-	capture_file_if_exists "$config_file" "commands/xhttp-selftest.json"
-	capture_file_if_exists "$xray_log" "commands/xhttp-selftest.xray.log"
-	capture_file_if_exists "$curl_log" "commands/xhttp-selftest.curl.log"
+	TRANSPORT_PROBE_LAST_METRICS="$curl_metrics"
+	TRANSPORT_PROBE_LAST_TARGET_URL="$target_url"
+	TRANSPORT_PROBE_LAST_TARGET_HOST="$target_host"
+	TRANSPORT_PROBE_LAST_TARGET_PATH="$target_path"
+
+	capture_file_if_exists "$config_file" "${artifact_prefix}.json"
+	capture_file_if_exists "$xray_log" "${artifact_prefix}.xray.log"
+	capture_file_if_exists "$curl_log" "${artifact_prefix}.curl.log"
+	capture_file_if_exists "$headers_file" "${artifact_prefix}.headers.txt"
+	capture_file_if_exists "$body_file" "${artifact_prefix}.body"
 
 	if [[ "$curl_rc" -eq 0 ]]; then
-		record_verify_result "PASS" "Stealth XHTTP transport self-test passed through local loopback client"
 		rm -rf "$test_dir"
 		return 0
 	fi
 
-	failure_hint=$(grep -E 'unexpected status|failed to send upload|XHTTP is dialing|proxy/vless/outbound' "$xray_log" 2>/dev/null | tail -n 4 | tr '\n' '; ')
-	append_debug_log "xhttp self-test curl output: ${curl_output}"
-	append_debug_log "xhttp self-test failure hint: ${failure_hint:-<none>}"
-	record_verify_result "FAIL" "Stealth XHTTP transport self-test failed (${failure_hint:-curl=${curl_rc}})"
+	failure_hint=$(grep -E 'unexpected status|failed to send upload|XHTTP is dialing|REALITY|handshake|proxy/vless/outbound|failed to dial|EOF' "$xray_log" 2>/dev/null | tail -n 4 | tr '\n' '; ')
+	TRANSPORT_PROBE_LAST_FAILURE_HINT="${failure_hint:-curl=${curl_rc}}"
+	append_debug_log "${transport_kind} transport probe curl output: ${curl_output}"
+	append_debug_log "${transport_kind} transport probe failure hint: ${TRANSPORT_PROBE_LAST_FAILURE_HINT}"
 	rm -rf "$test_dir"
+	return 1
+}
+xhttp_transport_self_test() {
+	transport_profile_has_xhttp || return 0
+	if run_local_transport_probe "xhttp" "commands/xhttp-selftest"; then
+		record_verify_result "PASS" "Stealth XHTTP transport self-test passed through local loopback client"
+		return 0
+	fi
+	record_verify_result "FAIL" "Stealth XHTTP transport self-test failed (${TRANSPORT_PROBE_LAST_FAILURE_HINT:-probe failed})"
+	return 1
+}
+reality_transport_self_test() {
+	transport_profile_has_reality || return 0
+	if run_local_transport_probe "reality" "commands/reality-selftest"; then
+		record_verify_result "PASS" "Stealth REALITY transport self-test passed through local loopback client"
+		return 0
+	fi
+	record_verify_result "FAIL" "Stealth REALITY transport self-test failed (${TRANSPORT_PROBE_LAST_FAILURE_HINT:-probe failed})"
 	return 1
 }
 write_acceptance_manual_checklist() {
@@ -2082,11 +2250,44 @@ acceptance_probe_url() {
 	fi
 	return 1
 }
+acceptance_transport_probe() {
+	local iteration="$1" transport_kind="$2"
+	local label="" artifact_base="" host="" path="" status="FAIL"
+	case "$transport_kind" in
+		reality)
+			label="Data-plane REALITY"
+			artifact_base="acceptance/reality-dataplane-${iteration}"
+			;;
+		xhttp)
+			label="Data-plane XHTTP"
+			artifact_base="acceptance/xhttp-dataplane-${iteration}"
+			;;
+		*)
+			record_acceptance_result "FAIL" "Unsupported transport probe kind: ${transport_kind}"
+			return 1
+			;;
+	esac
+	if run_local_transport_probe "$transport_kind" "$artifact_base"; then
+		status="PASS"
+	fi
+	host="${TRANSPORT_PROBE_LAST_TARGET_HOST:-}"
+	path="${TRANSPORT_PROBE_LAST_TARGET_PATH:-/}"
+	if [[ "$status" == "PASS" ]]; then
+		record_acceptance_result "PASS" "${label}: local loopback transport probe passed"
+	else
+		record_acceptance_result "FAIL" "${label}: local loopback transport probe failed"
+		append_debug_log "${label} failure hint: ${TRANSPORT_PROBE_LAST_FAILURE_HINT:-<none>}"
+		capture_acceptance_snapshot
+	fi
+	append_acceptance_probe_result_jsonl "$iteration" "$label" "$host" "$path" "$status" "${TRANSPORT_PROBE_LAST_METRICS:-http_code= remote_ip= time_namelookup= time_connect= time_appconnect= time_starttransfer= time_total=}"
+	[[ "$status" == "PASS" ]]
+}
 run_stealth_acceptance_stage() {
 	local failures=0 iteration=1 total_iterations=0 summary_file public_https_port
 	local panel_passes=0 panel_fails=0 websub_passes=0 websub_fails=0
 	local sub2singbox_passes=0 sub2singbox_fails=0 fallback_passes=0 fallback_fails=0
-	local json_passes=0 json_fails=0
+	local json_passes=0 json_fails=0 transport_reality_passes=0 transport_reality_fails=0
+	local transport_xhttp_passes=0 transport_xhttp_fails=0
 
 	KEEP_ARTIFACTS="y"
 	init_debug_session
@@ -2119,7 +2320,7 @@ run_stealth_acceptance_stage() {
 	write_acceptance_runtime_snapshot
 	write_acceptance_session_metadata
 	write_acceptance_manual_checklist
-	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails" "$json_passes" "$json_fails"
+	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails" "$json_passes" "$json_fails" "$transport_reality_passes" "$transport_reality_fails" "$transport_xhttp_passes" "$transport_xhttp_fails"
 
 	while (( iteration <= total_iterations )); do
 		msg_inf "Acceptance iteration ${iteration}/${total_iterations}"
@@ -2159,6 +2360,23 @@ run_stealth_acceptance_stage() {
 			failures=$((failures + 1))
 		fi
 
+		if transport_profile_has_reality; then
+			if acceptance_transport_probe "$iteration" "reality"; then
+				transport_reality_passes=$((transport_reality_passes + 1))
+			else
+				transport_reality_fails=$((transport_reality_fails + 1))
+				failures=$((failures + 1))
+			fi
+		fi
+		if transport_profile_has_xhttp; then
+			if acceptance_transport_probe "$iteration" "xhttp"; then
+				transport_xhttp_passes=$((transport_xhttp_passes + 1))
+			else
+				transport_xhttp_fails=$((transport_xhttp_fails + 1))
+				failures=$((failures + 1))
+			fi
+		fi
+
 		if (( iteration < total_iterations )); then
 			sleep "${ACCEPTANCE_INTERVAL_SECONDS}"
 		fi
@@ -2188,12 +2406,14 @@ Web-sub: pass=${websub_passes} fail=${websub_fails}
 Subscription JSON: pass=${json_passes} fail=${json_fails}
 sub2sing-box: pass=${sub2singbox_passes} fail=${sub2singbox_fails}
 Fallback root: pass=${fallback_passes} fail=${fallback_fails}
+Data-plane REALITY: pass=${transport_reality_passes} fail=${transport_reality_fails}
+Data-plane XHTTP: pass=${transport_xhttp_passes} fail=${transport_xhttp_fails}
 EOF
 	append_debug_log "Acceptance summary written to ${summary_file}"
 	capture_acceptance_snapshot
 	write_acceptance_runtime_snapshot
 	write_acceptance_session_metadata
-	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails" "$json_passes" "$json_fails"
+	write_acceptance_matrix_row_json "$failures" "$panel_passes" "$panel_fails" "$websub_passes" "$websub_fails" "$sub2singbox_passes" "$sub2singbox_fails" "$fallback_passes" "$fallback_fails" "$json_passes" "$json_fails" "$transport_reality_passes" "$transport_reality_fails" "$transport_xhttp_passes" "$transport_xhttp_fails"
 
 	if (( failures > 0 )); then
 		die "Acceptance завершён с ошибками. Подробности: ${summary_file}"
@@ -2402,6 +2622,12 @@ verify_existing_installation() {
 		fi
 	fi
 
+	if transport_profile_has_reality; then
+		if ! reality_transport_self_test; then
+			failures=$((failures + 1))
+		fi
+	fi
+
 	if ! verify_transport_tuning_contract; then
 		failures=$((failures + 1))
 	fi
@@ -2490,20 +2716,49 @@ SELECT
 							and ((.streamSettings.sockopt.tcpKeepAliveInterval | tostring) == $expectedKeepAliveInterval)
 							and ((.streamSettings.sockopt.tcpKeepAliveIdle | tostring) == $expectedKeepAliveIdle)
 							and ((.streamSettings.sockopt.tcpUserTimeout | tostring) == $expectedTcpUserTimeout);
+						def valid_xhttp_contract:
+							(.streamSettings.network == "xhttp")
+							and ((.streamSettings.security // "") == "tls")
+							and ((.streamSettings.xhttpSettings | type) == "object")
+							and (((.streamSettings.xhttpSettings.path // "") | tostring | length) > 0)
+							and (((.streamSettings.xhttpSettings.mode // "") | tostring | length) > 0)
+							and valid_xhttp_sockopt;
+						def valid_reality_contract:
+							(.streamSettings.security == "reality")
+							and ((.streamSettings.realitySettings | type) == "object")
+							and (((.streamSettings.realitySettings.publicKey // "") | tostring | length) > 0)
+							and (((.streamSettings.realitySettings.serverName // "") | tostring | length) > 0)
+							and (((.streamSettings.realitySettings.fingerprint // "") | tostring | length) > 0)
+							and (((.streamSettings.realitySettings.shortId // "") | tostring | length) > 0)
+							and (((.streamSettings.realitySettings.spiderX // "") | tostring | length) > 0);
 						def valid_dns:
 							. as $cfg
+							| (($cfg.outbounds // []) | map(select(.protocol == "vless" and ((.tag // "") | length > 0)) | .tag)) as $vless_tags
 							| (($cfg.dns | type) == "object")
 							and (($cfg.dns.queryStrategy // "") == $expectedDnsQueryStrategy)
+							and (($cfg.dns.tag // "") == "dns_out")
 							and (($cfg.dns.servers | type) == "array")
 							and (expected_dns_servers | length > 0)
 							and (expected_dns_servers | all(. as $dns_server | ([$cfg.dns.servers[]?.address] | index($dns_server)) != null))
-							and ((($cfg.routing.rules // []) | any(.type == "field" and (.outboundTag // "") == "proxy" and (.port | tostring) == "53" and (.network // "") == "tcp,udp")));
+							and ((($cfg.routing.rules // []) | any(
+								(.type == "field")
+								and ((.port | tostring) == "53")
+								and ((.network // "") == "tcp,udp")
+								and ((.outboundTag // "") as $tag | ($vless_tags | index($tag)) != null)
+							)));
 						(outbounds | any(.protocol == "vless"))
 						and (configs | all(valid_dns))
 						and (outbounds | all(if .protocol == "vless" then valid_vless else true end))
 						and (
 							if ($expectedTransportProfile == "stealth-xhttp" or $expectedTransportProfile == "stealth-multi") then
-								(outbounds | any(.protocol == "vless" and valid_xhttp_sockopt))
+								(outbounds | any(.protocol == "vless" and valid_xhttp_contract))
+							else
+								true
+							end
+						)
+						and (
+							if ($expectedTransportProfile == "stealth-xray" or $expectedTransportProfile == "stealth-multi") then
+								(outbounds | any(.protocol == "vless" and valid_reality_contract))
 							else
 								true
 							end
