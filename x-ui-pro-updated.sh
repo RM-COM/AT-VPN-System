@@ -98,7 +98,7 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:9443"
 				TRANSPORT_REALITY_TUNING_PROFILE="default"
-		TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision-udp443"
+		TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
 				TRANSPORT_REALITY_FINGERPRINT="random"
 				TRANSPORT_REALITY_SPIDER_X="/"
 				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
@@ -140,7 +140,7 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
 		TRANSPORT_REALITY_TUNING_PROFILE="call-safe"
-		TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision-udp443"
+		TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
 				TRANSPORT_REALITY_FINGERPRINT="chrome"
 				TRANSPORT_REALITY_SPIDER_X="/"
 				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
@@ -158,7 +158,7 @@ if ! declare -F platform_init >/dev/null 2>&1; then
 				TRANSPORT_REALITY_EXTERNAL_PROXY_DEST_MODE="reality_domain"
 				TRANSPORT_FALLBACK_TARGET="127.0.0.1:7443"
 		TRANSPORT_REALITY_TUNING_PROFILE="call-safe"
-		TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision-udp443"
+		TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
 				TRANSPORT_REALITY_FINGERPRINT="chrome"
 				TRANSPORT_REALITY_SPIDER_X="/"
 				TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
@@ -318,7 +318,7 @@ platform_validate_tuning_profile_name() {
 platform_validate_reality_tuning_profile_name() {
 	local profile_name="$1"
 	case "$profile_name" in
-		default|mobile-safe|low-latency|call-safe|aggressive-stealth) return 0 ;;
+		default|mobile-safe|low-latency|call-safe|udp443-safe|aggressive-stealth) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -460,6 +460,17 @@ platform_apply_reality_tuning_profile() {
 			TRANSPORT_REALITY_TCP_USER_TIMEOUT=""
 			;;
 		call-safe)
+			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision"
+			TRANSPORT_REALITY_FINGERPRINT="chrome"
+			TRANSPORT_REALITY_SPIDER_X="/"
+			TRANSPORT_REALITY_TCP_HEADER_TYPE="none"
+			TRANSPORT_REALITY_TCP_NO_DELAY="true"
+			TRANSPORT_REALITY_DOMAIN_STRATEGY="UseIP"
+			TRANSPORT_REALITY_TCP_KEEPALIVE_INTERVAL=5
+			TRANSPORT_REALITY_TCP_KEEPALIVE_IDLE=20
+			TRANSPORT_REALITY_TCP_USER_TIMEOUT=15000
+			;;
+		udp443-safe)
 			TRANSPORT_REALITY_CLIENT_FLOW="xtls-rprx-vision-udp443"
 			TRANSPORT_REALITY_FINGERPRINT="chrome"
 			TRANSPORT_REALITY_SPIDER_X="/"
