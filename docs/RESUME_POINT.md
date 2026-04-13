@@ -2,6 +2,9 @@
 
 ## Текущая точка продолжения (актуально)
 
+- [2026-04-13 03:50:00] Новый `DNS/feed` срез уже закрыт server-side: `subjson-rewrite` теперь жёстко переписывает JSON-подписку на `DoH`-набор `https://1.1.1.1/dns-query, https://8.8.8.8/dns-query` и добавляет явное правило `53/tcp,udp -> proxy`, а staging `strict verify` и `acceptance (1m/20s)` завершились полным `PASS`.
+- [2026-04-13 03:50:00] Это значит, что ближайшая практическая задача снова user-facing: проверить, уменьшился ли остаточный `feed/API latency` именно в живых сценариях `YouTube feed`, `Telegram media`, обычный web и Android-vs-iPhone, не трогая текущие transport-presets `REALITY=call-safe` и `XHTTP=realtime-media-safe`.
+- [2026-04-13 03:50:00] Ограничение текущего шага нужно помнить явно: мы уже форсируем DNS внутри клиентского Xray-конфига, но не можем этим alone запретить собственный `DoH/DoQ` отдельных приложений или literal-IP сценарии, если их реализует сам клиентский стек.
 - [2026-04-12 20:46:00] `stealth-multi` уже реализован как отдельный transport profile и подтверждён на staging: это теперь не просто идея из docs, а runnable unified baseline с `reality-shield` и `xhttp` в одной установке.
 - [2026-04-12 20:46:00] Ближайшая практическая задача теперь меняется: тестировать нужно уже не две разные переустановки, а один `stealth-multi` контур, где внутри одной подписки доступны оба профиля. Это и есть первый реальный шаг к финальному baseline `primary low-latency + primary stealth`.
 - [2026-04-12 20:46:00] Практический user-facing сценарий для следующего теста простой: в одной и той же установке проверить `reality-shield` и `xhttp`, сравнить `cold-start`, browsing, `Telegram/Discord`, handoff и затем решить, какие узлы в unified baseline считать основными по умолчанию.

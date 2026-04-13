@@ -7,6 +7,10 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-13 03:50:00] Следующий safe-slice блока `C1` переведён с грубого transport-tuning на `DNS/feed` слой: `subjson-rewrite` теперь принудительно переписывает клиентский JSON-контур на `DoH`-серверы `https://1.1.1.1/dns-query` и `https://8.8.8.8/dns-query`, сохраняя `queryStrategy=UseIP`.
+- [2026-04-13 03:50:00] В тот же rewrite-слой добавлено явное правило `routing: 53/tcp,udp -> proxy`, чтобы DNS-трафик из клиентского Xray-конфига не оставался на неявном catch-all и был зафиксирован как отдельный контракт baseline.
+- [2026-04-13 03:50:00] На staging `2.27.11.162` этот DNS/feed-срез уже подтверждён: live JSON subscription реально отдаёт оба `DoH`-адреса и явное DNS-правило, а server-side контур `strict verify -> acceptance (1m/20s)` завершился полным `PASS` без смены текущих transport-presets `REALITY=call-safe` и `XHTTP=realtime-media-safe`.
+- [2026-04-13 03:50:00] Ограничение решения тоже зафиксировано явно: этот шаг форсирует DNS внутри Xray-конфига и убирает зависимость от случайного DNS из JSON-контракта, но не может отменить собственный `DoH/DoQ` внутри отдельных приложений и literal-IP подключения, если сам клиентский стек их использует вне обычного Xray-resolve пути.
 - [2026-04-12 20:46:00] Следующий архитектурный шаг уже материализован в коде: введён новый transport profile `stealth-multi`, который оформляет текущий unified stealth baseline как одну установку с двумя ролями внутри — `reality-shield` (`REALITY mobile-safe`) и `xhttp` (`XHTTP packet-up-safe`).
 - [2026-04-12 20:46:00] Этот профиль уже подтверждён на staging по полному server-side контуру: `install -> strict verify -> acceptance (1m/20s)` завершились полным `PASS`, а runtime provenance явно фиксирует `transport=stealth-multi`, `reality=mobile-safe`, `xhttp=packet-up-safe`.
 - [2026-04-12 20:46:00] Значит, следующий шаг по плану теперь уже user-facing и продуктовый: тестировать не разрозненные инсталляции `stealth-xray` и `stealth-xhttp`, а единый baseline `stealth-multi`, где оба узла приезжают в одной подписке и могут использоваться как `primary low-latency` и `primary stealth`.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import os
 import sqlite3
 import ssl
 import sys
@@ -29,6 +30,19 @@ CLIENT_SOCKOPT_KEYS = (
     "tcpKeepAliveIdle",
     "tcpUserTimeout",
 )
+
+DEFAULT_DNS_SERVERS = (
+    "https://1.1.1.1/dns-query",
+    "https://8.8.8.8/dns-query",
+)
+DEFAULT_DNS_QUERY_STRATEGY = "UseIP"
+DEFAULT_DNS_TAG = "dns_out"
+FORCED_DNS_PROXY_RULE = {
+    "type": "field",
+    "network": "tcp,udp",
+    "port": "53",
+    "outboundTag": "proxy",
+}
 
 
 def build_vless_vnext(settings):
@@ -91,6 +105,78 @@ def build_client_sockopt(sockopt):
     return client_sockopt or None
 
 
+def split_csv(value):
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def build_dns_servers(dns_servers):
+    servers = []
+    for address in dns_servers:
+        if not address:
+            continue
+        servers.append(
+            {
+                "address": address,
+                "skipFallback": False,
+            }
+        )
+    return servers
+
+
+def rewrite_dns(config, dns_servers, dns_query_strategy):
+    if not isinstance(config, dict):
+        return config
+    existing_dns = config.get("dns")
+    rewritten_dns = {}
+    if isinstance(existing_dns, dict):
+        for key in ("hosts", "clientIp", "disableCache", "disableFallback", "disableFallbackIfMatch"):
+            if key in existing_dns:
+                rewritten_dns[key] = existing_dns[key]
+    rewritten_dns["queryStrategy"] = dns_query_strategy or DEFAULT_DNS_QUERY_STRATEGY
+    rewritten_dns["servers"] = build_dns_servers(dns_servers)
+    rewritten_dns["tag"] = DEFAULT_DNS_TAG
+    config["dns"] = rewritten_dns
+    return config
+
+
+def has_dns_proxy_rule(rules):
+    if not isinstance(rules, list):
+        return False
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        if rule.get("type") != FORCED_DNS_PROXY_RULE["type"]:
+            continue
+        if rule.get("outboundTag") != FORCED_DNS_PROXY_RULE["outboundTag"]:
+            continue
+        port_value = str(rule.get("port", ""))
+        if port_value != FORCED_DNS_PROXY_RULE["port"]:
+            continue
+        network_value = str(rule.get("network", ""))
+        if network_value != FORCED_DNS_PROXY_RULE["network"]:
+            continue
+        return True
+    return False
+
+
+def rewrite_routing(config):
+    if not isinstance(config, dict):
+        return config
+    routing = config.get("routing")
+    if not isinstance(routing, dict):
+        routing = {}
+        config["routing"] = routing
+    rules = routing.get("rules")
+    if not isinstance(rules, list):
+        rules = []
+        routing["rules"] = rules
+    if not has_dns_proxy_rule(rules):
+        rules.insert(0, dict(FORCED_DNS_PROXY_RULE))
+    return config
+
+
 def maybe_inject_sockopt(outbound, sockopt_map):
     if not isinstance(outbound, dict):
         return outbound
@@ -115,9 +201,11 @@ def maybe_inject_sockopt(outbound, sockopt_map):
     return outbound
 
 
-def rewrite_config(config, sockopt_map):
+def rewrite_config(config, sockopt_map, dns_servers, dns_query_strategy):
     if not isinstance(config, dict):
         return config
+    rewrite_dns(config, dns_servers, dns_query_strategy)
+    rewrite_routing(config)
     outbounds = config.get("outbounds")
     if isinstance(outbounds, list):
         rewritten_outbounds = []
@@ -128,22 +216,24 @@ def rewrite_config(config, sockopt_map):
     return config
 
 
-def rewrite_document(document, sockopt_map):
+def rewrite_document(document, sockopt_map, dns_servers, dns_query_strategy):
     if isinstance(document, list):
-        return [rewrite_config(item, sockopt_map) for item in document]
+        return [rewrite_config(item, sockopt_map, dns_servers, dns_query_strategy) for item in document]
     if isinstance(document, dict):
-        return rewrite_config(document, sockopt_map)
+        return rewrite_config(document, sockopt_map, dns_servers, dns_query_strategy)
     return document
 
 
 class RewriteHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, server_address, handler_cls, upstream_port, timeout, xui_db_path):
+    def __init__(self, server_address, handler_cls, upstream_port, timeout, xui_db_path, dns_servers, dns_query_strategy):
         super().__init__(server_address, handler_cls)
         self.upstream_port = upstream_port
         self.timeout = timeout
         self.xui_db_path = xui_db_path
+        self.dns_servers = dns_servers
+        self.dns_query_strategy = dns_query_strategy
         self.ssl_context = ssl._create_unverified_context()
 
     def fetch_upstream(self, path, host_header):
@@ -221,7 +311,12 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             parsed = json.loads(body.decode("utf-8"))
-            rewritten = rewrite_document(parsed, self.server.load_sockopt_map())
+            rewritten = rewrite_document(
+                parsed,
+                self.server.load_sockopt_map(),
+                self.server.dns_servers,
+                self.server.dns_query_strategy,
+            )
             rewritten_body = json.dumps(rewritten, ensure_ascii=False, indent=2).encode("utf-8")
         except Exception as exc:
             sys.stderr.write(f"json rewrite failed for {self.path}: {exc}\n")
@@ -257,9 +352,22 @@ def main():
     parser.add_argument("--upstream-port", type=int, required=True)
     parser.add_argument("--timeout", type=int, default=15)
     parser.add_argument("--xui-db-path", default="/etc/x-ui/x-ui.db")
+    parser.add_argument("--dns-server", action="append", default=None)
+    parser.add_argument("--dns-query-strategy", default=None)
     args = parser.parse_args()
 
-    server = RewriteHTTPServer((args.bind, args.port), Handler, args.upstream_port, args.timeout, args.xui_db_path)
+    dns_servers = args.dns_server or split_csv(os.environ.get("SUBJSON_REWRITE_DNS_SERVERS")) or list(DEFAULT_DNS_SERVERS)
+    dns_query_strategy = args.dns_query_strategy or os.environ.get("SUBJSON_REWRITE_DNS_QUERY_STRATEGY") or DEFAULT_DNS_QUERY_STRATEGY
+
+    server = RewriteHTTPServer(
+        (args.bind, args.port),
+        Handler,
+        args.upstream_port,
+        args.timeout,
+        args.xui_db_path,
+        dns_servers,
+        dns_query_strategy,
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

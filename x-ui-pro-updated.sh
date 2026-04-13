@@ -22,6 +22,8 @@ SUBJSON_REWRITE_SERVICE="/etc/systemd/system/subjson-rewrite.service"
 SUBJSON_REWRITE_BIN="/usr/local/bin/subjson-rewrite.py"
 SUBJSON_REWRITE_PORT="${SUBJSON_REWRITE_PORT:-8091}"
 SUBJSON_REWRITE_XUI_DB="${SUBJSON_REWRITE_XUI_DB:-/etc/x-ui/x-ui.db}"
+SUBJSON_REWRITE_DNS_SERVERS="${SUBJSON_REWRITE_DNS_SERVERS:-https://1.1.1.1/dns-query,https://8.8.8.8/dns-query}"
+SUBJSON_REWRITE_DNS_QUERY_STRATEGY="${SUBJSON_REWRITE_DNS_QUERY_STRATEGY:-UseIP}"
 XUI_REPO_SLUG="${XUI_REPO_SLUG:-MHSanaei/3x-ui}"
 XUI_VERSION="${XUI_VERSION:-v2.8.11}"
 SUB2SINGBOX_REPO_SLUG="${SUB2SINGBOX_REPO_SLUG:-legiz-ru/sub2sing-box}"
@@ -390,6 +392,8 @@ write_platform_runtime_provenance_file() {
 	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_JSON_PATH" "${json_path:-}"
 	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_SUB2SINGBOX_PATH" "${sub2singbox_path:-}"
 	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_XHTTP_PATH" "${xhttp_path:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_SUBJSON_DNS_SERVERS" "${SUBJSON_REWRITE_DNS_SERVERS:-}"
+	write_platform_runtime_provenance_kv "$provenance_file" "RUNTIME_PROVENANCE_SUBJSON_DNS_QUERY_STRATEGY" "${SUBJSON_REWRITE_DNS_QUERY_STRATEGY:-}"
 	append_debug_log "Runtime provenance written to ${provenance_file}"
 }
 
@@ -1317,6 +1321,8 @@ sub_path=${sub_path:-}
 json_path=${json_path:-}
 sub2singbox_path=${sub2singbox_path:-}
 xhttp_path=${xhttp_path:-}
+subjson_rewrite_dns_servers=${SUBJSON_REWRITE_DNS_SERVERS:-}
+subjson_rewrite_dns_query_strategy=${SUBJSON_REWRITE_DNS_QUERY_STRATEGY:-}
 EOF
 	append_debug_log "Acceptance runtime snapshot written to ${snapshot_file}"
 	if command -v sqlite3 >/dev/null 2>&1 && [[ -f "$XUIDB" ]]; then
@@ -1473,6 +1479,8 @@ write_acceptance_matrix_row_json() {
 		--arg panel_provider "${PANEL_PROVIDER}" \
 		--arg reality_tuning_profile "${TRANSPORT_REALITY_TUNING_PROFILE:-default}" \
 		--arg xhttp_tuning_profile "${TRANSPORT_XHTTP_TUNING_PROFILE:-}" \
+		--arg subjson_rewrite_dns_servers "${SUBJSON_REWRITE_DNS_SERVERS:-}" \
+		--arg subjson_rewrite_dns_query_strategy "${SUBJSON_REWRITE_DNS_QUERY_STRATEGY:-}" \
 		--arg acceptance_label "${ACCEPTANCE_LABEL:-}" \
 		--arg acceptance_matrix_group "${ACCEPTANCE_MATRIX_GROUP:-}" \
 		--arg acceptance_network_label "${ACCEPTANCE_NETWORK_LABEL:-}" \
@@ -1516,7 +1524,9 @@ write_acceptance_matrix_row_json() {
 				transport_profile: $transport_profile,
 				panel_provider: $panel_provider,
 				reality_tuning_profile: $reality_tuning_profile,
-				xhttp_tuning_profile: $xhttp_tuning_profile
+				xhttp_tuning_profile: $xhttp_tuning_profile,
+				subjson_rewrite_dns_servers: $subjson_rewrite_dns_servers,
+				subjson_rewrite_dns_query_strategy: $subjson_rewrite_dns_query_strategy
 			},
 			matrix: {
 				label: $acceptance_label,
@@ -2431,9 +2441,13 @@ SELECT
 						--arg expectedKeepAliveIdle "${TRANSPORT_XHTTP_TCP_KEEPALIVE_IDLE:-}" \
 						--arg expectedTcpUserTimeout "${TRANSPORT_XHTTP_TCP_USER_TIMEOUT:-}" \
 						--arg expectedTransportProfile "${TRANSPORT_PROFILE:-}" \
+						--arg expectedDnsServersCsv "${SUBJSON_REWRITE_DNS_SERVERS:-}" \
+						--arg expectedDnsQueryStrategy "${SUBJSON_REWRITE_DNS_QUERY_STRATEGY:-}" \
 						'
 						def configs: if type == "array" then . else [.] end;
 						def outbounds: [configs[] | (.outbounds // [])[]];
+						def expected_dns_servers:
+							($expectedDnsServersCsv | split(",") | map(gsub("^\\s+|\\s+$"; "") | select(length > 0)));
 						def valid_vless:
 							(.protocol == "vless")
 							and ((.settings.vnext | type) == "array")
@@ -2446,7 +2460,16 @@ SELECT
 							and ((.streamSettings.sockopt.tcpKeepAliveInterval | tostring) == $expectedKeepAliveInterval)
 							and ((.streamSettings.sockopt.tcpKeepAliveIdle | tostring) == $expectedKeepAliveIdle)
 							and ((.streamSettings.sockopt.tcpUserTimeout | tostring) == $expectedTcpUserTimeout);
+						def valid_dns:
+							. as $cfg
+							| (($cfg.dns | type) == "object")
+							and (($cfg.dns.queryStrategy // "") == $expectedDnsQueryStrategy)
+							and (($cfg.dns.servers | type) == "array")
+							and (expected_dns_servers | length > 0)
+							and (expected_dns_servers | all(. as $dns_server | ([$cfg.dns.servers[]?.address] | index($dns_server)) != null))
+							and ((($cfg.routing.rules // []) | any(.type == "field" and (.outboundTag // "") == "proxy" and (.port | tostring) == "53" and (.network // "") == "tcp,udp")));
 						(outbounds | any(.protocol == "vless"))
+						and (configs | all(valid_dns))
 						and (outbounds | all(if .protocol == "vless" then valid_vless else true end))
 						and (
 							if ($expectedTransportProfile == "stealth-xhttp" or $expectedTransportProfile == "stealth-multi") then
@@ -4824,6 +4847,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+Environment="SUBJSON_REWRITE_DNS_SERVERS=${SUBJSON_REWRITE_DNS_SERVERS}"
+Environment="SUBJSON_REWRITE_DNS_QUERY_STRATEGY=${SUBJSON_REWRITE_DNS_QUERY_STRATEGY}"
 ExecStart=/usr/bin/python3 ${SUBJSON_REWRITE_BIN} --bind 127.0.0.1 --port ${SUBJSON_REWRITE_PORT} --upstream-port ${sub_port} --xui-db-path ${SUBJSON_REWRITE_XUI_DB}
 Restart=always
 RestartSec=3
