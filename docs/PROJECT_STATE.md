@@ -8,6 +8,7 @@
 ## Текущее состояние baseline
 
 - [2026-04-14 00:20:00] Последний `REALITY udp443` срез не повышен до общего baseline. После iPhone retest `call-safe` возвращён на стандартный `xtls-rprx-vision`, а `xtls-rprx-vision-udp443` оставлен как отдельный experimental preset `udp443-safe` для будущих узких сетевых сценариев.
+- [2026-04-14 00:22:00] Этот откат уже подтверждён staging-циклом: `stealth-multi` на `2.27.11.162` снова прошёл `install -> strict verify -> acceptance`, а живая JSON-подписка уже публикует `reality-call` со стандартным `flow=xtls-rprx-vision`.
 
 - [2026-04-14 00:10:00] Для `REALITY` открыт новый целевой corrective step под звонки: `call-safe` теперь использует `xtls-rprx-vision-udp443`, а не обычный `xtls-rprx-vision`. Причина практическая: текущий low-latency профиль должен лучше переносить voice/video приложения, которые чувствительны к перехвату `UDP/443`.
 - [2026-04-14 00:12:00] Этот corrective step уже подтверждён staging-циклом: `stealth-multi` на `2.27.11.162` повторно установлен, прошёл `strict verify` и `acceptance (1m/20s)`, а живая JSON-подписка уже публикует `reality-call` с `flow=xtls-rprx-vision-udp443`.
