@@ -116,6 +116,8 @@
 - [2026-04-10 22:10:47] Критерий приёмки C1: оба stealth-профиля проходят длинные mobile-data сессии и reconnect-проверки с предсказуемым восстановлением, после чего формируется production-рекомендация «основной профиль + fallback профиль».
 - [2026-04-10 22:10:47] Ограничение этапа остаётся прежним: `AWG` и performance-ускорения не переводятся в active implementation, пока C1 не закрыт формально.
 - [2026-04-10 22:48:10] Технологический контракт C1 вынесен в `PROTOCOL_HARDENING_PLAN.md`: первичная защита от `RST`/drop строится через снижение DPI-сигнатур, правдоподобный edge, controlled `REALITY/XHTTP` tuning, fallback/reconnect и отдельный auth hardening.
+- [2026-04-13 05:45:00] Внутри `C1` закрыт отдельный hardening-срез public/admin surface: stealth panel, subscription JSON/simple и `sub2sing-box` теперь отдают `no-store/noindex/nosniff/SAMEORIGIN`, а `stage=websub -verify` валидирует этот edge-layer как часть anti-probing контракта.
+- [2026-04-13 05:55:00] Внутри `C1` закрыт ещё один lifecycle-хвост unified baseline: runtime provenance теперь возвращает `stealth-multi` как selection-контракт в `verify/acceptance`, поэтому матрица приёмки реально видит оба transport-а как один dual-role baseline, а не сужает его до `stealth-xhttp`.
 
 ### Блок D. Закрыть Xray/DPI этап формально
 
@@ -137,5 +139,7 @@
 - [2026-04-10 19:41:17] Текущая точка исполнения обновлена: после аварии прошлой ноды активный staging — `217.199.253.102`; server-side baseline `stealth-xhttp` подтверждён, поэтому следующий шаг снова чисто прикладной — длинные mobile-data тесты и reconnect-сравнение `stealth-xray` vs `stealth-xhttp` на новой ноде.
 - [2026-04-10 20:07:20] Продуктовые ограничения и целевой сценарий «устойчивая связь и рабочие ресурсы» теперь формально закреплены в `docs/PROJECT_CONNECTIVITY_REQUIREMENTS.md`; решения по Block C должны проверяться и на эту практическую модель, а не только на server-side `PASS`.
 - [2026-04-10 23:05:05] Следующая практическая точка уточнена: кроме сравнения `stealth-xray`/`stealth-xhttp`, нужно отличать обычный DPI-detect от mobile whitelist/IP-level drop. Если мобильная сеть не пропускает прямой VPS IP, следующий продуктовый шаг — не только усиление `REALITY`, а добавление whitelist-resilient fallback-класса.
+- [2026-04-13 05:45:00] Текущая практическая точка исполнения уточнена ещё раз: высокий `Discord` ping на `XHTTP` при хорошем browsing трактуется как evidence rolesplit, а не как повод ломать `XHTTP` до latency-паритета. Ближайший шаг внутри `C1` — сделать этот rolesplit явным в unified baseline и продолжить tuning уже по отдельным ролям `REALITY` и `XHTTP`.
+- [2026-04-13 05:55:00] Эта точка уже частично закрыта: repeated install на staging пишет явные user-facing remarks `reality-call` и `xhttp-stealth`, а следующий шаг смещается с организационного оформления на содержательный tuning двух ролей внутри одного baseline.
 
 

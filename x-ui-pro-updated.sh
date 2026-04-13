@@ -402,6 +402,10 @@ load_platform_runtime_provenance_defaults() {
 	[[ -f "$provenance_file" ]] || return 0
 	# shellcheck disable=SC1090
 	source "$provenance_file" 2>/dev/null || return 0
+	[[ -n "${RUNTIME_PROVENANCE_PLATFORM_PROFILE:-}" ]] && PLATFORM_PROFILE="$RUNTIME_PROVENANCE_PLATFORM_PROFILE"
+	[[ -n "${RUNTIME_PROVENANCE_TRANSPORT_PROFILE:-}" ]] && TRANSPORT_PROFILE="$RUNTIME_PROVENANCE_TRANSPORT_PROFILE"
+	[[ -n "${RUNTIME_PROVENANCE_PANEL_PROVIDER:-}" ]] && PANEL_PROVIDER="$RUNTIME_PROVENANCE_PANEL_PROVIDER"
+	platform_init >/dev/null 2>&1 || true
 	if [[ -z "${OVERRIDE_REALITY_TUNING_PROFILE:-}" && -n "${RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE:-}" ]]; then
 		TRANSPORT_REALITY_TUNING_PROFILE="$RUNTIME_PROVENANCE_REALITY_TUNING_PROFILE"
 	fi
@@ -1407,6 +1411,17 @@ acceptance_metric_value() {
 	local metrics="$1" key="$2"
 	printf '%s\n' "$metrics" | tr ' ' '\n' | awk -F= -v target="$key" '$1 == target { print $2; exit }'
 }
+response_has_header() {
+	local headers="$1" header_name="$2" expected_fragment="${3:-}"
+	local header_line=""
+	header_line="$(printf '%s\n' "$headers" | grep -iE "^${header_name}:" | head -n1 || true)"
+	[[ -n "$header_line" ]] || return 1
+	if [[ -n "$expected_fragment" ]]; then
+		grep -qi -- "$expected_fragment" <<<"$header_line"
+		return $?
+	fi
+	return 0
+}
 append_acceptance_probe_result_jsonl() {
 	local iteration="$1" label="$2" host="$3" path="$4" status="$5" curl_metrics="$6"
 	local jsonl_file http_code remote_ip time_namelookup time_connect time_appconnect time_starttransfer time_total
@@ -2166,6 +2181,11 @@ write_acceptance_manual_checklist() {
 			secondary_target_hint=""
 			;;
 	esac
+	if [[ "$TRANSPORT_PROFILE" == "stealth-multi" ]]; then
+		client_target_hint="Для client-load проверки сравнивайте оба узла из одной установки: \`${emoji_flag} reality-call\` как low-latency/calls профиль и \`${emoji_flag} xhttp-stealth\` как stealth/browsing профиль."
+		client_log_hint="Для \`reality-call\` строки \`REALITY ... DialTLSContext\` ожидаемы; для \`xhttp-stealth\` ориентируйтесь на импортированный JSON/XHTTP-профиль."
+		secondary_target_hint="- Основная цель: сравнить роли \`primary low-latency\` и \`primary stealth\` внутри одного baseline, а не искать один универсальный transport."
+	fi
 	cat > "$checklist_file" <<EOF
 # Чек-лист ручной клиентской приёмки
 
@@ -2423,7 +2443,7 @@ EOF
 }
 verify_existing_installation() {
 	local failures=0
-	local sqlite_result="" curl_output="" unexpected_urls="" listener_output="" stealth_reality_port=""
+	local sqlite_result="" curl_output="" curl_headers="" unexpected_urls="" listener_output="" stealth_reality_port=""
 	local stealth_xhttp_inbound_count="" stealth_xhttp_path=""
 	local stream_mode="" selection_runtime_state="" https_proxy_checks_enabled="" stealth_runtime_checks_enabled=""
 	local public_https_port="" web_tls_port=""
@@ -2686,6 +2706,30 @@ SELECT
 			if curl_output=$(curl -kfsS --resolve "${domain}:443:127.0.0.1" "https://${domain}/${json_path}/first" 2>&1); then
 				record_verify_result "PASS" "Subscription JSON endpoint responds through local HTTPS"
 				[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/subscription-json-body.txt"
+				if curl_headers=$(curl -kfsS -D - -o /dev/null --resolve "${domain}:443:127.0.0.1" "https://${domain}/${json_path}/first" 2>&1); then
+					[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_headers" > "$DEBUG_DIR/commands/subscription-json-headers.txt"
+					if response_has_header "$curl_headers" "Cache-Control" "no-store"; then
+						record_verify_result "PASS" "Subscription JSON endpoint sends no-store cache headers"
+					else
+						record_verify_result "FAIL" "Subscription JSON endpoint is missing no-store cache headers"
+						failures=$((failures + 1))
+					fi
+					if response_has_header "$curl_headers" "X-Robots-Tag" "noindex"; then
+						record_verify_result "PASS" "Subscription JSON endpoint sends anti-index headers"
+					else
+						record_verify_result "FAIL" "Subscription JSON endpoint is missing anti-index headers"
+						failures=$((failures + 1))
+					fi
+					if response_has_header "$curl_headers" "X-Content-Type-Options" "nosniff"; then
+						record_verify_result "PASS" "Subscription JSON endpoint sends nosniff header"
+					else
+						record_verify_result "FAIL" "Subscription JSON endpoint is missing nosniff header"
+						failures=$((failures + 1))
+					fi
+				else
+					record_verify_result "FAIL" "Subscription JSON endpoint headers do not respond through local HTTPS"
+					failures=$((failures + 1))
+				fi
 				if grep -Eqi '<!doctype html|<html' <<<"$curl_output"; then
 					record_verify_result "FAIL" "Subscription JSON endpoint returns HTML instead of client config"
 					failures=$((failures + 1))
@@ -2826,6 +2870,36 @@ SELECT
 			if curl_output=$(curl -kfsS --resolve "${domain}:${public_https_port}:127.0.0.1" "https://${domain}/${panel_path}/" 2>&1); then
 				record_verify_result "PASS" "Stealth panel responds through public ${public_https_port}"
 				[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_output" > "$DEBUG_DIR/commands/stealth-panel-body.html"
+				if curl_headers=$(curl -kfsS -D - -o /dev/null --resolve "${domain}:${public_https_port}:127.0.0.1" "https://${domain}/${panel_path}/" 2>&1); then
+					[[ -n "$DEBUG_DIR" ]] && printf '%s' "$curl_headers" > "$DEBUG_DIR/commands/stealth-panel-headers.txt"
+					if response_has_header "$curl_headers" "Cache-Control" "no-store"; then
+						record_verify_result "PASS" "Stealth panel sends no-store cache headers"
+					else
+						record_verify_result "FAIL" "Stealth panel is missing no-store cache headers"
+						failures=$((failures + 1))
+					fi
+					if response_has_header "$curl_headers" "X-Robots-Tag" "noindex"; then
+						record_verify_result "PASS" "Stealth panel sends anti-index headers"
+					else
+						record_verify_result "FAIL" "Stealth panel is missing anti-index headers"
+						failures=$((failures + 1))
+					fi
+					if response_has_header "$curl_headers" "X-Content-Type-Options" "nosniff"; then
+						record_verify_result "PASS" "Stealth panel sends nosniff header"
+					else
+						record_verify_result "FAIL" "Stealth panel is missing nosniff header"
+						failures=$((failures + 1))
+					fi
+					if response_has_header "$curl_headers" "X-Frame-Options" "SAMEORIGIN"; then
+						record_verify_result "PASS" "Stealth panel sends SAMEORIGIN frame policy"
+					else
+						record_verify_result "FAIL" "Stealth panel is missing SAMEORIGIN frame policy"
+						failures=$((failures + 1))
+					fi
+				else
+					record_verify_result "FAIL" "Stealth panel headers do not respond through public ${public_https_port}"
+					failures=$((failures + 1))
+				fi
 			else
 				record_verify_result "FAIL" "Stealth panel does not respond through public ${public_https_port}"
 				append_debug_log "stealth panel curl output: ${curl_output}"
@@ -3619,10 +3693,31 @@ obtain_ssl() {
 }
 
 ##############################Nginx Config################################################################
+write_nginx_edge_hardening_snippets() {
+	cat > "/etc/nginx/snippets/edge-security-headers.conf" <<'EOF'
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+EOF
+
+	cat > "/etc/nginx/snippets/sensitive-edge-headers.conf" <<'EOF'
+proxy_hide_header X-Powered-By;
+proxy_hide_header Server;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
+add_header Pragma "no-cache" always;
+add_header Expires "0" always;
+add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+EOF
+}
+
 setup_nginx_classic() {
 	mkdir -p "/root/cert/${domain}"
 	mkdir -p /etc/nginx/modules-enabled /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/snippets /etc/nginx/stream-enabled
 	chmod 700 /root/cert/*
+	write_nginx_edge_hardening_snippets
 
 	local public_http_port public_https_port web_tls_port reality_inbound_port reality_site_tls_port sub2singbox_bind_port
 	public_http_port="$(platform_public_http_port)"
@@ -3739,8 +3834,10 @@ server {
 	if (\$request_uri ~ "(\"|'|\`|~|,|:|--|;|%|\\$|&&|\?\?|0x00|0X00|\||\\|\{|\}|\[|\]|<|>|\.\.\.|\.\.\/|\/\/\/)"){set \$hack 1;}
 	error_page 400 401 402 403 500 501 502 503 504 =404 /404;
 	proxy_intercept_errors on;
+	include /etc/nginx/snippets/edge-security-headers.conf;
 	#X-UI Admin Panel
 	location /${panel_path}/ {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -3757,6 +3854,7 @@ server {
 		break;
 	}
         location /${panel_path} {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -3780,6 +3878,7 @@ EOF
 	cat > "/etc/nginx/snippets/includes.conf" << EOF
 	#sub2sing-box
 	location /${sub2singbox_path}/ {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
 		proxy_redirect off;
 		proxy_set_header Host \$host;
 		proxy_set_header X-Real-IP \$remote_addr;
@@ -3816,6 +3915,7 @@ EOF
     }
 	#Subscription Path (simple/encode)
         location /${sub_path} {
+                include /etc/nginx/snippets/sensitive-edge-headers.conf;
                 if (\$hack = 1) {return 404;}
                 proxy_redirect off;
                 proxy_set_header Host \$host;
@@ -3825,6 +3925,7 @@ EOF
                 break;
         }
 	location /${sub_path}/ {
+                include /etc/nginx/snippets/sensitive-edge-headers.conf;
                 if (\$hack = 1) {return 404;}
                 proxy_redirect off;
                 proxy_set_header Host \$host;
@@ -3835,6 +3936,7 @@ EOF
         }
 	#Subscription Path (json/fragment)
         location /${json_path} {
+                include /etc/nginx/snippets/sensitive-edge-headers.conf;
                 if (\$hack = 1) {return 404;}
                 proxy_redirect off;
                 proxy_set_header Host \$host;
@@ -3844,6 +3946,7 @@ EOF
                 break;
         }
 	location /${json_path}/ {
+                include /etc/nginx/snippets/sensitive-edge-headers.conf;
                 if (\$hack = 1) {return 404;}
                 proxy_redirect off;
                 proxy_set_header Host \$host;
@@ -3924,8 +4027,10 @@ server {
 	if (\$request_uri ~ "(\"|'|\`|~|,|:|--|;|%|\\$|&&|\?\?|0x00|0X00|\||\\|\{|\}|\[|\]|<|>|\.\.\.|\.\.\/|\/\/\/)"){set \$hack 1;}
 	error_page 400 401 402 403 500 501 502 503 504 =404 /404;
 	proxy_intercept_errors on;
+	include /etc/nginx/snippets/edge-security-headers.conf;
 	#X-UI Admin Panel
 	location /${panel_path}/ {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
 		proxy_redirect off;
 		proxy_set_header Host \$host;
 		proxy_set_header X-Real-IP \$remote_addr;
@@ -3934,6 +4039,7 @@ server {
 		break;
 	}
         location /$panel_path {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
 		proxy_redirect off;
 		proxy_set_header Host \$host;
 		proxy_set_header X-Real-IP \$remote_addr;
@@ -3950,6 +4056,7 @@ setup_nginx_stealth() {
 	mkdir -p "/root/cert/${domain}"
 	mkdir -p /etc/nginx/modules-enabled /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/snippets /etc/nginx/stream-enabled
 	chmod 700 /root/cert/*
+	write_nginx_edge_hardening_snippets
 
 	local public_http_port web_tls_port reality_site_tls_port sub2singbox_bind_port
 	public_http_port="$(platform_public_http_port)"
@@ -3997,8 +4104,10 @@ server {
 	if (\$request_uri ~ "(\"|'|\`|~|,|:|--|;|%|\\$|&&|\?\?|0x00|0X00|\||\\|\{|\}|\[|\]|<|>|\.\.\.|\.\.\/|\/\/\/)"){set \$hack 1;}
 	error_page 400 401 402 403 500 501 502 503 504 =404 /404;
 	proxy_intercept_errors on;
+	include /etc/nginx/snippets/edge-security-headers.conf;
 	#X-UI Admin Panel
 	location /${panel_path}/ {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -4015,6 +4124,7 @@ server {
 		break;
 	}
         location /${panel_path} {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -4038,6 +4148,7 @@ EOF
 	cat > "/etc/nginx/snippets/includes.conf" << EOF
   	#sub2sing-box
 	location /${sub2singbox_path}/ {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
 		proxy_redirect off;
 		proxy_set_header Host \$host;
 		proxy_set_header X-Real-IP \$remote_addr;
@@ -4074,6 +4185,7 @@ EOF
     }
  	#Subscription Path (simple/encode)
         location /${sub_path} {
+                include /etc/nginx/snippets/sensitive-edge-headers.conf;
                 if (\$hack = 1) {return 404;}
                 proxy_redirect off;
                 proxy_set_header Host \$host;
@@ -4083,6 +4195,7 @@ EOF
                 break;
         }
 	location /${sub_path}/ {
+                include /etc/nginx/snippets/sensitive-edge-headers.conf;
                 if (\$hack = 1) {return 404;}
                 proxy_redirect off;
                 proxy_set_header Host \$host;
@@ -4093,6 +4206,7 @@ EOF
         }
 	#Subscription Path (json/fragment)
         location /${json_path} {
+                include /etc/nginx/snippets/sensitive-edge-headers.conf;
                 if (\$hack = 1) {return 404;}
                 proxy_redirect off;
                 proxy_set_header Host \$host;
@@ -4102,6 +4216,7 @@ EOF
                 break;
         }
 	location /${json_path}/ {
+                include /etc/nginx/snippets/sensitive-edge-headers.conf;
                 if (\$hack = 1) {return 404;}
                 proxy_redirect off;
                 proxy_set_header Host \$host;
@@ -4182,8 +4297,10 @@ server {
 	if (\$request_uri ~ "(\"|'|\`|~|,|:|--|;|%|\\$|&&|\?\?|0x00|0X00|\||\\|\{|\}|\[|\]|<|>|\.\.\.|\.\.\/|\/\/\/)"){set \$hack 1;}
 	error_page 400 401 402 403 500 501 502 503 504 =404 /404;
 	proxy_intercept_errors on;
+	include /etc/nginx/snippets/edge-security-headers.conf;
 	#X-UI Admin Panel
 	location /${panel_path}/ {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
 		proxy_redirect off;
 		proxy_set_header Host \$host;
 		proxy_set_header X-Real-IP \$remote_addr;
@@ -4192,6 +4309,7 @@ server {
 		break;
 	}
         location /$panel_path {
+		include /etc/nginx/snippets/sensitive-edge-headers.conf;
 		proxy_redirect off;
 		proxy_set_header Host \$host;
 		proxy_set_header X-Real-IP \$remote_addr;
@@ -4715,9 +4833,16 @@ EOF
 
 write_transport_inbounds_stealth_xhttp() {
 	local reality_external_proxy_dest reality_accept_proxy_protocol reality_xver
+	local reality_node_remark xhttp_node_remark
 	reality_external_proxy_dest="$(platform_transport_reality_external_proxy_dest)"
 	reality_accept_proxy_protocol="$(platform_transport_reality_accept_proxy_protocol)"
 	reality_xver="$(platform_transport_reality_xver)"
+	reality_node_remark="${emoji_flag} reality-shield"
+	xhttp_node_remark="${emoji_flag} xhttp"
+	if [[ "$TRANSPORT_PROFILE" == "stealth-multi" ]]; then
+		reality_node_remark="${emoji_flag} reality-call"
+		xhttp_node_remark="${emoji_flag} xhttp-stealth"
+	fi
 
 	sqlite3 "$XUIDB" <<EOF
              INSERT INTO "client_traffics" ("inbound_id","enable","email","up","down","expiry_time","total","reset") VALUES ('1','1','first','0','0','0','0','0');
@@ -4727,7 +4852,7 @@ write_transport_inbounds_stealth_xhttp() {
 	     '0',
              '0',
 	     '0',
-             '${emoji_flag} reality-shield',
+             '${reality_node_remark}',
 	     '1',
 	     '0',
 	     '',
@@ -4818,7 +4943,7 @@ write_transport_inbounds_stealth_xhttp() {
 	     '0',
              '0',
 	     '0',
-             '${emoji_flag} xhttp',
+             '${xhttp_node_remark}',
 	     '1',
              '0',
 	     '/dev/shm/uds2023.sock,0666',
@@ -5386,6 +5511,8 @@ main() {
 		install_web_sub_page
 		ensure_sub2singbox_local_ui_proxy
 		install_subjson_rewrite
+		platform_setup_ingress
+		platform_enable_ingress
 		nginx -t >/dev/null 2>&1 || die "nginx validation failed after updating web/sub2sing-box UI."
 		systemctl reload nginx >/dev/null 2>&1 || die "Failed to reload nginx after updating web/sub2sing-box UI."
 		if is_yes "$VERIFY_MODE"; then

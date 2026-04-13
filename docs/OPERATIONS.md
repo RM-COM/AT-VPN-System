@@ -30,7 +30,8 @@
 ## Что делает debug-контур
 
 - [2026-04-08 04:30:47] `-stage verify` выполняет быструю диагностику существующей установки без её изменения.
-- [2026-04-08 04:30:47] `-stage websub` обновляет только web/UI-контур без полного reinstall.
+- [2026-04-08 04:30:47] `-stage websub` обновляет web/UI-контур без полного reinstall.
+- [2026-04-13 05:45:00] `-stage websub` теперь не ограничивается bundle/service-слоем: он заново применяет `platform_setup_ingress()` и `platform_enable_ingress()`, поэтому все текущие nginx edge-изменения и header-policy реально доходят до уже установленной ноды.
 - [2026-04-09 00:30:57] `-stage acceptance` запускает server-side stealth acceptance: выполняет строгий `verify`, повторяемые HTTPS-пробы и сохраняет чек-лист ручной клиентской проверки.
 - [2026-04-13 05:10:00] `-stage acceptance` теперь дополнительно запускает transport-aware data-plane probe: для активных `REALITY/XHTTP` поднимается локальный Xray loopback-client, который проверяет живой ingress path и пишет результат в `acceptance/probe-results.jsonl` рядом с обычными HTTPS probe.
 - [2026-04-11 14:40:00] `-reality_tuning_profile` и `-xhttp_tuning_profile` позволяют прогонять comparative acceptance на разных preset'ах без ручной правки metadata или SQL.
@@ -43,6 +44,7 @@
 - [2026-04-12 00:20:00] `balanced-speed` является opt-in preset для сравнения скорости с уже подтверждённым `handoff-safe`: он не включает `XMUX`, но увеличивает XHTTP buffering/post-size и сохраняет короткие keepalive значения. При деградации handoff нужно возвращаться на `handoff-safe`.
 - [2026-04-11 20:05:00] Публичный JSON-sub endpoint больше не отдаётся напрямую из `3x-ui`: nginx проксирует `/${json_path}` в локальный `subjson-rewrite` bridge на `127.0.0.1:8091`, который забирает raw JSON с локального `x-ui` sub-port и переписывает `vless` outbound'ы в валидный `vnext`-формат.
 - [2026-04-11 20:05:00] `stage=verify` теперь валидирует не только то, что JSON endpoint отвечает и не возвращает HTML, но и то, что все `vless`-конфиги приходят с `settings.vnext` и без старого плоского `settings.address/id/port`.
+- [2026-04-13 05:45:00] `stage=verify` для stealth runtime теперь дополнительно проверяет HTTP headers на panel и JSON subscription: `Cache-Control: no-store`, `X-Robots-Tag: noindex`, `X-Content-Type-Options: nosniff`, а для панели ещё и `X-Frame-Options: SAMEORIGIN`.
 - [2026-04-08 04:30:47] `-stage reset` подготавливает staging к новому чистому прогону.
 - [2026-04-08 04:30:47] `-dry_run yes` используется как безопасный preview действий.
 - [2026-04-08 04:30:47] `-keep_artifacts yes` сохраняет артефакты диагностики даже без полного `-debug yes`.
@@ -56,7 +58,9 @@
 - [2026-04-11 14:40:00] Comparative acceptance теперь дополнительно сохраняет `acceptance/runtime-snapshot.env` с profile/preset/runtime state и `acceptance/xui-inbounds-summary.txt` с redacted сводкой по `REALITY/XHTTP` inbound'ам из `x-ui.db`.
 - [2026-04-11 16:05:00] Comparative acceptance теперь также сохраняет `acceptance/session-metadata.env`, `acceptance/matrix-row.json` и `acceptance/probe-results.jsonl`; это канонический артефактный слой для triage блока `C1`.
 - [2026-04-11 15:20:00] Постоянный runtime provenance теперь хранится в `/etc/x-ui/runtime-provenance.env`; `backup.sh` копирует его отдельным `runtime-provenance.env` в каталог backup, а `restore` сначала использует этот sidecar-файл и только потом fallback-эвристику по `x-ui.db`.
+- [2026-04-13 05:55:00] Для `stage=verify`, `stage=websub` и `stage=acceptance` runtime provenance теперь является источником правды не только по tuning/path, но и по самой platform selection. На installed unified baseline это позволяет вернуть именно `stealth-multi`, а не свалиться в грубый autodetect `stealth-xhttp`.
 - [2026-04-09 01:32:44] `acceptance/manual-client-checklist.md` теперь должен рассматриваться как основной handoff-файл для ручного теста: он фиксирует актуальные URL ноды после reinstall и transport-specific подсказку, какой узел выбирать в клиенте.
+- [2026-04-13 05:55:00] Для `stealth-multi` manual checklist и user-facing remarks теперь синхронизированы с role split: `reality-call` для low-latency/calls и `xhttp-stealth` для stealth/browsing.
 
 ## Границы использования
 
