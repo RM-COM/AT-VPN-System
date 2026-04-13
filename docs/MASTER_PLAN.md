@@ -58,6 +58,9 @@
 
 ## Текущая активная задача
 
+- [2026-04-13 19:25:00] `[СДЕЛАНО]` Unified baseline доведён до repo-default состояния: `stealth-multi` теперь ставится с подтверждёнными preset'ами `REALITY=call-safe` и `XHTTP=realtime-media-safe` без ручных tuning override.
+- [2026-04-13 19:25:00] `[СДЕЛАНО]` На staging `2.27.11.162` repeated install этого default baseline подтверждён полным циклом `install -> verify -> acceptance`, а runtime provenance фиксирует именно ожидаемые preset'ы и remarks `reality-call` / `xhttp-stealth`.
+- [2026-04-13 19:25:00] `[В РАБОТЕ]` Следующий активный шаг снова продуктовый: улучшать `REALITY` и `XHTTP` раздельно уже поверх нормального default `stealth-multi`, а не возвращаться к ручному выравниванию preset'ов между git и staging.
 - [2026-04-12 20:46:00] `[СДЕЛАНО]` Внутри `Block C1` уже собран первый runnable unified stealth baseline: новый transport profile `stealth-multi` поднимает `reality-shield` и `xhttp` вместе в одной установке и проходит staging `install -> verify -> acceptance`.
 - [2026-04-12 20:46:00] `[В РАБОТЕ]` Следующий активный шаг теперь user-facing: проверить `stealth-multi` как единый baseline в живой сети, сравнить внутри одной подписки роли `reality-shield` и `xhttp` и подтвердить product-модель `primary low-latency + primary stealth`.
 - [2026-04-12 20:46:00] `[ДАЛЕЕ]` После этого можно переходить к следующему слою roadmap: admin/subscription hardening для unified baseline, а затем уже к compatibility/fallback классу и `AWG`.

@@ -2,6 +2,9 @@
 
 ## Текущая точка продолжения (актуально)
 
+- [2026-04-13 19:25:00] Новый baseline-alignment шаг уже закрыт: принятые runtime-presets `REALITY=call-safe` и `XHTTP=realtime-media-safe` подняты в repo defaults для `stealth-multi`, `stealth-xray` и `stealth-xhttp`, поэтому текущее подтверждённое состояние больше не зависит от ручных env override.
+- [2026-04-13 19:25:00] Это уже подтверждено repeated install на staging `2.27.11.162`: `stealth-multi` без tuning override проходит `install -> stage=verify -> stage=acceptance`, а `runtime-provenance.env` и `x-ui.db` фиксируют именно ожидаемые default role/preset значения.
+- [2026-04-13 19:25:00] Значит, ближайшая практическая задача снова user-facing и продуктовая: продолжать полевой тюнинг `REALITY` и `XHTTP` уже поверх нормального дефолтного unified baseline, а не тратить цикл на ручное выравнивание install-defaults и staging-runtime.
 - [2026-04-13 05:10:00] Server-side hardening по `acceptance` и JSON delivery уже закрыт: новый batch добавил transport-aware data-plane probes, убрал зависимость `XHTTP` verify от внешнего `gstatic` и усилил сам JSON-контракт `REALITY/XHTTP` на уровне `subjson-rewrite`.
 - [2026-04-13 05:10:00] Staging после этого зелёный: `stage=websub -verify` и `stage=acceptance (1m/20s)` прошли успешно, а отдельный `stage=verify -profile stealth -transport_profile stealth-multi` подтвердил loopback self-test сразу для обоих transport-ролей.
 - [2026-04-13 05:10:00] Значит, ближайшая практическая задача снова user-facing: обновить JSON-подписку и проверить, исчезли ли остаточные `cold-start/feed/API` проблемы в живых сценариях `YouTube`, `Telegram`, `Discord`, Android и iPhone уже на усиленном delivery/acceptance baseline.

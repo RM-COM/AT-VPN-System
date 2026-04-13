@@ -7,6 +7,9 @@
 
 ## Текущее состояние baseline
 
+- [2026-04-13 19:25:00] Следующий lifecycle-хвост unified baseline закрыт: текущий принятый staging runtime больше не существует как «особый режим с ручными env override». `stealth-multi` теперь поднимает `REALITY=call-safe` и `XHTTP=realtime-media-safe` прямо из repo metadata по умолчанию.
+- [2026-04-13 19:25:00] Это подтверждено не только кодом, но и повторной установкой без tuning override на staging `2.27.11.162`: repeated install `PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-multi` завершился `PASS`, а `runtime-provenance.env` зафиксировал именно `call-safe` и `realtime-media-safe`.
+- [2026-04-13 19:25:00] Практическое значение этого шага: текущий unified baseline теперь воспроизводим как нормальная установка из репозитория, а не как staging-конфигурация, которую ещё нужно вручную «докрутить» до принятого состояния.
 - [2026-04-13 05:10:00] Следующий hardening batch блока `C1` уже закрыт кодом и staging-проверкой: `stage=verify` и `stage=acceptance` теперь имеют transport-aware data-plane probes, а значит зелёный server-side прогон больше не означает только «панель и web-sub живы».
 - [2026-04-13 05:10:00] Для `XHTTP` и `REALITY` теперь используется один и тот же принцип loopback triage: локальный Xray client проходит через публичный ingress и проверяет живой transport-path на локальный HTTPS target проекта. Это убирает ложную зависимость verify от внешнего `gstatic`.
 - [2026-04-13 05:10:00] JSON delivery-контракт тоже усилен: `subjson-rewrite` динамически выбирает proxy-like outbound tag, аккуратнее merge'ит `dns` и достраивает недостающие поля `REALITY/XHTTP` из `x-ui.db` прямо в публичной JSON-подписке.
@@ -214,6 +217,8 @@
 
 ## Ближайшая точка продолжения
 
+- [2026-04-13 19:25:00] Следующий практический шаг больше не про сборку baseline, а про продуктовый тюнинг поверх уже закреплённого `stealth-multi` default. Нужно продолжать раздельно улучшать `REALITY` как профиль `calls/low-latency` и `XHTTP` как профиль `stealth/browsing/feed`, не меняя базовый role split.
+- [2026-04-13 19:25:00] Отдельный критерий следующего среза теперь тоже понятен: любые новые улучшения должны сравниваться уже против дефолтного `stealth-multi`, а не против ручной staging-комбинации preset'ов. Иначе мы снова потеряем связь между git-состоянием и тем, что реально ставится пользователю.
 - [2026-04-12 04:20:00] Следующая ближайшая задача: не трогая успешный `realtime-safe`, подготовить отдельный speed/latency safe-slice именно под `cold-start` и мелкие API-запросы `XHTTP`, затем сравнить его с текущим preset по сценариям `first ping`, `Instagram feed`, `YouTube thumbnails/feed`, обычный web и звонки.
 - [2026-04-12 04:28:00] Следующая ближайшая задача уточнена: выложить `stealth-xhttp + XHTTP_TUNING_PROFILE=api-latency-safe` на staging, прогнать `verify/acceptance` и затем отдельно сравнить его с `realtime-safe` по `first ping`, `Instagram feed`, `YouTube UI/feed`, обычному browsing и `Telegram calls`.
 - [2026-04-12 15:15:00] Следующая ближайшая задача уточнена ещё раз: выложить `stealth-xhttp + XHTTP_TUNING_PROFILE=stream-one-safe` на staging, прогнать `verify/acceptance` и затем сравнить его с `api-latency-safe` и `realtime-safe` по `first ping`, `Instagram feed`, `YouTube UI/feed`, обычному browsing и `Telegram calls`.

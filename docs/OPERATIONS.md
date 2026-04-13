@@ -9,6 +9,8 @@
 ## Канонические рабочие сценарии
 
 - [2026-04-08 04:30:47] Поддерживаемая установка: `sudo bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no`
+- [2026-04-13 19:25:00] Поддерживаемая unified stealth-установка без ручных preset override: `sudo env PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-multi bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no`
+- [2026-04-13 19:25:00] Для этой команды текущий repo default уже зафиксирован как `REALITY=call-safe` и `XHTTP=realtime-media-safe`; отдельные `REALITY_TUNING_PROFILE` и `XHTTP_TUNING_PROFILE` теперь нужны только для сравнительных/экспериментальных прогонов, а не для основного baseline.
 - [2026-04-11 14:40:00] Установка с controlled tuning preset: `sudo env PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp REALITY_TUNING_PROFILE=mobile-safe XHTTP_TUNING_PROFILE=handoff-safe bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no`
 - [2026-04-12 00:20:00] Экспериментальная установка speed-среза после подтверждённого `handoff-safe`: `sudo env PLATFORM_PROFILE=stealth TRANSPORT_PROFILE=stealth-xhttp REALITY_TUNING_PROFILE=mobile-safe XHTTP_TUNING_PROFILE=balanced-speed bash ./x-ui-pro.sh -install yes -panel 1 -ONLY_CF_IP_ALLOW no`
 - [2026-04-08 04:30:47] Проверка существующей установки: `sudo bash ./x-ui-pro-updated.sh -stage verify -debug yes -keep_artifacts yes`
