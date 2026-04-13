@@ -232,3 +232,5 @@
 - [2026-04-13 00:15:31] Актуальные учётные данные панели staging: username `9hDBjwDXjC`, password `fxoesIfogS`.
 - [2026-04-13 00:15:50] Канонический server-side артефакт этого среза: `/root/x-ui-pro-debug/20260413-001550/acceptance/summary.txt`; `install`, `strict verify` и `acceptance` завершились с `PASS`.
 - [2026-04-13 00:15:50] Следующий рабочий шаг: провести живой retest именно Telegram/media на `XHTTP=realtime-media-safe` и решить, является ли он лучше `packet-up-safe` или дальнейший выигрыш уже упирается в `v2rayNG` client stack.
+- [2026-04-13 00:40:00] Новый полевой результат после этого среза: на Android и `REALITY`, и `XHTTP` уже заметно ускорились в Telegram/media; основной остаточный симптом теперь не realtime-call, а краткая задержка подгрузки следующей порции карточек/ленты в YouTube.
+- [2026-04-13 00:40:00] Следующий рабочий шаг смещён: прежде чем снова трогать transport, проверить DNS/feed-layer гипотезу и решить, нужен ли отдельный controlled DNS/client-behaviour срез для уменьшения `feed/API latency`.
