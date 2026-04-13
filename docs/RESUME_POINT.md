@@ -2,6 +2,8 @@
 
 ## Текущая точка продолжения (актуально)
 
+- [2026-04-13 20:55:00] `XHTTP=packet-feed-safe` проверен в живой сети и не поднят выше экспериментального статуса: лента стала приемлемой, но старт видео остался слишком тяжёлым, поэтому baseline остаётся на `realtime-media-safe`, а продуктовое разделение ролей не меняется.
+- [2026-04-13 20:55:00] Отдельно исправлен installer race: repeated install теперь должен дожидаться чистой остановки `x-ui` и готовности новых panel/sub listener'ов после `start/restart`, чтобы не ловить ложный красный статус при фактически живом сервисе.
 - [2026-04-13 19:25:00] Новый baseline-alignment шаг уже закрыт: принятые runtime-presets `REALITY=call-safe` и `XHTTP=realtime-media-safe` подняты в repo defaults для `stealth-multi`, `stealth-xray` и `stealth-xhttp`, поэтому текущее подтверждённое состояние больше не зависит от ручных env override.
 - [2026-04-13 19:25:00] Это уже подтверждено repeated install на staging `2.27.11.162`: `stealth-multi` без tuning override проходит `install -> stage=verify -> stage=acceptance`, а `runtime-provenance.env` и `x-ui.db` фиксируют именно ожидаемые default role/preset значения.
 - [2026-04-13 19:25:00] Значит, ближайшая практическая задача снова user-facing и продуктовая: продолжать полевой тюнинг `REALITY` и `XHTTP` уже поверх нормального дефолтного unified baseline, а не тратить цикл на ручное выравнивание install-defaults и staging-runtime.

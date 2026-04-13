@@ -5076,13 +5076,16 @@ EOF
 
 update_xui_db() {
 if [[ -f "$XUIDB" ]]; then
-		local xray_bin public_https_port reality_inbound_port reality_target reality_inbound_tag credential_length
+		local xray_bin public_https_port reality_inbound_port reality_target reality_inbound_tag credential_length previous_panel_port previous_sub_port
 		public_https_port="$(platform_public_https_port)"
 		reality_inbound_port="$(platform_transport_reality_inbound_port)"
 		reality_target="$(platform_transport_reality_target)"
 		reality_inbound_tag="$(platform_transport_reality_inbound_tag)"
 		credential_length="$(platform_credential_length)"
+		previous_panel_port=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="webPort" LIMIT 1;' 2>/dev/null)
+		previous_sub_port=$(sqlite3 -list "$XUIDB" 'SELECT "value" FROM settings WHERE "key"="subPort" LIMIT 1;' 2>/dev/null)
         x-ui stop
+		platform_wait_panel_shutdown 20 "${previous_panel_port:-}" "${previous_sub_port:-}" || die "x-ui service did not stop cleanly before DB rewrite."
 		xray_bin=$(xray_binary_path)
 		[[ -x "$xray_bin" ]] || die "xray helper binary not found or not executable: ${xray_bin}"
 		generate_reality_x25519_pair "$xray_bin"
@@ -5119,6 +5122,7 @@ if [[ -f "$XUIDB" ]]; then
 run_sensitive /usr/local/x-ui/x-ui setting -username "${config_username}" -password "${config_password}" -port "${panel_port}" -webBasePath "${panel_path}"
 /usr/local/x-ui/x-ui cert -webCert "/root/cert/${domain}/fullchain.pem" -webCertKey "/root/cert/${domain}/privkey.pem"
 x-ui start
+		platform_wait_panel_runtime 20 "${panel_port:-}" "${sub_port:-}" || die "x-ui service did not become ready after DB rewrite."
 else
 	die "x-ui.db file not exist! Maybe x-ui isn't installed."
 fi
@@ -5503,6 +5507,7 @@ platform_apply_transport_profile() {
 
 platform_restart_panel() {
 	"$(platform_panel_control_bin)" restart
+	platform_wait_panel_runtime 20 "${panel_port:-}" "${sub_port:-}" || die "x-ui service did not become ready after restart."
 }
 
 platform_enable_panel_service() {
@@ -5511,6 +5516,69 @@ platform_enable_panel_service() {
 	if ! systemctl is-enabled --quiet "${service_name}"; then
 		systemctl daemon-reload && systemctl enable "${service_name}.service"
 	fi
+}
+
+platform_port_is_listening() {
+	local port="$1"
+	[[ -n "$port" ]] || return 1
+	command -v ss >/dev/null 2>&1 || return 1
+	ss -ltn "( sport = :${port} )" 2>/dev/null | awk 'NR>1 { found=1 } END { exit found ? 0 : 1 }'
+}
+
+platform_wait_panel_shutdown() {
+	local timeout="${1:-20}"
+	local wait_panel_port="${2:-}"
+	local wait_sub_port="${3:-}"
+	local service_name elapsed=0
+	service_name="$(platform_panel_service_name)"
+	while (( elapsed < timeout )); do
+		local service_active=0 panel_busy=0 sub_busy=0
+		if systemctl is-active --quiet "${service_name}"; then
+			service_active=1
+		fi
+		if platform_port_is_listening "$wait_panel_port"; then
+			panel_busy=1
+		fi
+		if platform_port_is_listening "$wait_sub_port"; then
+			sub_busy=1
+		fi
+		if (( service_active == 0 && panel_busy == 0 && sub_busy == 0 )); then
+			append_debug_log "Panel shutdown confirmed for service=${service_name} panel_port=${wait_panel_port:-<empty>} sub_port=${wait_sub_port:-<empty>} after ${elapsed}s"
+			return 0
+		fi
+		sleep 1
+		elapsed=$((elapsed + 1))
+	done
+	append_debug_log "Panel shutdown wait timed out for service=${service_name} panel_port=${wait_panel_port:-<empty>} sub_port=${wait_sub_port:-<empty>}"
+	return 1
+}
+
+platform_wait_panel_runtime() {
+	local timeout="${1:-20}"
+	local wait_panel_port="${2:-${panel_port:-}}"
+	local wait_sub_port="${3:-${sub_port:-}}"
+	local service_name elapsed=0
+	service_name="$(platform_panel_service_name)"
+	while (( elapsed < timeout )); do
+		local service_active=0 panel_ready=1 sub_ready=1
+		if systemctl is-active --quiet "${service_name}"; then
+			service_active=1
+		fi
+		if [[ -n "$wait_panel_port" ]] && ! platform_port_is_listening "$wait_panel_port"; then
+			panel_ready=0
+		fi
+		if [[ "$PANEL_PROVIDER" == "3x-ui" && -n "$wait_sub_port" ]] && ! platform_port_is_listening "$wait_sub_port"; then
+			sub_ready=0
+		fi
+		if (( service_active == 1 && panel_ready == 1 && sub_ready == 1 )); then
+			append_debug_log "Panel runtime ready for service=${service_name} panel_port=${wait_panel_port:-<empty>} sub_port=${wait_sub_port:-<empty>} after ${elapsed}s"
+			return 0
+		fi
+		sleep 1
+		elapsed=$((elapsed + 1))
+	done
+	append_debug_log "Panel runtime wait timed out for service=${service_name} panel_port=${wait_panel_port:-<empty>} sub_port=${wait_sub_port:-<empty>}"
+	return 1
 }
 
 ##############################Main########################################################################
@@ -5676,7 +5744,7 @@ main() {
 		platform_install_panel_provider
 		platform_apply_transport_profile
 		platform_enable_panel_service
-		platform_restart_panel
+		platform_wait_panel_runtime 20 "${panel_port:-}" "${sub_port:-}" || die "x-ui service did not become ready after fresh install."
 	fi
 
 	# 14. Tune system (idempotent sysctl)
