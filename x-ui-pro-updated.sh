@@ -1047,6 +1047,35 @@ init_debug_session() {
 	fi
 	msg_inf "Debug artifacts: ${DEBUG_DIR}"
 }
+
+run_sensitive() {
+	local had_xtrace=""
+	if [[ "$-" == *x* ]]; then
+		had_xtrace="yes"
+		set +x
+	fi
+	"$@"
+	local rc=$?
+	if [[ -n "$had_xtrace" ]]; then
+		set -x
+	fi
+	return "$rc"
+}
+
+print_sensitive_printf() {
+	local had_xtrace=""
+	if [[ "$-" == *x* ]]; then
+		had_xtrace="yes"
+		set +x
+	fi
+	printf "$@"
+	local rc=$?
+	if [[ -n "$had_xtrace" ]]; then
+		set -x
+	fi
+	return "$rc"
+}
+
 print_runtime_context() {
 	append_debug_log "Runtime context:"
 	append_debug_log "  platform_root=${PLATFORM_ROOT:-<empty>}"
@@ -4657,7 +4686,7 @@ if [[ -f "$XUIDB" ]]; then
 				die "Unsupported transport profile in update_xui_db: ${TRANSPORT_PROFILE}"
 				;;
 		esac
-/usr/local/x-ui/x-ui setting -username "${config_username}" -password "${config_password}" -port "${panel_port}" -webBasePath "${panel_path}"
+run_sensitive /usr/local/x-ui/x-ui setting -username "${config_username}" -password "${config_password}" -port "${panel_port}" -webBasePath "${panel_path}"
 /usr/local/x-ui/x-ui cert -webCert "/root/cert/${domain}/fullchain.pem" -webCertKey "/root/cert/${domain}/privkey.pem"
 x-ui start
 else
@@ -4667,7 +4696,7 @@ fi
 
 ##############################Config After Install########################################################
 config_after_install() {
-	/usr/local/x-ui/x-ui setting \
+	run_sensitive /usr/local/x-ui/x-ui setting \
 		-username "$(platform_panel_bootstrap_username)" \
 		-password "$(platform_panel_bootstrap_password)" \
 		-port "$(platform_panel_bootstrap_port)" \
@@ -4871,8 +4900,9 @@ install_subjson_rewrite() {
 	copy_or_fetch_repo_file "helpers/subjson_rewrite.py" "$SUBJSON_REWRITE_BIN"
 	chmod +x "$SUBJSON_REWRITE_BIN"
 	write_subjson_rewrite_service
-	systemctl daemon-reload
-	systemctl enable --now subjson-rewrite.service
+	systemctl daemon-reload || die "Failed to reload systemd before starting subjson-rewrite."
+	systemctl enable --now subjson-rewrite.service || die "Failed to enable/start subjson-rewrite.service."
+	systemctl is-active --quiet subjson-rewrite.service || die "subjson-rewrite.service is not active after install."
 }
 
 install_sub2singbox() {
@@ -4976,8 +5006,8 @@ show_details() {
 		msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 		msg_inf "${PANEL_PROVIDER_PANEL_TITLE:-X-UI Secure Panel}: https://${domain}/${panel_path}/"
 		printf '\n'
-		printf 'Username:  %s\n\n' "${config_username}"
-		printf 'Password:  %s\n\n' "${config_password}"
+		print_sensitive_printf 'Username:  %s\n\n' "${config_username}"
+		print_sensitive_printf 'Password:  %s\n\n' "${config_password}"
 		msg_inf "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 		msg_inf "Web Sub Page your first client: https://${domain}/${web_path}/?name=first"
 		printf '\n'
